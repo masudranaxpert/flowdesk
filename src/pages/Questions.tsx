@@ -71,17 +71,27 @@ const formDifficultyOptions = DIFFICULTIES.map(d => ({ value: d, label: capitali
 const formPlatformOptions = PLATFORMS.map(p => ({ value: p, label: capitalize(p) }));
 const formLanguageOptions = LANGUAGES.map(l => ({ value: l, label: l.toUpperCase() }));
 
+const listCache: Record<string, { items: any[]; total: number }> = {};
+const clearCache = () => {
+  for (const key in listCache) delete listCache[key];
+};
+
 export default function QuestionsPage() {
   const navigate = useNavigate();
-  const [items, setItems] = useState<Question[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [difficulty, setDifficulty] = useState('all');
   const [platform, setPlatform] = useState('all');
   const [category, setCategory] = useState('all');
   const [solved, setSolved] = useState('all');
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
+
+  const cacheKey = `${difficulty}-${platform}-${category}-${solved}-${search}-${page}`;
+  const cached = listCache[cacheKey] || { items: [], total: 0 };
+
+  const [items, setItems] = useState<Question[]>(cached.items);
+  const [total, setTotal] = useState(cached.total);
+  const [loading, setLoading] = useState(cached.items.length === 0);
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Question | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -90,11 +100,15 @@ export default function QuestionsPage() {
   const [categories, setCategories] = useState<Category[]>([fallbackCategory]);
 
   const load = useCallback(() => {
-    setLoading(true);
+    const key = `${difficulty}-${platform}-${category}-${solved}-${search}-${page}`;
+    if (!listCache[key]) setLoading(true);
     api.questions.list({ difficulty, platform, category, solved, search, page: String(page), limit: String(PAGE_SIZE) })
       .then((data: any) => {
-        setItems(data.items || []);
-        setTotal(data.total || 0);
+        const resItems = data.items || [];
+        const resTotal = data.total || 0;
+        setItems(resItems);
+        setTotal(resTotal);
+        listCache[key] = { items: resItems, total: resTotal };
       })
       .catch(() => toast.error('Failed to load'))
       .finally(() => setLoading(false));
@@ -123,6 +137,7 @@ export default function QuestionsPage() {
         await api.questions.create({ ...form, link: form.link ? normalizeUrl(form.link) : '' });
         toast.success('Question created');
       }
+      clearCache();
       setDialogOpen(false);
       load();
     } catch { toast.error('Failed to save'); }
@@ -132,12 +147,14 @@ export default function QuestionsPage() {
     if (!delId) return;
     await api.questions.delete(delId);
     toast.success('Question deleted');
+    clearCache();
     setDelId(null);
     load();
   };
 
   const toggleSolved = async (q: Question) => {
     await api.questions.update(q._id, { isSolved: !q.isSolved });
+    clearCache();
     load();
   };
 

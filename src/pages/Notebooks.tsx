@@ -17,23 +17,37 @@ import { Card, CardContent } from '@/components/ui/card';
 const PAGE_SIZE = 9;
 const fallbackCategory: Category = { _id: 'general', name: 'General', slug: 'general', scope: 'all', color: 'primary', createdAt: '', updatedAt: '' };
 
+const listCache: Record<string, { items: any[]; total: number }> = {};
+const clearCache = () => {
+  for (const key in listCache) delete listCache[key];
+};
+
 export default function NotebooksPage() {
-  const [items, setItems] = useState<Notebook[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
+
+  const cacheKey = `${category}-${search}-${page}`;
+  const cached = listCache[cacheKey] || { items: [], total: 0 };
+
+  const [items, setItems] = useState<Notebook[]>(cached.items);
+  const [total, setTotal] = useState(cached.total);
+  const [loading, setLoading] = useState(cached.items.length === 0);
+
   const [delId, setDelId] = useState<string | null>(null);
   const [viewNote, setViewNote] = useState<Notebook | null>(null);
   const [categories, setCategories] = useState<Category[]>([fallbackCategory]);
 
   const load = useCallback(() => {
-    setLoading(true);
+    const key = `${category}-${search}-${page}`;
+    if (!listCache[key]) setLoading(true);
     api.notebooks.list({ category, search, page: String(page), limit: String(PAGE_SIZE) })
       .then((data: any) => {
-        setItems(data.items || []);
-        setTotal(data.total || 0);
+        const resItems = data.items || [];
+        const resTotal = data.total || 0;
+        setItems(resItems);
+        setTotal(resTotal);
+        listCache[key] = { items: resItems, total: resTotal };
       })
       .catch(() => toast.error('Failed to load'))
       .finally(() => setLoading(false));
@@ -55,12 +69,14 @@ export default function NotebooksPage() {
     if (!delId) return;
     await api.notebooks.delete(delId);
     toast.success('Note deleted');
+    clearCache();
     setDelId(null);
     load();
   };
 
   const togglePin = async (n: Notebook) => {
     await api.notebooks.update(n._id, { isPinned: !n.isPinned });
+    clearCache();
     load();
   };
 

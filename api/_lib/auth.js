@@ -53,7 +53,7 @@ export async function requireUser(req, res) {
     res.status(401).json({ error: 'Login required' });
     return null;
   }
-  const user = await User.findById(session.id).select('_id name email');
+  const user = await User.findById(session.id).select('_id name email').lean();
   if (!user) {
     res.status(401).json({ error: 'Login required' });
     return null;

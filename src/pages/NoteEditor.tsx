@@ -53,7 +53,7 @@ export default function NoteEditorPage() {
   const [categories, setCategories] = useState<Category[]>([fallbackCategory]);
   const [mode, setMode] = useState<'write' | 'preview'>('write');
   const [settings, setSettings] = useState<AiSettings>(defaultAiSettings);
-  const [aiBusy, setAiBusy] = useState(false);
+  const [aiActiveTask, setAiActiveTask] = useState<'summarize' | 'polish' | 'custom' | null>(null);
   const [selectedModelId, setSelectedModelId] = useState('');
   const [customPrompt, setCustomPrompt] = useState('');
   const [selectedColor, setSelectedColor] = useState(colors[0].value);
@@ -174,7 +174,7 @@ export default function NoteEditorPage() {
     const target = text.trim() ? text : content;
     if (!target.trim()) return toast.error('Write or select some text first');
     if (task === 'custom' && !customPrompt.trim()) return toast.error('Write your AI prompt first');
-    setAiBusy(true);
+    setAiActiveTask(task);
     setContextMenu(null);
     try {
       const instruction = task === 'summarize'
@@ -195,7 +195,7 @@ export default function NoteEditorPage() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'AI failed');
     } finally {
-      setAiBusy(false);
+      setAiActiveTask(null);
     }
   };
 
@@ -269,18 +269,6 @@ export default function NoteEditorPage() {
             <Button variant="ghost" size="icon" onClick={() => insert('```cpp\n', '\n```', 'code here')}>
               <Code2 className="h-4 w-4" />
             </Button>
-            <div className="h-9 w-32">
-              <Select value={selectedColor} onChange={setSelectedColor} options={colors} />
-            </div>
-            <Button variant="ghost" size="icon" onClick={() => applyColor()} title="Apply text color">
-              <Palette className="h-4 w-4" />
-            </Button>
-            <div className="h-9 w-32">
-              <Select value={selectedFontSize} onChange={setSelectedFontSize} options={fontSizes} />
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => applyFontSize()}>
-              <Type className="h-4 w-4" /> Size
-            </Button>
             <span className="ml-auto hidden text-xs text-muted-foreground sm:inline">{categoryLabel(category, categories)}</span>
           </div>
 
@@ -291,18 +279,45 @@ export default function NoteEditorPage() {
                   <Select value={selectedModelId || modelOptions[0]?.value || 'default'} onChange={setSelectedModelId} options={modelOptions} />
                 </FormField>
                 <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                  <Button variant="secondary" size="sm" disabled={aiBusy} onClick={() => runNoteAi('summarize')}>
-                    <Bot className="h-4 w-4" /> Summarize selection
+                  <Button variant="secondary" size="sm" disabled={aiActiveTask !== null} onClick={() => runNoteAi('summarize')}>
+                    {aiActiveTask === 'summarize' ? (
+                      <>
+                        <div className="mr-2 h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                        Summarizing...
+                      </>
+                    ) : (
+                      <>
+                        <Bot className="h-4 w-4" /> Summarize selection
+                      </>
+                    )}
                   </Button>
-                  <Button variant="secondary" size="sm" disabled={aiBusy} onClick={() => runNoteAi('polish')}>
-                    <Sparkles className="h-4 w-4" /> Polish text
+                  <Button variant="secondary" size="sm" disabled={aiActiveTask !== null} onClick={() => runNoteAi('polish')}>
+                    {aiActiveTask === 'polish' ? (
+                      <>
+                        <div className="mr-2 h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                        Polishing...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4" /> Polish text
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
-                <Input value={customPrompt} onChange={(event) => setCustomPrompt(event.target.value)} placeholder="Ask AI to rewrite selected text your way..." />
-                <Button disabled={aiBusy} onClick={() => runNoteAi('custom')}>
-                  <Sparkles className="h-4 w-4" /> Apply AI
+                <Input value={customPrompt} onChange={(event) => setCustomPrompt(event.target.value)} placeholder="Ask AI to rewrite selected text your way..." disabled={aiActiveTask !== null} />
+                <Button disabled={aiActiveTask !== null} onClick={() => runNoteAi('custom')}>
+                  {aiActiveTask === 'custom' ? (
+                    <>
+                      <div className="mr-2 h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                      Applying...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" /> Apply AI
+                    </>
+                  )}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">Select text first to edit only that part. If nothing is selected, AI updates the full note.</p>
@@ -362,8 +377,12 @@ export default function NoteEditorPage() {
           <div className="mt-2 grid grid-cols-2 gap-2">
             <Button variant="secondary" size="sm" onClick={() => applyFontSize('20px')}>Large</Button>
             <Button variant="secondary" size="sm" onClick={() => applyFontSize('26px')}>Title</Button>
-            <Button variant="secondary" size="sm" disabled={aiBusy} onClick={() => runNoteAi('summarize')}>Summarize</Button>
-            <Button variant="secondary" size="sm" disabled={aiBusy} onClick={() => runNoteAi('polish')}>Polish</Button>
+            <Button variant="secondary" size="sm" disabled={aiActiveTask !== null} onClick={() => runNoteAi('summarize')}>
+              {aiActiveTask === 'summarize' ? 'Summarizing...' : 'Summarize'}
+            </Button>
+            <Button variant="secondary" size="sm" disabled={aiActiveTask !== null} onClick={() => runNoteAi('polish')}>
+              {aiActiveTask === 'polish' ? 'Polishing...' : 'Polish'}
+            </Button>
           </div>
         </div>
       )}

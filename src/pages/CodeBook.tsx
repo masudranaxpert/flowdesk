@@ -25,14 +25,24 @@ const languageOptions = [
 
 const formLanguageOptions = LANGUAGES.map(l => ({ value: l, label: l.toUpperCase() }));
 
+const listCache: Record<string, { items: any[]; total: number }> = {};
+const clearCache = () => {
+  for (const key in listCache) delete listCache[key];
+};
+
 export default function CodeBookPage() {
-  const [items, setItems] = useState<CodeSnippet[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [language, setLanguage] = useState('all');
   const [category, setCategory] = useState('all');
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
+
+  const cacheKey = `${language}-${category}-${search}-${page}`;
+  const cached = listCache[cacheKey] || { items: [], total: 0 };
+
+  const [items, setItems] = useState<CodeSnippet[]>(cached.items);
+  const [total, setTotal] = useState(cached.total);
+  const [loading, setLoading] = useState(cached.items.length === 0);
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<CodeSnippet | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -43,11 +53,15 @@ export default function CodeBookPage() {
   const [wrapCode, setWrapCode] = useState(false);
 
   const load = useCallback(() => {
-    setLoading(true);
+    const key = `${language}-${category}-${search}-${page}`;
+    if (!listCache[key]) setLoading(true);
     api.codes.list({ language, category, search, page: String(page), limit: String(PAGE_SIZE) })
       .then((data: any) => {
-        setItems(data.items || []);
-        setTotal(data.total || 0);
+        const resItems = data.items || [];
+        const resTotal = data.total || 0;
+        setItems(resItems);
+        setTotal(resTotal);
+        listCache[key] = { items: resItems, total: resTotal };
       })
       .catch(() => toast.error('Failed to load'))
       .finally(() => setLoading(false));
@@ -76,6 +90,7 @@ export default function CodeBookPage() {
         await api.codes.create(form);
         toast.success('Snippet created');
       }
+      clearCache();
       setDialogOpen(false);
       load();
     } catch { toast.error('Failed to save'); }
@@ -85,6 +100,7 @@ export default function CodeBookPage() {
     if (!delId) return;
     await api.codes.delete(delId);
     toast.success('Snippet deleted');
+    clearCache();
     setDelId(null);
     load();
   };
@@ -98,6 +114,7 @@ export default function CodeBookPage() {
 
   const toggleFav = async (c: CodeSnippet) => {
     await api.codes.update(c._id, { isFavorite: !c.isFavorite });
+    clearCache();
     load();
   };
 

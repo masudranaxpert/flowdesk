@@ -17,25 +17,39 @@ const emptyForm = { url: '', title: '', description: '', tags: [] as string[], c
 const PAGE_SIZE = 9;
 const fallbackCategory: Category = { _id: 'general', name: 'General', slug: 'general', scope: 'all', color: 'primary', createdAt: '', updatedAt: '' };
 
+const listCache: Record<string, { items: any[]; total: number }> = {};
+const clearCache = () => {
+  for (const key in listCache) delete listCache[key];
+};
+
 export default function BookmarksPage() {
-  const [items, setItems] = useState<BookmarkType[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
+
+  const cacheKey = `${category}-${search}-${page}`;
+  const cached = listCache[cacheKey] || { items: [], total: 0 };
+
+  const [items, setItems] = useState<BookmarkType[]>(cached.items);
+  const [total, setTotal] = useState(cached.total);
+  const [loading, setLoading] = useState(cached.items.length === 0);
+
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<BookmarkType | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [delId, setDelId] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([fallbackCategory]);
 
   const load = useCallback(() => {
-    setLoading(true);
+    const key = `${category}-${search}-${page}`;
+    if (!listCache[key]) setLoading(true);
     api.bookmarks.list({ category, search, page: String(page), limit: String(PAGE_SIZE) })
       .then((data: any) => {
-        setItems(data.items || []);
-        setTotal(data.total || 0);
+        const resItems = data.items || [];
+        const resTotal = data.total || 0;
+        setItems(resItems);
+        setTotal(resTotal);
+        listCache[key] = { items: resItems, total: resTotal };
       })
       .catch(() => toast.error('Failed to load'))
       .finally(() => setLoading(false));
@@ -64,6 +78,7 @@ export default function BookmarksPage() {
         await api.bookmarks.create({ ...form, url, favicon: getFavicon(url) });
         toast.success('Bookmark created');
       }
+      clearCache();
       setDialogOpen(false);
       load();
     } catch { toast.error('Failed to save'); }
@@ -73,12 +88,14 @@ export default function BookmarksPage() {
     if (!delId) return;
     await api.bookmarks.delete(delId);
     toast.success('Bookmark deleted');
+    clearCache();
     setDelId(null);
     load();
   };
 
   const toggleFav = async (b: BookmarkType) => {
     await api.bookmarks.update(b._id, { isFavorite: !b.isFavorite });
+    clearCache();
     load();
   };
 

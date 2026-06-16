@@ -19,20 +19,33 @@ const scopeOptions = [
 ];
 const PAGE_SIZE = 12;
 
+const listCache: Record<string, { items: any[]; total: number }> = {};
+const clearCache = () => {
+  for (const key in listCache) delete listCache[key];
+};
+
 export default function CategoriesPage() {
-  const [items, setItems] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
   const [scope, setScope] = useState('all');
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
+
+  const cacheKey = `${page}`;
+  const cached = listCache[cacheKey] || { items: [], total: 0 };
+
+  const [items, setItems] = useState<Category[]>(cached.items);
+  const [total, setTotal] = useState(cached.total);
+  const [loading, setLoading] = useState(cached.items.length === 0);
 
   const load = useCallback(() => {
-    setLoading(true);
+    const key = `${page}`;
+    if (!listCache[key]) setLoading(true);
     api.categories.list({ page: String(page), limit: String(PAGE_SIZE) })
       .then((data: any) => {
-        setItems(data.items || []);
-        setTotal(data.total || 0);
+        const resItems = data.items || [];
+        const resTotal = data.total || 0;
+        setItems(resItems);
+        setTotal(resTotal);
+        listCache[key] = { items: resItems, total: resTotal };
       })
       .catch(() => toast.error('Failed to load categories'))
       .finally(() => setLoading(false));
@@ -47,6 +60,7 @@ export default function CategoriesPage() {
       toast.success('Category created');
       setName('');
       setScope('all');
+      clearCache();
       load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to create category');
@@ -56,6 +70,7 @@ export default function CategoriesPage() {
   const remove = async (id: string) => {
     await api.categories.delete(id);
     toast.success('Category deleted');
+    clearCache();
     load();
   };
 
