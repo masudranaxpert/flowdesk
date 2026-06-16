@@ -37,6 +37,9 @@ export const api = {
     me: () => request<{ user: { id: string; name: string; email: string } }>('/auth/me'),
     forgotPassword: (data: { email: string }) => request<{ message: string }>('/auth/forgot-password', { method: 'POST', body: JSON.stringify(data) }),
     resetPassword: (data: { email: string; code: string; newPassword: string }) => request<{ message: string }>('/auth/reset-password', { method: 'POST', body: JSON.stringify(data) }),
+    updateProfile: (data: { name: string }) => request<{ message: string; user: { id: string; name: string; email: string } }>('/auth/profile', { method: 'PUT', body: JSON.stringify(data) }),
+    changePassword: (data: { currentPassword?: string; newPassword: string }) => request<{ message: string }>('/auth/change-password', { method: 'PUT', body: JSON.stringify(data) }),
+    deleteAccount: () => request<{ message: string }>('/auth/profile', { method: 'DELETE' }),
   },
   chatHistory: {
     get: () => request<{ messages: { role: 'user' | 'assistant'; content: string }[] }>('/chat-history'),

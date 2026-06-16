@@ -142,6 +142,54 @@ export default async function handler(req, res) {
       return res.json({ user: { id: user._id, name: user.name, email: user.email } });
     }
 
+    if (slug === 'auth/profile' && method === 'PUT') {
+      const user = await requireUser(req, res);
+      if (!user) return;
+      const name = String(req.body.name || '').trim();
+      if (!name) return res.status(400).json({ error: 'Name is required' });
+      const dbUser = await User.findById(user._id);
+      if (!dbUser) return res.status(404).json({ error: 'User not found' });
+      dbUser.name = name;
+      await dbUser.save();
+      return res.json({ message: 'Profile updated successfully', user: { id: dbUser._id, name: dbUser.name, email: dbUser.email } });
+    }
+
+    if (slug === 'auth/change-password' && method === 'PUT') {
+      const user = await requireUser(req, res);
+      if (!user) return;
+      const currentPassword = String(req.body.currentPassword || '');
+      const newPassword = String(req.body.newPassword || '');
+      if (newPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters' });
+      const dbUser = await User.findById(user._id);
+      if (!dbUser) return res.status(404).json({ error: 'User not found' });
+      if (!verifyPassword(currentPassword, dbUser.salt, dbUser.passwordHash)) {
+        return res.status(400).json({ error: 'Incorrect current password' });
+      }
+      const { salt, passwordHash } = hashPassword(newPassword);
+      dbUser.salt = salt;
+      dbUser.passwordHash = passwordHash;
+      await dbUser.save();
+      return res.json({ message: 'Password changed successfully' });
+    }
+
+    if (slug === 'auth/profile' && method === 'DELETE') {
+      const user = await requireUser(req, res);
+      if (!user) return;
+      const userId = user._id;
+      await Promise.all([
+        Bookmark.deleteMany({ userId }),
+        Notebook.deleteMany({ userId }),
+        CodeSnippet.deleteMany({ userId }),
+        Question.deleteMany({ userId }),
+        Category.deleteMany({ userId }),
+        Routine.deleteMany({ userId }),
+        AiSetting.deleteMany({ userId }),
+        ChatHistory.deleteMany({ userId }),
+        User.deleteOne({ _id: userId })
+      ]);
+      return res.json({ message: 'Account deleted permanently' });
+    }
+
     if (slug === 'chat-history') {
       const user = await requireUser(req, res);
       if (!user) return;
