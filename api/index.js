@@ -219,6 +219,29 @@ export default async function handler(req, res) {
       return res.json({ bookmarks, notebooks, codes, questions, solved });
     }
 
+    if (slug === 'search' && method === 'GET') {
+      const user = await requireUser(req, res);
+      if (!user) return;
+      const q = String(query.q || '').trim();
+      if (!q) return res.json([]);
+      const escapedQ = q.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&');
+      const regex = { $regex: escapedQ, $options: 'i' };
+      const filter = { userId: user._id };
+      const [bookmarks, notebooks, codes, questions] = await Promise.all([
+        Bookmark.find({ ...filter, $or: [{ title: regex }, { url: regex }, { tags: regex }] }).limit(5),
+        Notebook.find({ ...filter, $or: [{ title: regex }, { content: regex }, { tags: regex }] }).limit(5),
+        CodeSnippet.find({ ...filter, $or: [{ title: regex }, { code: regex }, { tags: regex }] }).limit(5),
+        Question.find({ ...filter, $or: [{ title: regex }, { tags: regex }] }).limit(5),
+      ]);
+      const results = [
+        ...bookmarks.map((item) => ({ id: item._id, type: 'Bookmark', title: item.title, subtitle: item.url, to: '/bookmarks' })),
+        ...notebooks.map((item) => ({ id: item._id, type: 'Note', title: item.title, subtitle: item.category, to: '/notebooks' })),
+        ...codes.map((item) => ({ id: item._id, type: 'Code', title: item.title, subtitle: item.language, to: '/codes' })),
+        ...questions.map((item) => ({ id: item._id, type: 'Q&A', title: item.title, subtitle: item.platform, to: '/questions' })),
+      ];
+      return res.json(results);
+    }
+
     if (slug === 'ai-settings') {
       const user = await requireUser(req, res);
       if (!user) return;
@@ -252,20 +275,25 @@ export default async function handler(req, res) {
           const user = await requireUser(req, res);
           if (!user) return;
           const filter = { userId: user._id };
+          let searchFilter = null;
+          if (query.search) {
+            const escapedQ = String(query.search).trim().replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&');
+            searchFilter = { $regex: escapedQ, $options: 'i' };
+          }
           if (resource === 'bookmarks') {
-            if (query.search) filter.$or = [{ title: { $regex: query.search, $options: 'i' } }, { url: { $regex: query.search, $options: 'i' } }, { tags: { $regex: query.search, $options: 'i' } }];
+            if (searchFilter) filter.$or = [{ title: searchFilter }, { url: searchFilter }, { tags: searchFilter }];
             if (query.category && query.category !== 'all') filter.category = query.category;
             if (query.favorite === 'true') filter.isFavorite = true;
           } else if (resource === 'notebooks') {
-            if (query.search) filter.$or = [{ title: { $regex: query.search, $options: 'i' } }, { content: { $regex: query.search, $options: 'i' } }, { tags: { $regex: query.search, $options: 'i' } }];
+            if (searchFilter) filter.$or = [{ title: searchFilter }, { content: searchFilter }, { tags: searchFilter }];
             if (query.category && query.category !== 'all') filter.category = query.category;
           } else if (resource === 'codes') {
-            if (query.search) filter.$or = [{ title: { $regex: query.search, $options: 'i' } }, { code: { $regex: query.search, $options: 'i' } }, { tags: { $regex: query.search, $options: 'i' } }];
+            if (searchFilter) filter.$or = [{ title: searchFilter }, { code: searchFilter }, { tags: searchFilter }];
             if (query.language && query.language !== 'all') filter.language = query.language;
             if (query.category && query.category !== 'all') filter.category = query.category;
             if (query.favorite === 'true') filter.isFavorite = true;
           } else if (resource === 'questions') {
-            if (query.search) filter.$or = [{ title: { $regex: query.search, $options: 'i' } }, { tags: { $regex: query.search, $options: 'i' } }];
+            if (searchFilter) filter.$or = [{ title: searchFilter }, { tags: searchFilter }];
             if (query.difficulty && query.difficulty !== 'all') filter.difficulty = query.difficulty;
             if (query.platform && query.platform !== 'all') filter.platform = query.platform;
             if (query.category && query.category !== 'all') filter.category = query.category;
@@ -280,6 +308,19 @@ export default async function handler(req, res) {
             : resource === 'categories' ? { name: 1 }
             : resource === 'routines' ? { dayOfWeek: 1, date: 1, startTime: 1 }
             : { createdAt: -1 };
+
+          if (query.page || query.limit) {
+            const page = Number(query.page || 1);
+            const limit = Number(query.limit || 10);
+            const skip = (page - 1) * limit;
+
+            const [items, total] = await Promise.all([
+              Model.find(filter).sort(sort).skip(skip).limit(limit),
+              Model.countDocuments(filter),
+            ]);
+            return res.json({ items, total });
+          }
+
           const items = await Model.find(filter).sort(sort);
           return res.json(items);
         }

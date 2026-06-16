@@ -25,11 +25,18 @@ export default function CategoriesPage() {
   const [name, setName] = useState('');
   const [scope, setScope] = useState('all');
   const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const load = useCallback(() => {
     setLoading(true);
-    api.categories.list().then(setItems).catch(() => toast.error('Failed to load categories')).finally(() => setLoading(false));
-  }, []);
+    api.categories.list({ page: String(page), limit: String(PAGE_SIZE) })
+      .then((data: any) => {
+        setItems(data.items || []);
+        setTotal(data.total || 0);
+      })
+      .catch(() => toast.error('Failed to load categories'))
+      .finally(() => setLoading(false));
+  }, [page]);
 
   useEffect(() => load(), [load]);
 
@@ -51,8 +58,6 @@ export default function CategoriesPage() {
     toast.success('Category deleted');
     load();
   };
-
-  const visibleItems = useMemo(() => items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [items, page]);
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -85,7 +90,7 @@ export default function CategoriesPage() {
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {visibleItems.map((category) => (
+          {items.map((category) => (
             <Card key={category._id} className="interactive-card rounded-3xl">
               <CardContent className="flex items-center gap-3 p-4">
                 <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary/12 text-primary">
@@ -107,7 +112,7 @@ export default function CategoriesPage() {
         </div>
       )}
 
-      <PaginationControls page={page} total={items.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
+      <PaginationControls page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} />
     </div>
   );
 }

@@ -81,6 +81,7 @@ export default function QuestionsPage() {
   const [category, setCategory] = useState('all');
   const [solved, setSolved] = useState('all');
   const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Question | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -90,8 +91,14 @@ export default function QuestionsPage() {
 
   const load = useCallback(() => {
     setLoading(true);
-    api.questions.list({ difficulty, platform, category, solved }).then(setItems).catch(() => toast.error('Failed to load')).finally(() => setLoading(false));
-  }, [difficulty, platform, category, solved]);
+    api.questions.list({ difficulty, platform, category, solved, search, page: String(page), limit: String(PAGE_SIZE) })
+      .then((data: any) => {
+        setItems(data.items || []);
+        setTotal(data.total || 0);
+      })
+      .catch(() => toast.error('Failed to load'))
+      .finally(() => setLoading(false));
+  }, [difficulty, platform, category, solved, search, page]);
 
   useEffect(() => { const t = setTimeout(load, 300); return () => clearTimeout(t); }, [load]);
   useEffect(() => setPage(1), [search, difficulty, platform, category, solved]);
@@ -100,12 +107,6 @@ export default function QuestionsPage() {
     api.categories.list({ scope: 'question' }).then((items) => setCategories([fallbackCategory, ...items])).catch(() => {});
   }, []);
 
-  const filteredItems = useMemo(
-    () => items.filter((item) => fuzzyMatch(search, [item.title, item.problem, item.solution, item.code, item.platform, item.tags, categoryLabel(item.category, categories)])),
-    [items, search, categories]
-  );
-
-  const visibleItems = useMemo(() => filteredItems.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [filteredItems, page]);
   const categoryOptions = useMemo(() => [{ value: 'all', label: 'All Categories' }, ...categories.map((item) => ({ value: item.slug, label: item.name }))], [categories]);
   const formCategoryOptions = useMemo(() => categories.map((item) => ({ value: item.slug, label: item.name })), [categories]);
 
@@ -165,7 +166,7 @@ export default function QuestionsPage() {
         </div>
       </div>
 
-      {loading ? <Spinner /> : filteredItems.length === 0 ? (
+      {loading ? <Spinner /> : items.length === 0 ? (
         <EmptyState
           icon={<HelpCircle className="h-6 w-6 text-muted-foreground" />}
           title="No questions yet"
@@ -174,7 +175,7 @@ export default function QuestionsPage() {
         />
       ) : (
         <div className="space-y-3">
-          {visibleItems.map((q, i) => (
+          {items.map((q, i) => (
             <Card
               key={q._id}
               className={`interactive-card group cursor-pointer rounded-2xl border-l-[4px] stagger-item ${q.isSolved ? 'solved-card border-l-success ring-success/20' : diffConfig[q.difficulty].border}`}
@@ -226,7 +227,7 @@ export default function QuestionsPage() {
         </div>
       )}
 
-      <PaginationControls page={page} total={filteredItems.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
+      <PaginationControls page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} />
 
       <Dialog open={!!viewQ} onOpenChange={v => !v && setViewQ(null)} title={viewQ?.title || ''} maxWidth="sm:max-w-2xl">
         {viewQ && (

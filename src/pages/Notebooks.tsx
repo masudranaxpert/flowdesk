@@ -23,14 +23,21 @@ export default function NotebooksPage() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [delId, setDelId] = useState<string | null>(null);
   const [viewNote, setViewNote] = useState<Notebook | null>(null);
   const [categories, setCategories] = useState<Category[]>([fallbackCategory]);
 
   const load = useCallback(() => {
     setLoading(true);
-    api.notebooks.list({ category }).then(setItems).catch(() => toast.error('Failed to load')).finally(() => setLoading(false));
-  }, [category]);
+    api.notebooks.list({ category, search, page: String(page), limit: String(PAGE_SIZE) })
+      .then((data: any) => {
+        setItems(data.items || []);
+        setTotal(data.total || 0);
+      })
+      .catch(() => toast.error('Failed to load'))
+      .finally(() => setLoading(false));
+  }, [category, search, page]);
 
   useEffect(() => { const t = setTimeout(load, 300); return () => clearTimeout(t); }, [load]);
   useEffect(() => setPage(1), [search, category]);
@@ -38,13 +45,6 @@ export default function NotebooksPage() {
   useEffect(() => {
     api.categories.list({ scope: 'notebook' }).then((items) => setCategories([fallbackCategory, ...items])).catch(() => {});
   }, []);
-
-  const filteredItems = useMemo(
-    () => items.filter((item) => fuzzyMatch(search, [item.title, item.content, item.tags, categoryLabel(item.category, categories)])),
-    [items, search, categories]
-  );
-
-  const visibleItems = useMemo(() => filteredItems.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [filteredItems, page]);
 
   const categoryOptions = useMemo(
     () => [{ value: 'all', label: 'All Categories' }, ...categories.map((item) => ({ value: item.slug, label: item.name }))],
@@ -95,7 +95,7 @@ export default function NotebooksPage() {
         />
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {visibleItems.map((n, i) => (
+          {items.map((n, i) => (
             <Card
               key={n._id}
               className="interactive-card group cursor-pointer rounded-3xl stagger-item"
@@ -140,7 +140,7 @@ export default function NotebooksPage() {
         </div>
       )}
 
-      <PaginationControls page={page} total={filteredItems.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
+      <PaginationControls page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} />
 
       <Dialog open={!!viewNote} onOpenChange={v => !v && setViewNote(null)} title={viewNote?.title || ''} maxWidth="sm:max-w-2xl">
         {viewNote && (

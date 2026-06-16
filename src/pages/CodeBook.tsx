@@ -32,6 +32,7 @@ export default function CodeBookPage() {
   const [language, setLanguage] = useState('all');
   const [category, setCategory] = useState('all');
   const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<CodeSnippet | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -43,8 +44,14 @@ export default function CodeBookPage() {
 
   const load = useCallback(() => {
     setLoading(true);
-    api.codes.list({ language, category }).then(setItems).catch(() => toast.error('Failed to load')).finally(() => setLoading(false));
-  }, [language, category]);
+    api.codes.list({ language, category, search, page: String(page), limit: String(PAGE_SIZE) })
+      .then((data: any) => {
+        setItems(data.items || []);
+        setTotal(data.total || 0);
+      })
+      .catch(() => toast.error('Failed to load'))
+      .finally(() => setLoading(false));
+  }, [language, category, search, page]);
 
   useEffect(() => { const t = setTimeout(load, 300); return () => clearTimeout(t); }, [load]);
   useEffect(() => setPage(1), [search, language, category]);
@@ -53,12 +60,6 @@ export default function CodeBookPage() {
     api.categories.list({ scope: 'code' }).then((items) => setCategories([fallbackCategory, ...items])).catch(() => {});
   }, []);
 
-  const filteredItems = useMemo(
-    () => items.filter((item) => fuzzyMatch(search, [item.title, item.description, item.code, item.language, item.tags, categoryLabel(item.category, categories)])),
-    [items, search, categories]
-  );
-
-  const visibleItems = useMemo(() => filteredItems.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [filteredItems, page]);
   const categoryOptions = useMemo(() => [{ value: 'all', label: 'All Categories' }, ...categories.map((item) => ({ value: item.slug, label: item.name }))], [categories]);
   const formCategoryOptions = useMemo(() => categories.map((item) => ({ value: item.slug, label: item.name })), [categories]);
 
@@ -121,7 +122,7 @@ export default function CodeBookPage() {
         <Select value={category} onChange={setCategory} options={categoryOptions} className="sm:w-48" />
       </div>
 
-      {loading ? <Spinner /> : filteredItems.length === 0 ? (
+      {loading ? <Spinner /> : items.length === 0 ? (
         <EmptyState
           icon={<Code2 className="h-6 w-6 text-muted-foreground" />}
           title="No snippets yet"
@@ -130,7 +131,7 @@ export default function CodeBookPage() {
         />
       ) : (
         <div className="space-y-3">
-          {visibleItems.map((c, i) => (
+          {items.map((c, i) => (
             <Card
               key={c._id}
               className="interactive-card group cursor-pointer rounded-3xl stagger-item"
@@ -174,7 +175,7 @@ export default function CodeBookPage() {
         </div>
       )}
 
-      <PaginationControls page={page} total={filteredItems.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
+      <PaginationControls page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen} title={editing ? 'Edit Snippet' : 'Add Snippet'} maxWidth="sm:max-w-2xl">
         <div className="space-y-4">
