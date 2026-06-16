@@ -1,0 +1,115 @@
+export interface Bookmark {
+  _id: string;
+  url: string;
+  title: string;
+  description: string;
+  favicon: string;
+  tags: string[];
+  category: string;
+  isFavorite: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Notebook {
+  _id: string;
+  title: string;
+  content: string;
+  tags: string[];
+  category: string;
+  isPinned: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CodeSnippet {
+  _id: string;
+  title: string;
+  code: string;
+  language: string;
+  description: string;
+  category: string;
+  tags: string[];
+  isFavorite: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Question {
+  _id: string;
+  title: string;
+  problem: string;
+  solution: string;
+  code: string;
+  language: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  platform: string;
+  category: string;
+  tags: string[];
+  isSolved: boolean;
+  link: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Stats {
+  bookmarks: number;
+  notebooks: number;
+  codes: number;
+  questions: number;
+  solved: number;
+}
+
+export interface Category {
+  _id: string;
+  name: string;
+  slug: string;
+  scope: 'all' | 'bookmark' | 'notebook' | 'code' | 'question';
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RoutineItem {
+  _id: string;
+  type: 'class' | 'event';
+  title: string;
+  subject: string;
+  teacher: string;
+  room: string;
+  dayOfWeek: number;
+  date: string;
+  startTime: string;
+  endTime: string;
+  breakTime: string;
+  repeatWeekly: boolean;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AiSetting {
+  _id: string;
+  singleton: string;
+  provider: 'gemini' | 'openrouter' | 'openai';
+  geminiKey: string;
+  geminiModel: string;
+  openRouterKey: string;
+  openRouterModel: string;
+  openAiKey: string;
+  openAiModel: string;
+  multimodalEnabled: boolean;
+  models: AiModelConfig[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AiModelConfig {
+  id: string;
+  label: string;
+  provider: 'gemini' | 'openrouter' | 'openai';
+  apiKey: string;
+  model: string;
+  multimodal: boolean;
+  active: boolean;
+}

@@ -1,0 +1,126 @@
+import { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { ArrowLeft, ExternalLink } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import toast from 'react-hot-toast';
+import { api } from '../lib/api';
+import CodeBlock from '../components/CodeBlock';
+import { Spinner } from '../components/UI';
+import { normalizeUrl } from '../lib/utils';
+import type { Bookmark, CodeSnippet, Notebook, Question } from '../types';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+
+type SharedItem = Bookmark | Notebook | CodeSnippet | Question;
+
+export default function SharePage() {
+  const { type, id } = useParams();
+  const [item, setItem] = useState<SharedItem | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!type || !id) return;
+    const loaders = {
+      notes: api.notebooks.get,
+      codes: api.codes.get,
+      questions: api.questions.get,
+      bookmarks: api.bookmarks.get,
+    } as const;
+    const load = loaders[type as keyof typeof loaders];
+    if (!load) {
+      setLoading(false);
+      return;
+    }
+    load(id).then(setItem).catch(() => toast.error('Shared item not found')).finally(() => setLoading(false));
+  }, [type, id]);
+
+  if (loading) return <Spinner />;
+
+  if (!item || !type) {
+    return (
+      <div className="mx-auto max-w-3xl p-4">
+        <Card className="rounded-3xl">
+          <CardContent className="p-8 text-center">
+            <p className="text-lg font-semibold">Shared item not found</p>
+            <Button asChild className="mt-4">
+              <Link to="/">Back home</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const title = 'title' in item ? item.title : 'Shared item';
+
+  return (
+    <div className="min-h-screen bg-background px-4 py-5 text-foreground sm:px-6">
+      <div className="mx-auto max-w-4xl space-y-4">
+        <Button variant="outline" asChild>
+          <Link to="/">
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Link>
+        </Button>
+
+        <Card className="rounded-3xl">
+          <CardContent className="space-y-5 p-5 sm:p-7">
+            <div>
+              <Badge variant="secondary" className="rounded-full">{type}</Badge>
+              <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
+            </div>
+
+            {type === 'bookmarks' && 'url' in item && (
+              <div className="space-y-3">
+                {item.description && <p className="text-sm leading-6 text-muted-foreground">{item.description}</p>}
+                <Button asChild>
+                  <a href={normalizeUrl(item.url)} target="_blank" rel="noopener">
+                    <ExternalLink className="h-4 w-4" />
+                    Open bookmark
+                  </a>
+                </Button>
+              </div>
+            )}
+
+            {type === 'notes' && 'content' in item && (
+              <div className="prose-dark max-w-none">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.content}</ReactMarkdown>
+              </div>
+            )}
+
+            {type === 'codes' && 'code' in item && 'language' in item && (
+              <>
+                {'description' in item && item.description && <p className="text-sm leading-6 text-muted-foreground">{item.description}</p>}
+                <CodeBlock code={item.code} language={item.language} />
+              </>
+            )}
+
+            {type === 'questions' && 'solution' in item && (
+              <div className="space-y-5">
+                {'problem' in item && item.problem && (
+                  <section>
+                    <h2 className="mb-2 text-sm font-semibold">Question</h2>
+                    <div className="prose-dark max-w-none">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.problem}</ReactMarkdown>
+                    </div>
+                  </section>
+                )}
+                {item.solution && (
+                  <section>
+                    <h2 className="mb-2 text-sm font-semibold">Answer</h2>
+                    <div className="prose-dark max-w-none">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.solution}</ReactMarkdown>
+                    </div>
+                  </section>
+                )}
+                {item.code && <CodeBlock code={item.code} language={item.language} />}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
