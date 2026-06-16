@@ -118,6 +118,13 @@ categorySchema.index({ userId: 1, slug: 1 }, { unique: true });
 aiSettingSchema.index({ userId: 1, singleton: 1 }, { unique: true });
 chatHistorySchema.index({ userId: 1 }, { unique: true });
 
+bookmarkSchema.index({ userId: 1, createdAt: -1 });
+notebookSchema.index({ userId: 1, isPinned: -1, updatedAt: -1 });
+codeSnippetSchema.index({ userId: 1, createdAt: -1 });
+questionSchema.index({ userId: 1, createdAt: -1 });
+routineSchema.index({ userId: 1, dayOfWeek: 1, date: 1, startTime: 1 });
+categorySchema.index({ userId: 1, name: 1 });
+
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 const Bookmark = mongoose.models.Bookmark || mongoose.model('Bookmark', bookmarkSchema);
 const Notebook = mongoose.models.Notebook || mongoose.model('Notebook', notebookSchema);

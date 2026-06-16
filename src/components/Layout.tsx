@@ -122,7 +122,8 @@ export default function Layout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [globalSearch, setGlobalSearch] = useState('');
-  const [globalItems, setGlobalItems] = useState<Array<{ id: string; type: string; title: string; subtitle: string; to: string; fields: unknown[] }>>([]);
+  const [searchResults, setSearchResults] = useState<Array<{ id: string; type: string; title: string; subtitle: string; to: string }>>([]);
+  const [searching, setSearching] = useState(false);
   const [dark, setDark] = useState(() => localStorage.getItem('theme') !== 'light');
   const location = useLocation();
   const navigate = useNavigate();
@@ -133,19 +134,20 @@ export default function Layout({ children }: { children: ReactNode }) {
   }, [dark]);
 
   useEffect(() => {
-    if (!searchOpen) return;
-    Promise.all([api.bookmarks.list(), api.notebooks.list(), api.codes.list(), api.questions.list(), api.routines.list()])
-      .then(([bookmarks, notes, codes, questions, routines]: [BookmarkType[], Notebook[], CodeSnippet[], Question[], RoutineItem[]]) => {
-        setGlobalItems([
-          ...bookmarks.map((item) => ({ id: item._id, type: 'Bookmark', title: item.title, subtitle: item.url, to: '/bookmarks', fields: [item.title, item.url, item.tags] })),
-          ...notes.map((item) => ({ id: item._id, type: 'Note', title: item.title, subtitle: item.category, to: '/notebooks', fields: [item.title, item.content, item.tags] })),
-          ...codes.map((item) => ({ id: item._id, type: 'Code', title: item.title, subtitle: item.language, to: '/codes', fields: [item.title, item.description, item.code, item.tags] })),
-          ...questions.map((item) => ({ id: item._id, type: 'Q&A', title: item.title, subtitle: item.platform, to: '/questions', fields: [item.title, item.problem, item.solution, item.code, item.tags] })),
-          ...routines.map((item) => ({ id: item._id, type: 'Routine', title: item.title, subtitle: `${item.startTime} - ${item.endTime}`, to: '/routine', fields: [item.title, item.room, item.teacher, item.notes] })),
-        ]);
-      })
-      .catch(() => {});
-  }, [searchOpen]);
+    const q = globalSearch.trim();
+    if (!q) {
+      setSearchResults([]);
+      return;
+    }
+    setSearching(true);
+    const t = setTimeout(() => {
+      api.search(q)
+        .then((items) => setSearchResults(items || []))
+        .catch(() => {})
+        .finally(() => setSearching(false));
+    }, 250);
+    return () => clearTimeout(t);
+  }, [globalSearch]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -163,10 +165,6 @@ export default function Layout({ children }: { children: ReactNode }) {
   const active = useMemo(
     () => navItems.find((item) => (item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to))) ?? navItems[0],
     [location.pathname]
-  );
-  const searchResults = useMemo(
-    () => globalItems.filter((item) => fuzzyMatch(globalSearch, item.fields)).slice(0, 12),
-    [globalItems, globalSearch]
   );
   const logout = () => {
     localStorage.removeItem('auth-token');
@@ -349,7 +347,11 @@ export default function Layout({ children }: { children: ReactNode }) {
                 </Button>
               </div>
               <div className="mt-3 max-h-[60vh] space-y-2 overflow-y-auto">
-                {searchResults.length === 0 ? (
+                {searching ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  </div>
+                ) : searchResults.length === 0 ? (
                   <p className="px-3 py-8 text-center text-sm text-muted-foreground">{globalSearch ? 'No result found.' : 'Start typing to search your workspace.'}</p>
                 ) : searchResults.map((item) => (
                   <button
@@ -363,7 +365,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                     className="flex w-full cursor-pointer items-center gap-3 rounded-2xl border border-border bg-muted/30 p-3 text-left transition hover:bg-muted/60"
                   >
                     <Badge variant="secondary" className="rounded-full">{item.type}</Badge>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold">{item.title}</p>
                       <p className="truncate text-xs text-muted-foreground">{item.subtitle}</p>
                     </div>

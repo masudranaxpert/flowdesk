@@ -24,6 +24,7 @@ export default function BookmarksPage() {
   const [category, setCategory] = useState('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [editing, setEditing] = useState<BookmarkType | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [delId, setDelId] = useState<string | null>(null);
@@ -31,8 +32,14 @@ export default function BookmarksPage() {
 
   const load = useCallback(() => {
     setLoading(true);
-    api.bookmarks.list({ category }).then(setItems).catch(() => toast.error('Failed to load')).finally(() => setLoading(false));
-  }, [category]);
+    api.bookmarks.list({ category, search, page: String(page), limit: String(PAGE_SIZE) })
+      .then((data: any) => {
+        setItems(data.items || []);
+        setTotal(data.total || 0);
+      })
+      .catch(() => toast.error('Failed to load'))
+      .finally(() => setLoading(false));
+  }, [category, search, page]);
 
   useEffect(() => { const t = setTimeout(load, 300); return () => clearTimeout(t); }, [load]);
   useEffect(() => setPage(1), [search, category]);
@@ -41,12 +48,6 @@ export default function BookmarksPage() {
     api.categories.list({ scope: 'bookmark' }).then((items) => setCategories([fallbackCategory, ...items])).catch(() => {});
   }, []);
 
-  const filteredItems = useMemo(
-    () => items.filter((item) => fuzzyMatch(search, [item.title, item.url, item.description, item.tags, categoryLabel(item.category, categories)])),
-    [items, search, categories]
-  );
-
-  const visibleItems = useMemo(() => filteredItems.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [filteredItems, page]);
   const formCategoryOptions = useMemo(() => categories.map((item) => ({ value: item.slug, label: item.name })), [categories]);
 
   const openCreate = () => { setEditing(null); setForm(emptyForm); setDialogOpen(true); };
@@ -109,7 +110,7 @@ export default function BookmarksPage() {
         ))}
       </div>
 
-      {loading ? <Spinner /> : filteredItems.length === 0 ? (
+      {loading ? <Spinner /> : items.length === 0 ? (
         <EmptyState
           icon={<Bookmark className="h-6 w-6 text-muted-foreground" />}
           title="No bookmarks yet"
@@ -118,7 +119,7 @@ export default function BookmarksPage() {
         />
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {visibleItems.map((b, i) => (
+          {items.map((b, i) => (
             <Card key={b._id} className="interactive-card group rounded-3xl stagger-item" style={{ animationDelay: `${i * 45}ms` }}>
               <CardContent className="flex h-full flex-col p-4">
                 <div className="flex items-start gap-3">
@@ -171,7 +172,7 @@ export default function BookmarksPage() {
         </div>
       )}
 
-      <PaginationControls page={page} total={filteredItems.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
+      <PaginationControls page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen} title={editing ? 'Edit Bookmark' : 'Add Bookmark'}>
         <div className="space-y-4">

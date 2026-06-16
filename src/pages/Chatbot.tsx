@@ -129,12 +129,12 @@ export default function ChatbotPage() {
       api.categories.list(),
     ]).then(([bookmarks, notes, codes, questions, routines, categories]) => {
       setContext(JSON.stringify({
-        bookmarks: bookmarks.slice(0, 50).map((item) => ({ id: item._id, title: item.title, url: item.url, category: item.category, tags: item.tags })),
-        notes: notes.slice(0, 50).map((item) => ({ id: item._id, title: item.title, category: item.category, preview: item.content.slice(0, 500) })),
-        codes: codes.slice(0, 30).map((item) => ({ id: item._id, title: item.title, language: item.language, category: item.category, description: item.description })),
-        questions: questions.slice(0, 50).map((item) => ({ id: item._id, title: item.title, platform: item.platform, category: item.category, solved: item.isSolved })),
-        routines: routines.slice(0, 50).map((item) => ({ id: item._id, title: item.title, type: item.type, dayOfWeek: item.dayOfWeek, date: item.date, startTime: item.startTime, endTime: item.endTime, room: item.room, teacher: item.teacher })),
-        categories: categories.slice(0, 50).map((item) => ({ id: item._id, name: item.name, slug: item.slug, scope: item.scope })),
+        bookmarks: bookmarks.slice(0, 50).map((item: any) => ({ id: item._id, title: item.title, url: item.url, category: item.category, tags: item.tags })),
+        notes: notes.slice(0, 50).map((item: any) => ({ id: item._id, title: item.title, category: item.category, preview: item.content.slice(0, 500) })),
+        codes: codes.slice(0, 30).map((item: any) => ({ id: item._id, title: item.title, language: item.language, category: item.category, description: item.description })),
+        questions: questions.slice(0, 50).map((item: any) => ({ id: item._id, title: item.title, platform: item.platform, category: item.category, solved: item.isSolved })),
+        routines: routines.slice(0, 50).map((item: any) => ({ id: item._id, title: item.title, type: item.type, dayOfWeek: item.dayOfWeek, date: item.date, startTime: item.startTime, endTime: item.endTime, room: item.room, teacher: item.teacher })),
+        categories: categories.slice(0, 50).map((item: any) => ({ id: item._id, name: item.name, slug: item.slug, scope: item.scope })),
       }, null, 2));
     }).catch(() => {});
   }, []);

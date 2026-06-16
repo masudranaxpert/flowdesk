@@ -89,9 +89,11 @@ export default function Dashboard() {
     return stats.bookmarks + stats.notebooks + stats.codes + stats.questions;
   }, [stats]);
 
-  if (!stats) return <Spinner />;
+  const solvedPercent = useMemo(() => {
+    if (!stats || !stats.questions) return 0;
+    return Math.round((stats.solved / stats.questions) * 100);
+  }, [stats]);
 
-  const solvedPercent = stats.questions ? Math.round((stats.solved / stats.questions) * 100) : 0;
   const today = new Date();
   const todayIndex = today.getDay();
   const todayDate = today.toISOString().slice(0, 10);
@@ -171,7 +173,11 @@ export default function Dashboard() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-sm text-muted-foreground">Solved progress</p>
-                  <p className="mt-1 text-3xl font-semibold tracking-tight">{solvedPercent}%</p>
+                  {!stats ? (
+                    <div className="mt-1.5 h-8 w-20 animate-pulse rounded bg-foreground/20" />
+                  ) : (
+                    <p className="mt-1 text-3xl font-semibold tracking-tight">{solvedPercent}%</p>
+                  )}
                 </div>
                 <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary text-primary-foreground">
                   <Target className="h-5 w-5" />
@@ -183,10 +189,14 @@ export default function Dashboard() {
                   style={{ width: `${solvedPercent}%` }}
                 />
               </div>
-              <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                <span>{stats.solved} solved</span>
-                <span>{stats.questions} total questions</span>
-              </div>
+              {!stats ? (
+                <div className="mt-3.5 h-4 w-48 animate-pulse rounded bg-foreground/10" />
+              ) : (
+                <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{stats.solved} solved</span>
+                  <span>{stats.questions} total questions</span>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -194,7 +204,7 @@ export default function Dashboard() {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {sections.map((section, index) => {
-          const value = stats[section.key as keyof Stats] as number;
+          const value = stats ? (stats[section.key as keyof Stats] as number) : null;
           return (
             <Link key={section.key} to={section.to} className="stagger-item block" style={{ animationDelay: `${index * 55}ms` }}>
               <Card className="interactive-card h-full rounded-3xl">
@@ -205,7 +215,11 @@ export default function Dashboard() {
                     </div>
                     <ArrowRight className="h-4 w-4 text-muted-foreground transition group-hover/card:translate-x-0.5 group-hover/card:text-foreground" />
                   </div>
-                  <p className="mt-5 text-3xl font-semibold tracking-tight">{value}</p>
+                  {value === null ? (
+                    <div className="mt-5 h-9 w-16 animate-pulse rounded-lg bg-muted" />
+                  ) : (
+                    <p className="mt-5 text-3xl font-semibold tracking-tight">{value}</p>
+                  )}
                   <p className="mt-1 text-sm font-medium">{section.label}</p>
                   <p className="mt-3 text-sm leading-6 text-muted-foreground">{section.description}</p>
                 </CardContent>
@@ -223,7 +237,11 @@ export default function Dashboard() {
                 <CheckCircle2 className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-2xl font-semibold tracking-tight">{total}</p>
+                {!stats ? (
+                  <div className="h-8 w-16 animate-pulse rounded bg-muted" />
+                ) : (
+                  <p className="text-2xl font-semibold tracking-tight">{total}</p>
+                )}
                 <p className="text-sm text-muted-foreground">Total saved items</p>
               </div>
             </div>
