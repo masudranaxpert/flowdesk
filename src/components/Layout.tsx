@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   BookOpen,
@@ -18,10 +18,15 @@ import {
   Sparkles,
   Sun,
   X,
+  User,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import Dialog from './Dialog';
+import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { cn, fuzzyMatch } from '../lib/utils';
 import type { Bookmark as BookmarkType, CodeSnippet, Notebook, Question, RoutineItem } from '../types';
@@ -169,6 +174,85 @@ export default function Layout({ children }: { children: ReactNode }) {
     navigate('/login');
   };
 
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'danger'>('profile');
+
+  const currentUser = useMemo(() => {
+    try {
+      const stored = localStorage.getItem('auth-user');
+      return stored ? JSON.parse(stored) : { name: '', email: '' };
+    } catch {
+      return { name: '', email: '' };
+    }
+  }, [profileOpen]);
+
+  const [newName, setNewName] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
+  const [profileLoading, setProfileLoading] = useState(false);
+
+  useEffect(() => {
+    if (profileOpen) {
+      setNewName(currentUser.name);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setDeleteConfirmEmail('');
+      setActiveTab('profile');
+    }
+  }, [profileOpen, currentUser]);
+
+  const handleUpdateProfile = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!newName.trim()) return toast.error('Name is required');
+    setProfileLoading(true);
+    try {
+      const data = await api.auth.updateProfile({ name: newName.trim() });
+      localStorage.setItem('auth-user', JSON.stringify(data.user));
+      toast.success(data.message || 'Profile updated successfully');
+      setProfileOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update profile');
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const handleChangePassword = async (e: FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 6) return toast.error('New password must be at least 6 characters');
+    if (newPassword !== confirmPassword) return toast.error('New passwords do not match');
+    setProfileLoading(true);
+    try {
+      const data = await api.auth.changePassword({ currentPassword, newPassword });
+      toast.success(data.message || 'Password changed successfully');
+      setProfileOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to change password');
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async (e: FormEvent) => {
+    e.preventDefault();
+    if (deleteConfirmEmail !== currentUser.email) return toast.error('Email confirmation does not match');
+    setProfileLoading(true);
+    try {
+      const data = await api.auth.deleteAccount();
+      toast.success(data.message || 'Account deleted successfully');
+      localStorage.removeItem('auth-token');
+      localStorage.removeItem('auth-user');
+      navigate('/login');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to delete account');
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="fixed inset-y-0 left-0 z-30 hidden w-[18.5rem] border-r border-sidebar-border bg-sidebar/92 backdrop-blur-xl lg:block">
@@ -221,6 +305,10 @@ export default function Layout({ children }: { children: ReactNode }) {
               </Button>
               <Button variant="outline" size="icon" onClick={() => setDark((value) => !value)} aria-label="Toggle theme">
               {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </Button>
+              <Button variant="outline" onClick={() => setProfileOpen(true)} aria-label="Profile">
+                <User className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Profile</span>
               </Button>
               <Button variant="outline" className="hidden sm:inline-flex" onClick={logout}>Logout</Button>
             </div>
@@ -284,6 +372,107 @@ export default function Layout({ children }: { children: ReactNode }) {
               </div>
             </div>
           </div>
+        )}
+
+        {profileOpen && (
+          <Dialog open={profileOpen} onOpenChange={setProfileOpen} title="Account Settings" description="Manage your account profile, password, or delete your account.">
+            <div className="flex border-b border-border mb-4">
+              <button
+                type="button"
+                className={cn(
+                  "flex-1 pb-2 text-sm font-medium border-b-2 transition-colors",
+                  activeTab === 'profile'
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+                onClick={() => setActiveTab('profile')}
+              >
+                Profile Details
+              </button>
+              <button
+                type="button"
+                className={cn(
+                  "flex-1 pb-2 text-sm font-medium border-b-2 transition-colors",
+                  activeTab === 'password'
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+                onClick={() => setActiveTab('password')}
+              >
+                Password
+              </button>
+              <button
+                type="button"
+                className={cn(
+                  "flex-1 pb-2 text-sm font-medium border-b-2 transition-colors",
+                  activeTab === 'danger'
+                    ? "border-destructive text-destructive"
+                    : "border-transparent text-muted-foreground hover:text-destructive"
+                )}
+                onClick={() => setActiveTab('danger')}
+              >
+                Danger Zone
+              </button>
+            </div>
+
+            {activeTab === 'profile' && (
+              <form onSubmit={handleUpdateProfile} className="space-y-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="profile-email">Email Address</Label>
+                  <Input id="profile-email" type="email" value={currentUser.email} disabled className="opacity-60 cursor-not-allowed bg-muted" />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="profile-name">Full Name</Label>
+                  <Input id="profile-name" type="text" value={newName} onChange={(e) => setNewName(e.target.value)} required />
+                </div>
+                <Button type="submit" className="w-full animate-fade-in" disabled={profileLoading}>
+                  {profileLoading ? 'Saving changes...' : 'Save Profile'}
+                </Button>
+              </form>
+            )}
+
+            {activeTab === 'password' && (
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="current-pass">Current Password</Label>
+                  <Input id="current-pass" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="••••••••" required />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="new-pass">New Password</Label>
+                  <Input id="new-pass" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••" required />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="confirm-pass">Confirm New Password</Label>
+                  <Input id="confirm-pass" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" required />
+                </div>
+                <Button type="submit" className="w-full animate-fade-in" disabled={profileLoading}>
+                  {profileLoading ? 'Changing password...' : 'Update Password'}
+                </Button>
+              </form>
+            )}
+
+            {activeTab === 'danger' && (
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
+                  <p className="font-semibold">Warning: Account deletion is permanent!</p>
+                  <p className="mt-1 text-destructive/80 leading-normal">
+                    All your data, including bookmarks, notes, code snippets, routines, AI settings, and chatbot history, will be completely deleted and cannot be recovered.
+                  </p>
+                </div>
+                <form onSubmit={handleDeleteAccount} className="space-y-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="delete-email">
+                      To confirm, please type your email: <span className="font-semibold select-all">{currentUser.email}</span>
+                    </Label>
+                    <Input id="delete-email" type="email" value={deleteConfirmEmail} onChange={(e) => setDeleteConfirmEmail(e.target.value)} placeholder="Enter your email to confirm" required />
+                  </div>
+                  <Button type="submit" variant="destructive" className="w-full animate-fade-in" disabled={profileLoading || deleteConfirmEmail !== currentUser.email}>
+                    {profileLoading ? 'Deleting account...' : 'Permanently Delete My Account'}
+                  </Button>
+                </form>
+              </div>
+            )}
+          </Dialog>
         )}
       </div>
     </div>
