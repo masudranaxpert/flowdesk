@@ -75,7 +75,7 @@ export default function Login() {
               <div className="grid gap-2">
                 <div className="flex items-center gap-3">
                   <Label htmlFor="password">Password</Label>
-                  <Link to="#" className="ml-auto text-sm font-medium text-primary hover:underline">
+                  <Link to="/forgot-password" className="ml-auto text-sm font-medium text-primary hover:underline">
                     Forgot?
                   </Link>
                 </div>

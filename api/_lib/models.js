@@ -10,6 +10,8 @@ const userSchema = new mongoose.Schema({
   emailVerified: { type: Boolean, default: false },
   verificationCodeHash: { type: String, default: '' },
   verificationExpires: { type: Date, default: null },
+  resetCodeHash: { type: String, default: '' },
+  resetExpires: { type: Date, default: null },
 }, { timestamps: true });
 
 const bookmarkSchema = new mongoose.Schema({

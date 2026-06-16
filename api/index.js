@@ -1,7 +1,7 @@
 import dbConnect from './_lib/mongodb.js';
 import { User, Bookmark, Notebook, CodeSnippet, Question, Category, Routine, AiSetting, ChatHistory } from './_lib/models.js';
 import { createToken, verifyPassword, hashPassword, createVerificationCode, hashValue, verifyToken } from './_lib/auth.js';
-import { sendVerificationEmail } from './_lib/mailer.js';
+import { sendVerificationEmail, sendResetPasswordEmail } from './_lib/mailer.js';
 
 async function requireUser(req, res) {
   const header = req.headers.authorization || '';
@@ -49,12 +49,66 @@ export default async function handler(req, res) {
       const email = String(req.body.email || '').trim().toLowerCase();
       const password = String(req.body.password || '');
       if (!name || !email || password.length < 6) return res.status(400).json({ error: 'Name, email and 6+ character password required' });
-      if (await User.exists({ email })) return res.status(409).json({ error: 'Email already registered' });
+      
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        if (existingUser.emailVerified) return res.status(409).json({ error: 'Email already registered' });
+        const { salt, passwordHash } = hashPassword(password);
+        const code = createVerificationCode();
+        existingUser.name = name;
+        existingUser.salt = salt;
+        existingUser.passwordHash = passwordHash;
+        existingUser.verificationCodeHash = hashValue(code);
+        existingUser.verificationExpires = new Date(Date.now() + 10 * 60 * 1000);
+        await existingUser.save();
+        await sendVerificationEmail({ to: email, name, code });
+        return res.status(201).json({ requiresVerification: true, email: existingUser.email, message: 'Verification code sent' });
+      }
+
       const { salt, passwordHash } = hashPassword(password);
       const code = createVerificationCode();
       const user = await User.create({ name, email, salt, passwordHash, emailVerified: false, verificationCodeHash: hashValue(code), verificationExpires: new Date(Date.now() + 10 * 60 * 1000) });
       await sendVerificationEmail({ to: email, name, code });
       return res.status(201).json({ requiresVerification: true, email: user.email, message: 'Verification code sent' });
+    }
+
+    if (slug === 'auth/forgot-password' && method === 'POST') {
+      const email = String(req.body.email || '').trim().toLowerCase();
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.json({ message: 'If the email is registered, a password reset code has been sent.' });
+      }
+      if (user.emailVerified === false) {
+        return res.status(400).json({ error: 'This email is not verified yet. Please register or verify first.' });
+      }
+      const code = createVerificationCode();
+      user.resetCodeHash = hashValue(code);
+      user.resetExpires = new Date(Date.now() + 10 * 60 * 1000);
+      await user.save();
+      await sendResetPasswordEmail({ to: user.email, name: user.name, code });
+      return res.json({ message: 'Password reset code sent to your email.' });
+    }
+
+    if (slug === 'auth/reset-password' && method === 'POST') {
+      const email = String(req.body.email || '').trim().toLowerCase();
+      const code = String(req.body.code || '').trim();
+      const newPassword = String(req.body.newPassword || '');
+      if (newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+      const user = await User.findOne({ email });
+      if (!user) return res.status(404).json({ error: 'Account not found' });
+      if (!user.resetExpires || user.resetExpires.getTime() < Date.now()) {
+        return res.status(400).json({ error: 'Reset code expired' });
+      }
+      if (user.resetCodeHash !== hashValue(code)) {
+        return res.status(400).json({ error: 'Invalid reset code' });
+      }
+      const { salt, passwordHash } = hashPassword(newPassword);
+      user.salt = salt;
+      user.passwordHash = passwordHash;
+      user.resetCodeHash = '';
+      user.resetExpires = null;
+      await user.save();
+      return res.json({ message: 'Password has been reset successfully' });
     }
 
     if (slug === 'auth/verify' && method === 'POST') {
