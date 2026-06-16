@@ -1,14 +1,13 @@
 import dbConnect from './_lib/mongodb.js';
 import { User, Bookmark, Notebook, CodeSnippet, Question, Category, Routine, AiSetting, ChatHistory } from './_lib/models.js';
 import { createToken, verifyPassword, hashPassword, createVerificationCode, hashValue, verifyToken } from './_lib/auth.js';
-import { sendVerificationEmail, sendResetPasswordEmail } from './_lib/mailer.js';
 
 async function requireUser(req, res) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
   const session = verifyToken(token);
   if (!session?.id) { res.status(401).json({ error: 'Login required' }); return null; }
-  const user = await User.findById(session.id).select('_id name email');
+  const user = await User.findById(session.id).select('_id name email').lean();
   if (!user) { res.status(401).json({ error: 'Login required' }); return null; }
   return user;
 }
@@ -61,6 +60,7 @@ export default async function handler(req, res) {
         existingUser.verificationCodeHash = hashValue(code);
         existingUser.verificationExpires = new Date(Date.now() + 10 * 60 * 1000);
         await existingUser.save();
+        const { sendVerificationEmail } = await import('./_lib/mailer.js');
         await sendVerificationEmail({ to: email, name, code });
         return res.status(201).json({ requiresVerification: true, email: existingUser.email, message: 'Verification code sent' });
       }
@@ -68,6 +68,7 @@ export default async function handler(req, res) {
       const { salt, passwordHash } = hashPassword(password);
       const code = createVerificationCode();
       const user = await User.create({ name, email, salt, passwordHash, emailVerified: false, verificationCodeHash: hashValue(code), verificationExpires: new Date(Date.now() + 10 * 60 * 1000) });
+      const { sendVerificationEmail } = await import('./_lib/mailer.js');
       await sendVerificationEmail({ to: email, name, code });
       return res.status(201).json({ requiresVerification: true, email: user.email, message: 'Verification code sent' });
     }
@@ -85,6 +86,7 @@ export default async function handler(req, res) {
       user.resetCodeHash = hashValue(code);
       user.resetExpires = new Date(Date.now() + 10 * 60 * 1000);
       await user.save();
+      const { sendResetPasswordEmail } = await import('./_lib/mailer.js');
       await sendResetPasswordEmail({ to: user.email, name: user.name, code });
       return res.json({ message: 'Password reset code sent to your email.' });
     }
@@ -132,6 +134,7 @@ export default async function handler(req, res) {
       const code = createVerificationCode();
       user.verificationCodeHash = hashValue(code); user.verificationExpires = new Date(Date.now() + 10 * 60 * 1000);
       await user.save();
+      const { sendVerificationEmail } = await import('./_lib/mailer.js');
       await sendVerificationEmail({ to: user.email, name: user.name, code });
       return res.json({ message: 'Verification code sent' });
     }
@@ -194,7 +197,7 @@ export default async function handler(req, res) {
       const user = await requireUser(req, res);
       if (!user) return;
       if (method === 'GET') {
-        const item = await ChatHistory.findOne({ userId: user._id });
+        const item = await ChatHistory.findOne({ userId: user._id }).lean();
         return res.json({ messages: item?.messages || [] });
       }
       if (method === 'PUT') {
@@ -228,10 +231,10 @@ export default async function handler(req, res) {
       const regex = { $regex: escapedQ, $options: 'i' };
       const filter = { userId: user._id };
       const [bookmarks, notebooks, codes, questions] = await Promise.all([
-        Bookmark.find({ ...filter, $or: [{ title: regex }, { url: regex }, { tags: regex }] }).limit(5),
-        Notebook.find({ ...filter, $or: [{ title: regex }, { content: regex }, { tags: regex }] }).limit(5),
-        CodeSnippet.find({ ...filter, $or: [{ title: regex }, { code: regex }, { tags: regex }] }).limit(5),
-        Question.find({ ...filter, $or: [{ title: regex }, { tags: regex }] }).limit(5),
+        Bookmark.find({ ...filter, $or: [{ title: regex }, { url: regex }, { tags: regex }] }).limit(5).lean(),
+        Notebook.find({ ...filter, $or: [{ title: regex }, { content: regex }, { tags: regex }] }).limit(5).lean(),
+        CodeSnippet.find({ ...filter, $or: [{ title: regex }, { code: regex }, { tags: regex }] }).limit(5).lean(),
+        Question.find({ ...filter, $or: [{ title: regex }, { tags: regex }] }).limit(5).lean(),
       ]);
       const results = [
         ...bookmarks.map((item) => ({ id: item._id, type: 'Bookmark', title: item.title, subtitle: item.url, to: '/bookmarks' })),
@@ -315,13 +318,13 @@ export default async function handler(req, res) {
             const skip = (page - 1) * limit;
 
             const [items, total] = await Promise.all([
-              Model.find(filter).sort(sort).skip(skip).limit(limit),
+              Model.find(filter).sort(sort).skip(skip).limit(limit).lean(),
               Model.countDocuments(filter),
             ]);
             return res.json({ items, total });
           }
 
-          const items = await Model.find(filter).sort(sort);
+          const items = await Model.find(filter).sort(sort).lean();
           return res.json(items);
         }
 
@@ -344,7 +347,7 @@ export default async function handler(req, res) {
 
       if (id) {
         if (method === 'GET') {
-          const item = await Model.findById(id);
+          const item = await Model.findById(id).lean();
           if (!item) return res.status(404).json({ error: 'Not found' });
           return res.json(item);
         }

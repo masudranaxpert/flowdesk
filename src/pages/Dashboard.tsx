@@ -66,19 +66,29 @@ const sections = [
   },
 ] as const;
 
+let cachedStats: Stats | null = null;
+let cachedRoutines: RoutineItem[] = [];
+
 export default function Dashboard() {
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [upcoming, setUpcoming] = useState<RoutineItem[]>([]);
-  const [routines, setRoutines] = useState<RoutineItem[]>([]);
+  const [stats, setStats] = useState<Stats | null>(cachedStats);
+  const [upcoming, setUpcoming] = useState<RoutineItem[]>(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return cachedRoutines.filter((item) => !item.repeatWeekly && item.date >= today).slice(0, 3);
+  });
+  const [routines, setRoutines] = useState<RoutineItem[]>(cachedRoutines);
   const [routineOpen, setRoutineOpen] = useState(false);
 
   useEffect(() => {
     api.stats
       .get()
-      .then(setStats)
+      .then((data) => {
+        setStats(data);
+        cachedStats = data;
+      })
       .catch(() => setStats({ bookmarks: 0, notebooks: 0, codes: 0, questions: 0, solved: 0 }));
     api.routines.list().then((items) => {
       setRoutines(items);
+      cachedRoutines = items;
       const today = new Date().toISOString().slice(0, 10);
       setUpcoming(items.filter((item) => !item.repeatWeekly && item.date >= today).slice(0, 3));
     }).catch(() => {});
