@@ -15,6 +15,7 @@ import ChatbotPage from './pages/Chatbot';
 import RoutinePage from './pages/Routine';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import ForgotPassword from './pages/ForgotPassword';
 
 function ProtectedApp() {
   if (!localStorage.getItem('auth-token')) return <Navigate to="/login" replace />;
@@ -55,6 +56,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/share/:type/:id" element={<SharePage />} />
           <Route path="*" element={<ProtectedApp />} />
         </Routes>

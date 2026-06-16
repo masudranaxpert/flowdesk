@@ -14,7 +14,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     if (res.status === 401) {
       localStorage.removeItem('auth-token');
       localStorage.removeItem('auth-user');
-      if (!location.pathname.startsWith('/login') && !location.pathname.startsWith('/signup')) location.href = '/login';
+      if (!location.pathname.startsWith('/login') && !location.pathname.startsWith('/signup') && !location.pathname.startsWith('/forgot-password')) location.href = '/login';
     }
     throw new Error(err.error || 'Request failed');
   }
@@ -35,6 +35,8 @@ export const api = {
     verify: (data: { email: string; code: string }) => request<{ token: string; user: { id: string; name: string; email: string } }>('/auth/verify', { method: 'POST', body: JSON.stringify(data) }),
     resend: (data: { email: string }) => request<{ message: string }>('/auth/resend', { method: 'POST', body: JSON.stringify(data) }),
     me: () => request<{ user: { id: string; name: string; email: string } }>('/auth/me'),
+    forgotPassword: (data: { email: string }) => request<{ message: string }>('/auth/forgot-password', { method: 'POST', body: JSON.stringify(data) }),
+    resetPassword: (data: { email: string; code: string; newPassword: string }) => request<{ message: string }>('/auth/reset-password', { method: 'POST', body: JSON.stringify(data) }),
   },
   chatHistory: {
     get: () => request<{ messages: { role: 'user' | 'assistant'; content: string }[] }>('/chat-history'),
