@@ -1,9 +1,7 @@
 name = "bookmark-vault"
 compatibility_date = "2024-04-03"
 compatibility_flags = [ "nodejs_compat" ]
-
-[assets]
-directory = "./dist"
+pages_build_output_dir = "./dist"
 
 [[d1_databases]]
 binding = "DB"
