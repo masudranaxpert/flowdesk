@@ -1,7 +1,6 @@
 import crypto from 'crypto';
-import { User } from './models.js';
 
-const SECRET = process.env.AUTH_SECRET || process.env.JWT_SECRET || process.env.MONGODB_URI || 'bookmark-vault-dev-secret';
+const SECRET = process.env.AUTH_SECRET || process.env.JWT_SECRET || process.env.D1_REST_TOKEN || process.env.token || 'bookmark-vault-dev-secret';
 
 function base64url(value) {
   return Buffer.from(value).toString('base64url');
@@ -32,7 +31,7 @@ export function verifyPassword(password, salt, passwordHash) {
 }
 
 export function createToken(user) {
-  const payload = base64url(JSON.stringify({ id: String(user._id), email: user.email, name: user.name, exp: Date.now() + 1000 * 60 * 60 * 24 * 30 }));
+  const payload = base64url(JSON.stringify({ id: String(user.id || user._id), email: user.email, name: user.name, exp: Date.now() + 1000 * 60 * 60 * 24 * 30 }));
   return `${payload}.${sign(payload)}`;
 }
 
@@ -43,20 +42,4 @@ export function verifyToken(token) {
   const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
   if (!data.exp || Date.now() > data.exp) return null;
   return data;
-}
-
-export async function requireUser(req, res) {
-  const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
-  const session = verifyToken(token);
-  if (!session?.id) {
-    res.status(401).json({ error: 'Login required' });
-    return null;
-  }
-  const user = await User.findById(session.id).select('_id name email').lean();
-  if (!user) {
-    res.status(401).json({ error: 'Login required' });
-    return null;
-  }
-  return user;
 }

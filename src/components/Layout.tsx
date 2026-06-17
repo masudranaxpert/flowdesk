@@ -458,7 +458,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                 <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
                   <p className="font-semibold">Warning: Account deletion is permanent!</p>
                   <p className="mt-1 text-destructive/80 leading-normal">
-                    All your data, including bookmarks, notes, code snippets, routines, AI settings, and chatbot history, will be completely deleted and cannot be recovered.
+                    All database data, including bookmarks, notes, code snippets, routines, categories, and AI settings, will be completely deleted and cannot be recovered.
                   </p>
                 </div>
                 <form onSubmit={handleDeleteAccount} className="space-y-4">

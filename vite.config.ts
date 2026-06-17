@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 import { pathToFileURL } from 'url'
-import { existsSync } from 'fs'
 
 function localApiPlugin(): PluginOption {
   return {
@@ -13,18 +12,7 @@ function localApiPlugin(): PluginOption {
       server.middlewares.use('/api', async (req, res, next) => {
         try {
           const requestUrl = new URL(req.url ?? '/', 'http://localhost')
-          const parts = requestUrl.pathname.split('/').filter(Boolean)
-          const resource = parts[0]
-          const id = parts[1]
-
-          if (!resource) return next()
-
-          const staticNestedFile = id ? path.resolve(__dirname, 'api', resource, `${id}.js`) : ''
-          const apiFile = id
-            ? existsSync(staticNestedFile)
-              ? staticNestedFile
-              : path.resolve(__dirname, 'api', resource, '[id].js')
-            : path.resolve(__dirname, 'api', `${resource}.js`)
+          const apiFile = path.resolve(__dirname, 'api', 'index.js')
 
           const body = await new Promise<unknown>((resolve, reject) => {
             if (req.method === 'GET' || req.method === 'HEAD') return resolve({})
@@ -43,7 +31,6 @@ function localApiPlugin(): PluginOption {
           })
 
           const query = Object.fromEntries(requestUrl.searchParams.entries())
-          if (id) query.id = id
 
           ;(req as any).query = query
           ;(req as any).body = body
