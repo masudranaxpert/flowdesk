@@ -24,10 +24,22 @@ const clearCache = () => {
 
 export default function BookmarksPage() {
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [page, setPage] = useState(1);
 
-  const cacheKey = `${category}-${search}-${page}`;
+  useEffect(() => {
+    if (search === '') {
+      setDebouncedSearch('');
+      return;
+    }
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const cacheKey = `${category}-${debouncedSearch}-${page}`;
   const cached = listCache[cacheKey] || { items: [], total: 0 };
 
   const [items, setItems] = useState<BookmarkType[]>(cached.items);
@@ -41,9 +53,9 @@ export default function BookmarksPage() {
   const [categories, setCategories] = useState<Category[]>([fallbackCategory]);
 
   const load = useCallback(() => {
-    const key = `${category}-${search}-${page}`;
+    const key = `${category}-${debouncedSearch}-${page}`;
     if (!listCache[key]) setLoading(true);
-    api.bookmarks.list({ category, search, page: String(page), limit: String(PAGE_SIZE) })
+    api.bookmarks.list({ category, search: debouncedSearch, page: String(page), limit: String(PAGE_SIZE) })
       .then((data: any) => {
         const resItems = data.items || [];
         const resTotal = data.total || 0;
@@ -53,10 +65,10 @@ export default function BookmarksPage() {
       })
       .catch(() => toast.error('Failed to load'))
       .finally(() => setLoading(false));
-  }, [category, search, page]);
+  }, [category, debouncedSearch, page]);
 
-  useEffect(() => { const t = setTimeout(load, 300); return () => clearTimeout(t); }, [load]);
-  useEffect(() => setPage(1), [search, category]);
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => setPage(1), [debouncedSearch, category]);
 
   useEffect(() => {
     api.categories.list({ scope: 'bookmark' }).then((items) => setCategories([fallbackCategory, ...items])).catch(() => {});

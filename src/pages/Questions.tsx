@@ -79,13 +79,25 @@ const clearCache = () => {
 export default function QuestionsPage() {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [difficulty, setDifficulty] = useState('all');
   const [platform, setPlatform] = useState('all');
   const [category, setCategory] = useState('all');
   const [solved, setSolved] = useState('all');
   const [page, setPage] = useState(1);
 
-  const cacheKey = `${difficulty}-${platform}-${category}-${solved}-${search}-${page}`;
+  useEffect(() => {
+    if (search === '') {
+      setDebouncedSearch('');
+      return;
+    }
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const cacheKey = `${difficulty}-${platform}-${category}-${solved}-${debouncedSearch}-${page}`;
   const cached = listCache[cacheKey] || { items: [], total: 0 };
 
   const [items, setItems] = useState<Question[]>(cached.items);
@@ -100,9 +112,9 @@ export default function QuestionsPage() {
   const [categories, setCategories] = useState<Category[]>([fallbackCategory]);
 
   const load = useCallback(() => {
-    const key = `${difficulty}-${platform}-${category}-${solved}-${search}-${page}`;
+    const key = `${difficulty}-${platform}-${category}-${solved}-${debouncedSearch}-${page}`;
     if (!listCache[key]) setLoading(true);
-    api.questions.list({ difficulty, platform, category, solved, search, page: String(page), limit: String(PAGE_SIZE) })
+    api.questions.list({ difficulty, platform, category, solved, search: debouncedSearch, page: String(page), limit: String(PAGE_SIZE) })
       .then((data: any) => {
         const resItems = data.items || [];
         const resTotal = data.total || 0;
@@ -112,10 +124,10 @@ export default function QuestionsPage() {
       })
       .catch(() => toast.error('Failed to load'))
       .finally(() => setLoading(false));
-  }, [difficulty, platform, category, solved, search, page]);
+  }, [difficulty, platform, category, solved, debouncedSearch, page]);
 
-  useEffect(() => { const t = setTimeout(load, 300); return () => clearTimeout(t); }, [load]);
-  useEffect(() => setPage(1), [search, difficulty, platform, category, solved]);
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => setPage(1), [debouncedSearch, difficulty, platform, category, solved]);
 
   useEffect(() => {
     api.categories.list({ scope: 'question' }).then((items) => setCategories([fallbackCategory, ...items])).catch(() => {});
