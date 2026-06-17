@@ -18,6 +18,10 @@ import { Card, CardContent } from '@/components/ui/card';
 const emptyForm = { title: '', code: '', language: 'cpp', description: '', category: 'general', tags: [] as string[] };
 const PAGE_SIZE = 8;
 const fallbackCategory: Category = { _id: 'general', name: 'General', slug: 'general', scope: 'all', color: 'primary', createdAt: '', updatedAt: '' };
+const favoriteOptions = [
+  { value: 'all', label: 'All Snippets' },
+  { value: 'true', label: 'Favorites' },
+];
 
 const languageOptions = [
   { value: 'all', label: 'All Languages' },
@@ -49,6 +53,7 @@ export default function CodeBookPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [language, setLanguage] = useState('all');
   const [category, setCategory] = useState('all');
+  const [favorite, setFavorite] = useState('all');
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -62,7 +67,7 @@ export default function CodeBookPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  const cacheKey = `${language}-${category}-${debouncedSearch}-${page}`;
+  const cacheKey = `${language}-${category}-${favorite}-${debouncedSearch}-${page}`;
   const cached = listCache[cacheKey] || { items: [], total: 0 };
 
   const [items, setItems] = useState<CodeSnippet[]>(cached.items);
@@ -87,9 +92,9 @@ export default function CodeBookPage() {
   }, [form.code, dialogOpen, editing, form.language]);
 
   const load = useCallback(() => {
-    const key = `${language}-${category}-${debouncedSearch}-${page}`;
+    const key = `${language}-${category}-${favorite}-${debouncedSearch}-${page}`;
     if (!listCache[key]) setLoading(true);
-    api.codes.list({ language, category, search: debouncedSearch, page: String(page), limit: String(PAGE_SIZE) })
+    api.codes.list({ language, category, favorite: favorite === 'true' ? 'true' : '', search: debouncedSearch, page: String(page), limit: String(PAGE_SIZE) })
       .then((data: any) => {
         const resItems = data.items || [];
         const resTotal = data.total || 0;
@@ -99,10 +104,10 @@ export default function CodeBookPage() {
       })
       .catch(() => toast.error('Failed to load'))
       .finally(() => setLoading(false));
-  }, [language, category, debouncedSearch, page]);
+  }, [language, category, favorite, debouncedSearch, page]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => setPage(1), [debouncedSearch, language, category]);
+  useEffect(() => setPage(1), [debouncedSearch, language, category, favorite]);
 
   useEffect(() => {
     api.categories.list({ scope: 'code' }).then((items) => setCategories([fallbackCategory, ...items])).catch(() => {});
@@ -177,6 +182,7 @@ export default function CodeBookPage() {
         </div>
         <Select value={language} onChange={setLanguage} options={languageOptions} className="sm:w-44" />
         <Select value={category} onChange={setCategory} options={categoryOptions} className="sm:w-48" />
+        <Select value={favorite} onChange={setFavorite} options={favoriteOptions} className="sm:w-44" />
       </div>
 
       {loading ? <Spinner /> : items.length === 0 ? (

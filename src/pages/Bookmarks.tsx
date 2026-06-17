@@ -16,6 +16,10 @@ import { Card, CardContent } from '@/components/ui/card';
 const emptyForm = { url: '', title: '', description: '', tags: [] as string[], category: 'general' };
 const PAGE_SIZE = 9;
 const fallbackCategory: Category = { _id: 'general', name: 'General', slug: 'general', scope: 'all', color: 'primary', createdAt: '', updatedAt: '' };
+const favoriteOptions = [
+  { value: 'all', label: 'All Bookmarks' },
+  { value: 'true', label: 'Favorites' },
+];
 
 const listCache: Record<string, { items: any[]; total: number }> = {};
 const clearCache = () => {
@@ -26,6 +30,7 @@ export default function BookmarksPage() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [category, setCategory] = useState('all');
+  const [favorite, setFavorite] = useState('all');
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -39,7 +44,7 @@ export default function BookmarksPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  const cacheKey = `${category}-${debouncedSearch}-${page}`;
+  const cacheKey = `${category}-${favorite}-${debouncedSearch}-${page}`;
   const cached = listCache[cacheKey] || { items: [], total: 0 };
 
   const [items, setItems] = useState<BookmarkType[]>(cached.items);
@@ -82,9 +87,9 @@ export default function BookmarksPage() {
   }, [form.url, dialogOpen, editing]);
 
   const load = useCallback(() => {
-    const key = `${category}-${debouncedSearch}-${page}`;
+    const key = `${category}-${favorite}-${debouncedSearch}-${page}`;
     if (!listCache[key]) setLoading(true);
-    api.bookmarks.list({ category, search: debouncedSearch, page: String(page), limit: String(PAGE_SIZE) })
+    api.bookmarks.list({ category, favorite: favorite === 'true' ? 'true' : '', search: debouncedSearch, page: String(page), limit: String(PAGE_SIZE) })
       .then((data: any) => {
         const resItems = data.items || [];
         const resTotal = data.total || 0;
@@ -94,10 +99,10 @@ export default function BookmarksPage() {
       })
       .catch(() => toast.error('Failed to load'))
       .finally(() => setLoading(false));
-  }, [category, debouncedSearch, page]);
+  }, [category, favorite, debouncedSearch, page]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => setPage(1), [debouncedSearch, category]);
+  useEffect(() => setPage(1), [debouncedSearch, category, favorite]);
 
   useEffect(() => {
     api.categories.list({ scope: 'bookmark' }).then((items) => setCategories([fallbackCategory, ...items])).catch(() => {});
@@ -157,6 +162,7 @@ export default function BookmarksPage() {
         <div className="flex-1">
           <SearchInput value={search} onChange={setSearch} placeholder="Search bookmarks..." />
         </div>
+        <Select value={favorite} onChange={setFavorite} options={favoriteOptions} className="sm:w-44" />
       </div>
 
       <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
