@@ -1,8 +1,3 @@
-import crypto from 'node:crypto';
-
-const D1_URL = (process.env.D1_REST_URL || process.env.D1_REST_ENDPOINT || process.env.D1_URL || '').trim().replace(/^["']|["']$/g, '').replace(/\/$/, '');
-const D1_TOKEN = (process.env.D1_REST_TOKEN || process.env.D1_SECRET || process.env.token || process.env.TOKEN || '').trim().replace(/^["']|["']$/g, '');
-
 let schemaPromise;
 let dbBinding = null;
 
@@ -10,8 +5,34 @@ export function setDbBinding(db) {
   dbBinding = db;
 }
 
-function assertConfig() {
-  if (!D1_URL || !D1_TOKEN) throw new Error('D1_REST_URL and D1_REST_TOKEN are required');
+function getD1Url() {
+  return (
+    globalThis.APP_ENV?.D1_REST_URL ||
+    globalThis.APP_ENV?.D1_REST_ENDPOINT ||
+    globalThis.APP_ENV?.D1_URL ||
+    process.env.D1_REST_URL ||
+    process.env.D1_REST_ENDPOINT ||
+    process.env.D1_URL ||
+    ''
+  ).trim().replace(/^["']|["']$/g, '').replace(/\/$/, '');
+}
+
+function getD1Token() {
+  return (
+    globalThis.APP_ENV?.D1_REST_TOKEN ||
+    globalThis.APP_ENV?.D1_SECRET ||
+    globalThis.APP_ENV?.token ||
+    globalThis.APP_ENV?.TOKEN ||
+    process.env.D1_REST_TOKEN ||
+    process.env.D1_SECRET ||
+    process.env.token ||
+    process.env.TOKEN ||
+    ''
+  ).trim().replace(/^["']|["']$/g, '');
+}
+
+function assertConfig(url, token) {
+  if (!url || !token) throw new Error('D1_REST_URL and D1_REST_TOKEN are required');
 }
 
 export async function d1Query(query, params = []) {
@@ -20,11 +41,13 @@ export async function d1Query(query, params = []) {
     const res = await stmt.bind(...params).all();
     return res.results || [];
   }
-  assertConfig();
-  const response = await fetch(`${D1_URL}/query`, {
+  const url = getD1Url();
+  const token = getD1Token();
+  assertConfig(url, token);
+  const response = await fetch(`${url}/query`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${D1_TOKEN}`,
+      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ query, params }),
@@ -35,7 +58,7 @@ export async function d1Query(query, params = []) {
 }
 
 export function id() {
-  return crypto.randomUUID();
+  return globalThis.crypto.randomUUID();
 }
 
 export function now() {
