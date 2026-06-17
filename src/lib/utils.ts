@@ -1,5 +1,4 @@
 import { clsx, type ClassValue } from "clsx"
-import Fuse from "fuse.js"
 import { twMerge } from "tailwind-merge"
 
 export function cn(...inputs: ClassValue[]) {
@@ -97,6 +96,43 @@ function editDistanceAtMostOne(a: string, b: string) {
   return edits + (a.length - i) + (b.length - j) <= 1;
 }
 
+function levenshtein(a: string, b: string): number {
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+  let wordA = a;
+  let wordB = b;
+  if (wordA.length > wordB.length) {
+    const tmp = wordA;
+    wordA = wordB;
+    wordB = tmp;
+  }
+  const row = new Int32Array(wordA.length + 1);
+  for (let i = 0; i <= wordA.length; i++) {
+    row[i] = i;
+  }
+  for (let i = 1; i <= wordB.length; i++) {
+    let prev = i;
+    for (let j = 1; j <= wordA.length; j++) {
+      let val;
+      if (wordB[i - 1] === wordA[j - 1]) {
+        val = row[j - 1];
+      } else {
+        val = Math.min(
+          row[j - 1] + 1,
+          Math.min(
+            row[j] + 1,
+            prev + 1
+          )
+        );
+      }
+      row[j - 1] = prev;
+      prev = val;
+    }
+    row[wordA.length] = prev;
+  }
+  return row[wordA.length];
+}
+
 export function fuzzyMatch(search: string, fields: unknown[]) {
   const query = normalizeSearchText(search);
   if (!query) return true;
@@ -112,12 +148,9 @@ export function fuzzyMatch(search: string, fields: unknown[]) {
   );
   if (tokenMatch) return true;
 
-  return new Fuse([{ text: haystack }], {
-    keys: ['text'],
-    threshold: 0.35,
-    ignoreLocation: true,
-    minMatchCharLength: Math.min(2, query.length),
-  }).search(query).length > 0;
+  const dist = levenshtein(query, haystack);
+  const maxLen = Math.max(query.length, haystack.length);
+  return dist / maxLen <= 0.35;
 }
 
 export function getShareUrl(type: 'notes' | 'codes' | 'questions' | 'bookmarks', id: string) {
