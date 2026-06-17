@@ -445,7 +445,7 @@ export default function NoteEditorPage() {
     const { start, end, text } = selectedRange();
     if (!text.trim()) return toast.error('Select text first');
     const enclosing = findEnclosingFontSizeSpan(content, start, end);
-    const current = enclosing?.size || firstFontSizeInText(text) || Number(String(selectedFontSize).replace('px', '')) || 16;
+    const current = enclosing?.size || firstFontSizeInText(text) || 16;
     const next = textSizes.find((size) => size > current) || textSizes[textSizes.length - 1];
     setSelectedFontSize(`${next}px`);
     applyFontSize(`${next}px`);
@@ -862,7 +862,7 @@ export default function NoteEditorPage() {
           ) : (
             <div className="min-h-[55vh] cursor-text rounded-2xl border border-border bg-card/70 p-4" onClick={() => setMode('write')}>
               {content ? (
-                <div className="prose-dark max-w-none">
+                <div className="prose-dark note-reading max-w-none">
                   <MarkdownView allowHtml>{content}</MarkdownView>
                 </div>
               ) : (

@@ -171,7 +171,7 @@ export default function NotebooksPage() {
 
       <Dialog open={!!viewNote} onOpenChange={v => !v && setViewNote(null)} title={viewNote?.title || ''} maxWidth="sm:max-w-2xl">
         {viewNote && (
-          <div className="prose-dark max-w-none">
+          <div className="prose-dark note-reading max-w-none">
             <MarkdownView allowHtml>{viewNote.content}</MarkdownView>
           </div>
         )}
