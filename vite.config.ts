@@ -4,6 +4,8 @@ import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 import { pathToFileURL } from 'url'
 
+import { cloudflare } from "@cloudflare/vite-plugin";
+
 function localApiPlugin(): PluginOption {
   return {
     name: 'local-api-functions',
@@ -69,11 +71,11 @@ export default defineConfig(({ mode }) => {
   Object.assign(process.env, loadEnv(mode, process.cwd(), ''))
 
   return {
-    plugins: [react(), tailwindcss(), localApiPlugin()],
+    plugins: [react(), tailwindcss(), localApiPlugin(), cloudflare()],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
       },
     },
-  }
+  };
 })
