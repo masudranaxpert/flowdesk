@@ -1,11 +1,12 @@
-import type { AiSetting, Bookmark, Category, CodeSnippet, Notebook, Question, RoutineItem, Stats } from '../types';
+import type { AiSetting, Bookmark, Category, CodeSnippet, Notebook, Question, RoutineItem, Stats, UploadedFile } from '../types';
 
 const BASE = '/api';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem('auth-token');
+  const isFormData = options?.body instanceof FormData;
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    headers: { ...(isFormData ? {} : { 'Content-Type': 'application/json' }), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     ...options,
   });
 
@@ -96,5 +97,12 @@ export const api = {
     get: () => request<{ messages: any[] }>('/chat-history'),
     update: (messages: any[]) => request<{ messages: any[] }>('/chat-history', { method: 'PUT', body: JSON.stringify({ messages }) }),
     clear: () => request<{ message: string }>('/chat-history', { method: 'DELETE' }),
+  },
+  files: {
+    upload: (file: File) => {
+      const form = new FormData();
+      form.append('file', file);
+      return request<UploadedFile>('/files', { method: 'POST', body: form });
+    },
   },
 };

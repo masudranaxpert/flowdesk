@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, type ClipboardEvent, type FocusEvent, type KeyboardEvent, type MouseEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Bold, Bot, Code2, Download, Eye, Heading2, Italic, List, Palette, Save, Sparkles, Type } from 'lucide-react';
+import { ArrowLeft, Bold, Bot, Code2, Download, Eye, FileUp, Heading2, Italic, List, Palette, Redo2, Save, Sparkles, Type, Undo2, UploadCloud } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { runAiChat, type AiSettings, defaultAiSettings } from '../lib/ai';
@@ -39,11 +39,19 @@ const fontSizes = [
   { value: '26px', label: 'Title' },
 ];
 
+const textSizes = [14, 16, 18, 20, 22, 24, 26, 30, 34, 40];
+const historyLimit = 80;
+
 export default function NoteEditorPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const editorShellRef = useRef<HTMLDivElement | null>(null);
   const selectionRef = useRef<{ start: number; end: number } | null>(null);
+  const undoStackRef = useRef<string[]>(['']);
+  const redoStackRef = useRef<string[]>([]);
+  const historyPausedRef = useRef(false);
   const [loading, setLoading] = useState(Boolean(id));
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -59,6 +67,9 @@ export default function NoteEditorPage() {
   const [selectedFontSize, setSelectedFontSize] = useState(fontSizes[1].value);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [selectedText, setSelectedText] = useState('');
+  const [editorNotice, setEditorNotice] = useState('');
+  const [draggingFile, setDraggingFile] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
   const [draftData, setDraftData] = useState<{ title: string; content: string } | null>(null);
 
@@ -91,6 +102,8 @@ export default function NoteEditorPage() {
     if (draftData) {
       setTitle(draftData.title);
       setContent(draftData.content);
+      undoStackRef.current = [''];
+      redoStackRef.current = [];
       setHasDraft(false);
       toast.success('Draft restored');
     }
@@ -102,6 +115,61 @@ export default function NoteEditorPage() {
     setHasDraft(false);
     setDraftData(null);
     toast.success('Draft discarded');
+  };
+
+  const showEditorNotice = (message: string) => {
+    setEditorNotice(message);
+    window.setTimeout(() => {
+      setEditorNotice((current) => current === message ? '' : current);
+    }, 1300);
+  };
+
+  const pushHistory = (value = content) => {
+    if (historyPausedRef.current || value === undoStackRef.current[undoStackRef.current.length - 1]) return;
+    undoStackRef.current = [...undoStackRef.current, value].slice(-historyLimit);
+    redoStackRef.current = [];
+  };
+
+  const setContentWithHistory = (next: string, notice?: string) => {
+    pushHistory(content);
+    historyPausedRef.current = true;
+    setContent(next);
+    window.requestAnimationFrame(() => {
+      historyPausedRef.current = false;
+    });
+    if (notice) showEditorNotice(notice);
+  };
+
+  const undoContent = () => {
+    const previous = undoStackRef.current.pop();
+    if (previous === undefined) {
+      showEditorNotice('Nothing to undo');
+      return;
+    }
+    redoStackRef.current = [content, ...redoStackRef.current].slice(0, historyLimit);
+    historyPausedRef.current = true;
+    setContent(previous);
+    window.requestAnimationFrame(() => {
+      historyPausedRef.current = false;
+      textareaRef.current?.focus({ preventScroll: true });
+    });
+    showEditorNotice('Undo');
+  };
+
+  const redoContent = () => {
+    const next = redoStackRef.current.shift();
+    if (next === undefined) {
+      showEditorNotice('Nothing to redo');
+      return;
+    }
+    undoStackRef.current = [...undoStackRef.current, content].slice(-historyLimit);
+    historyPausedRef.current = true;
+    setContent(next);
+    window.requestAnimationFrame(() => {
+      historyPausedRef.current = false;
+      textareaRef.current?.focus({ preventScroll: true });
+    });
+    showEditorNotice('Redo');
   };
 
   useEffect(() => {
@@ -134,6 +202,8 @@ export default function NoteEditorPage() {
       .then((note) => {
         setTitle(note.title);
         setContent(note.content);
+        undoStackRef.current = [''];
+        redoStackRef.current = [];
         setCategory(note.category || 'general');
       })
       .catch(() => toast.error('Note not found'))
@@ -148,6 +218,8 @@ export default function NoteEditorPage() {
       if (val) {
         setTitle('Scratchpad Note');
         setContent(val);
+        undoStackRef.current = [''];
+        redoStackRef.current = [];
         localStorage.removeItem('dashboard-scratchpad');
         toast.success('Scratchpad content imported');
       }
@@ -171,16 +243,16 @@ export default function NoteEditorPage() {
   const insert = (before: string, after = '', placeholder = 'text') => {
     const textarea = textareaRef.current;
     if (!textarea) {
-      setContent((value) => `${value}${before}${placeholder}${after}`);
+      setContentWithHistory(`${content}${before}${placeholder}${after}`);
       return;
     }
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const selected = content.slice(start, end) || placeholder;
     const next = `${content.slice(0, start)}${before}${selected}${after}${content.slice(end)}`;
-    setContent(next);
+    setContentWithHistory(next);
     window.requestAnimationFrame(() => {
-      textarea.focus();
+      textarea.focus({ preventScroll: true });
       textarea.setSelectionRange(start + before.length, start + before.length + selected.length);
     });
   };
@@ -203,9 +275,9 @@ export default function NoteEditorPage() {
   const replaceRange = (start: number, end: number, nextText: string) => {
     const next = `${content.slice(0, start)}${nextText}${content.slice(end)}`;
     selectionRef.current = { start, end: start + nextText.length };
-    setContent(next);
+    setContentWithHistory(next);
     window.requestAnimationFrame(() => {
-      textareaRef.current?.focus();
+      textareaRef.current?.focus({ preventScroll: true });
       textareaRef.current?.setSelectionRange(start, start + nextText.length);
     });
   };
@@ -226,6 +298,21 @@ export default function NoteEditorPage() {
     wrapSelection(`<span style="font-size: ${size}">`, '</span>');
     setSelectedText('');
     setContextMenu(null);
+  };
+
+  const increaseSelectionSize = () => {
+    const { text } = selectedRange();
+    if (!text.trim()) return toast.error('Select text first');
+    const current = Number(String(selectedFontSize).replace('px', '')) || 16;
+    const next = textSizes.find((size) => size > current) || textSizes[textSizes.length - 1];
+    setSelectedFontSize(`${next}px`);
+    applyFontSize(`${next}px`);
+    showEditorNotice(`Text size ${next}px`);
+  };
+
+  const applyBold = () => {
+    wrapSelection('**', '**');
+    showEditorNotice('Bold');
   };
 
   const runnableAiSettings = () => {
@@ -267,7 +354,7 @@ export default function NoteEditorPage() {
         replaceRange(start, end, cleaned);
         setSelectedText('');
       } else {
-        setContent(cleaned);
+        setContentWithHistory(cleaned, 'AI updated note');
       }
       toast.success(task === 'summarize' ? 'Summary inserted' : task === 'shorten' ? 'Text shortened' : 'Text updated');
     } catch (error) {
@@ -336,6 +423,75 @@ export default function NoteEditorPage() {
     toast.success('Markdown exported');
   };
 
+  const handleEditorKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    const ctrl = event.ctrlKey || event.metaKey;
+    if (!ctrl) return;
+    const key = event.key.toLowerCase();
+    if (key === 'z' && event.shiftKey) {
+      event.preventDefault();
+      redoContent();
+      return;
+    }
+    if (key === 'z') {
+      event.preventDefault();
+      undoContent();
+      return;
+    }
+    if (key === 'y') {
+      event.preventDefault();
+      redoContent();
+      return;
+    }
+    if (key === 'b') {
+      event.preventDefault();
+      applyBold();
+      return;
+    }
+    if (key === 'l') {
+      event.preventDefault();
+      increaseSelectionSize();
+    }
+  };
+
+  const handleEditorBlur = (event: FocusEvent<HTMLTextAreaElement>) => {
+    rememberSelection(event);
+    window.setTimeout(() => {
+      const active = document.activeElement;
+      if (contextMenu || !content.trim()) return;
+      if (active && editorShellRef.current?.contains(active)) return;
+      setMode('preview');
+    }, 0);
+  };
+
+  const uploadFiles = async (selected: FileList | File[] | null) => {
+    const files = selected ? Array.from(selected).filter((file) => file.size > 0) : [];
+    if (files.length === 0) return;
+    setUploadingFile(true);
+    try {
+      const inserted: string[] = [];
+      for (const file of files.slice(0, 8)) {
+        const uploaded = await api.files.upload(file);
+        inserted.push(uploaded.markdown);
+      }
+      const text = inserted.join('\n\n');
+      const range = selectedRange();
+      replaceRange(range.start, range.end, `${range.start > 0 ? '\n\n' : ''}${text}\n\n`);
+      toast.success(`${inserted.length} file${inserted.length === 1 ? '' : 's'} attached`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'File upload failed');
+    } finally {
+      setUploadingFile(false);
+      setDraggingFile(false);
+    }
+  };
+
+  const handlePaste = async (event: ClipboardEvent<HTMLTextAreaElement>) => {
+    const files = Array.from(event.clipboardData.files || []);
+    if (files.length === 0) return;
+    event.preventDefault();
+    await uploadFiles(files);
+  };
+
   if (loading) return <Spinner />;
 
   const categoryOptions = categories.map((item) => ({ value: item.slug, label: item.name }));
@@ -381,7 +537,19 @@ export default function NoteEditorPage() {
         </div>
       )}
 
-      <Card className="rounded-3xl">
+      <Card
+        ref={editorShellRef}
+        className={`rounded-3xl ${draggingFile ? 'ring-2 ring-primary/60' : ''}`}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setDraggingFile(true);
+        }}
+        onDragLeave={() => setDraggingFile(false)}
+        onDrop={(event) => {
+          event.preventDefault();
+          uploadFiles(event.dataTransfer.files);
+        }}
+      >
         <CardContent className="space-y-4 p-4 sm:p-5">
           <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
             <FormField label="Title">
@@ -415,10 +583,17 @@ export default function NoteEditorPage() {
               <Eye className="h-4 w-4" /> Preview
             </Button>
             <span className="mx-1 h-6 w-px bg-border" />
+            <Button variant="ghost" size="icon" title="Undo (Ctrl+Z)" onMouseDown={(e) => e.preventDefault()} onClick={undoContent}>
+              <Undo2 className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" title="Redo (Ctrl+Shift+Z)" onMouseDown={(e) => e.preventDefault()} onClick={redoContent}>
+              <Redo2 className="h-4 w-4" />
+            </Button>
+            <span className="mx-1 h-6 w-px bg-border" />
             <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => insert('## ', '', 'Heading')}>
               <Heading2 className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => insert('**', '**')}>
+            <Button variant="ghost" size="icon" title="Bold (Ctrl+B)" onMouseDown={(e) => e.preventDefault()} onClick={applyBold}>
               <Bold className="h-4 w-4" />
             </Button>
             <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => insert('*', '*')}>
@@ -430,6 +605,20 @@ export default function NoteEditorPage() {
             <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => insert('```cpp\n', '\n```', 'code here')}>
               <Code2 className="h-4 w-4" />
             </Button>
+            <Button variant="ghost" size="icon" title="Attach image or file" disabled={uploadingFile} onMouseDown={(e) => e.preventDefault()} onClick={() => fileInputRef.current?.click()}>
+              {uploadingFile ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" /> : <FileUp className="h-4 w-4" />}
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              accept="image/*,.pdf,.txt,.md,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip"
+              onChange={(event) => {
+                uploadFiles(event.target.files);
+                event.currentTarget.value = '';
+              }}
+            />
             <span className="ml-auto hidden text-xs text-muted-foreground sm:inline">{categoryLabel(category, categories)}</span>
           </div>
 
@@ -497,25 +686,40 @@ export default function NoteEditorPage() {
           </Card>
 
           {mode === 'write' ? (
-            <Textarea
-              ref={textareaRef}
-              id="note-content"
-              value={content}
-              onChange={(event) => {
-                selectionRef.current = null;
-                setSelectedText('');
-                setContent(event.target.value);
-              }}
-              onSelect={(e) => rememberSelection(e)}
-              onMouseUp={(e) => rememberSelection(e)}
-              onKeyUp={(e) => rememberSelection(e)}
-              onBlur={(e) => rememberSelection(e)}
-              onContextMenu={openSelectionMenu}
-              className="min-h-[55vh] rounded-2xl font-mono text-sm"
-              placeholder="Start writing. Use toolbar buttons if markdown is unfamiliar..."
-            />
+            <div className="relative">
+              {draggingFile && (
+                <div className="absolute inset-0 z-10 grid place-items-center rounded-2xl border border-dashed border-primary/60 bg-background/80 text-sm font-semibold text-primary backdrop-blur-sm">
+                  <UploadCloud className="mr-2 inline h-4 w-4" />
+                  Drop files to attach
+                </div>
+              )}
+              <Textarea
+                ref={textareaRef}
+                id="note-content"
+                value={content}
+                onChange={(event) => {
+                  selectionRef.current = null;
+                  setSelectedText('');
+                  const next = event.target.value;
+                  if (!historyPausedRef.current) {
+                    pushHistory(content);
+                    redoStackRef.current = [];
+                  }
+                  setContent(next);
+                }}
+                onSelect={(e) => rememberSelection(e)}
+                onMouseUp={(e) => rememberSelection(e)}
+                onKeyUp={(e) => rememberSelection(e)}
+                onKeyDown={handleEditorKeyDown}
+                onPaste={handlePaste}
+                onBlur={handleEditorBlur}
+                onContextMenu={openSelectionMenu}
+                className="min-h-[55vh] rounded-2xl font-mono text-sm"
+                placeholder="Start writing. Use toolbar buttons if markdown is unfamiliar..."
+              />
+            </div>
           ) : (
-            <div className="min-h-[55vh] rounded-2xl border border-border bg-card/70 p-4">
+            <div className="min-h-[55vh] cursor-text rounded-2xl border border-border bg-card/70 p-4" onClick={() => setMode('write')}>
               {content ? (
                 <div className="prose-dark max-w-none">
                   <MarkdownView allowHtml>{content}</MarkdownView>
@@ -527,6 +731,7 @@ export default function NoteEditorPage() {
           )}
           <div className="mt-3 flex justify-between text-xs text-muted-foreground px-1">
             <span>{wordCount} words / {charCount} characters</span>
+            {editorNotice && <span className="font-semibold text-primary">{editorNotice}</span>}
           </div>
         </CardContent>
       </Card>
@@ -551,15 +756,15 @@ export default function NoteEditorPage() {
             ))}
           </div>
           <div className="mt-2 grid grid-cols-2 gap-2">
-            <Button variant="secondary" size="sm" onClick={() => applyFontSize('20px')}>Large</Button>
-            <Button variant="secondary" size="sm" onClick={() => applyFontSize('26px')}>Title</Button>
-            <Button variant="secondary" size="sm" disabled={aiActiveTask !== null} onClick={() => runNoteAi('summarize')}>
+            <Button variant="secondary" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => applyFontSize('20px')}>Large</Button>
+            <Button variant="secondary" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => applyFontSize('26px')}>Title</Button>
+            <Button variant="secondary" size="sm" disabled={aiActiveTask !== null} onMouseDown={(e) => e.preventDefault()} onClick={() => runNoteAi('summarize')}>
               {aiActiveTask === 'summarize' ? 'Summarizing...' : 'Summarize'}
             </Button>
-            <Button variant="secondary" size="sm" disabled={aiActiveTask !== null} onClick={() => runNoteAi('polish')}>
+            <Button variant="secondary" size="sm" disabled={aiActiveTask !== null} onMouseDown={(e) => e.preventDefault()} onClick={() => runNoteAi('polish')}>
               {aiActiveTask === 'polish' ? 'Polishing...' : 'Polish'}
             </Button>
-            <Button variant="secondary" size="sm" disabled={aiActiveTask !== null} onClick={() => runNoteAi('shorten')}>
+            <Button variant="secondary" size="sm" disabled={aiActiveTask !== null} onMouseDown={(e) => e.preventDefault()} onClick={() => runNoteAi('shorten')}>
               {aiActiveTask === 'shorten' ? 'Shortening...' : 'Shorten'}
             </Button>
           </div>

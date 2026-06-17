@@ -14,26 +14,33 @@ function localApiPlugin(): PluginOption {
           const requestUrl = new URL(req.url ?? '/', 'http://localhost')
           const apiFile = path.resolve(__dirname, 'api', 'index.js')
 
-          const body = await new Promise<unknown>((resolve, reject) => {
-            if (req.method === 'GET' || req.method === 'HEAD') return resolve({})
-            let raw = ''
+          const chunks: Buffer[] = []
+          const rawBody = await new Promise<Buffer>((resolve, reject) => {
+            if (req.method === 'GET' || req.method === 'HEAD') return resolve(Buffer.alloc(0))
             req.on('data', (chunk) => {
-              raw += chunk
+              chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
             })
             req.on('end', () => {
-              try {
-                resolve(raw ? JSON.parse(raw) : {})
-              } catch (error) {
-                reject(error)
-              }
+              resolve(Buffer.concat(chunks))
             })
             req.on('error', reject)
           })
+          const contentType = req.headers['content-type'] || ''
+          const body = req.method === 'GET' || req.method === 'HEAD'
+            ? {}
+            : String(contentType).includes('application/json')
+              ? (rawBody.length ? JSON.parse(rawBody.toString('utf8')) : {})
+              : {}
 
           const query = Object.fromEntries(requestUrl.searchParams.entries())
 
           ;(req as any).query = query
           ;(req as any).body = body
+          ;(req as any).rawRequest = new Request(`http://localhost${req.url || ''}`, {
+            method: req.method,
+            headers: req.headers as HeadersInit,
+            body: rawBody.length ? rawBody : undefined,
+          })
 
           let statusCode = 200
           const apiRes = Object.assign(res, {

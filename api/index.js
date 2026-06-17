@@ -31,9 +31,9 @@ const resources = {
   },
   codes: {
     table: 'codes',
-    columns: ['title', 'code', 'language', 'description', 'category', 'tags', 'isFavorite'],
-    defaults: { language: 'cpp', description: '', category: 'general', tags: [], isFavorite: false },
-    search: ['title', 'code', 'tags'],
+    columns: ['title', 'code', 'language', 'description', 'category', 'tags', 'attachments', 'isFavorite'],
+    defaults: { language: 'cpp', description: '', category: 'general', tags: [], attachments: [], isFavorite: false },
+    search: ['title', 'code', 'tags', 'attachments'],
     sort: 'createdAt DESC',
   },
   questions: {
@@ -110,7 +110,7 @@ function cleanBoolColumn(column, value) {
 }
 
 function cleanJsonColumn(column, value) {
-  return ['tags', 'models', 'messages'].includes(column) ? toJson(Array.isArray(value) ? value : []) : value;
+  return ['tags', 'models', 'messages', 'attachments'].includes(column) ? toJson(Array.isArray(value) ? value : []) : value;
 }
 
 function cleanValue(column, value) {
@@ -273,6 +273,40 @@ function cleanChatMessages(messages) {
     }))
     .filter((message) => message.content.trim())
     .slice(-50);
+}
+
+function getFileBucket() {
+  return globalThis.APP_ENV?.R2 || globalThis.APP_ENV?.BUCKET || globalThis.APP_ENV?.FILE_BUCKET || globalThis.APP_ENV?.UPLOADS || null;
+}
+
+function safeFileName(value) {
+  return String(value || 'file')
+    .replace(/[^\p{L}\p{N}._-]+/gu, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 120) || 'file';
+}
+
+async function pruneUserFiles(uid, incomingSize) {
+  const bucket = getFileBucket();
+  if (!bucket) return;
+  const maxBytes = 8 * 1024 * 1024 * 1024;
+  const rows = await d1Query('SELECT COALESCE(SUM(size), 0) AS total FROM uploaded_files WHERE userId = ?;', [uid]);
+  let total = Number(rows[0]?.total || 0);
+  if (total + incomingSize <= maxBytes) return;
+  const oldFiles = await d1Query('SELECT id, objectKey, size FROM uploaded_files WHERE userId = ? ORDER BY createdAt ASC;', [uid]);
+  for (const file of oldFiles) {
+    await bucket.delete(file.objectKey).catch(() => {});
+    await d1Query('DELETE FROM uploaded_files WHERE id = ? AND userId = ?;', [file.id, uid]).catch(() => {});
+    total -= Number(file.size || 0);
+    if (total + incomingSize <= maxBytes) break;
+  }
+}
+
+function fileMarkdown(file) {
+  const url = `/api/files/${file.id}`;
+  if (String(file.mimeType || '').startsWith('image/')) return `![${file.name}](${url})`;
+  if (String(file.mimeType || '') === 'application/pdf') return `<iframe class="note-file-preview" src="${url}" title="${file.name}"></iframe>`;
+  return `[${file.name}](${url})`;
 }
 
 async function createResource(resource, body, uid) {
@@ -504,6 +538,49 @@ export default async function handler(req, res) {
   const slug = url.pathname.replace(/^\/api\/?/, '').replace(/^\/+|\/+$/g, '');
 
   try {
+    if (slug.startsWith('files/')) {
+      const fileId = slug.split('/')[1];
+      const row = (await d1Query('SELECT * FROM uploaded_files WHERE id = ? LIMIT 1;', [fileId]))[0];
+      const bucket = getFileBucket();
+      if (!row || !bucket) return res.status(404).json({ error: 'File not found' });
+      const object = await bucket.get(row.objectKey);
+      if (!object) return res.status(404).json({ error: 'File not found' });
+      const body = await object.arrayBuffer();
+      res.setHeader('Content-Type', row.mimeType || 'application/octet-stream');
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      res.setHeader('Content-Disposition', `inline; filename="${safeFileName(row.name)}"`);
+      return res.end(new Uint8Array(body));
+    }
+
+    if (slug === 'files' && method === 'POST') {
+      const user = await requireUser(req, res);
+      if (!user) return;
+      const bucket = getFileBucket();
+      if (!bucket) return res.status(500).json({ error: 'R2 bucket binding missing. Add R2, BUCKET, FILE_BUCKET, or UPLOADS binding.' });
+      if (!req.rawRequest?.formData) return res.status(400).json({ error: 'Multipart upload is required' });
+      const form = await req.rawRequest.formData();
+      const file = form.get('file');
+      if (!file || typeof file === 'string') return res.status(400).json({ error: 'File is required' });
+      const size = Number(file.size || 0);
+      if (!size) return res.status(400).json({ error: 'Empty file is not allowed' });
+      const maxUpload = 50 * 1024 * 1024;
+      if (size > maxUpload) return res.status(413).json({ error: 'File must be 50MB or smaller' });
+      const uid = userId(user);
+      await pruneUserFiles(uid, size);
+      const rowId = newId();
+      const name = safeFileName(file.name || 'file');
+      const mimeType = file.type || 'application/octet-stream';
+      const objectKey = `${uid}/${new Date().toISOString().slice(0, 10)}/${rowId}-${name}`;
+      const stamp = now();
+      await bucket.put(objectKey, await file.arrayBuffer(), {
+        httpMetadata: { contentType: mimeType },
+        customMetadata: { userId: uid, name },
+      });
+      await d1Query('INSERT INTO uploaded_files (id, userId, objectKey, name, mimeType, size, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?);', [rowId, uid, objectKey, name, mimeType, size, stamp]);
+      const payload = { id: rowId, name, url: `/api/files/${rowId}`, markdown: fileMarkdown({ id: rowId, name, mimeType }), mimeType, size };
+      return res.status(201).json(payload);
+    }
+
     if (slug === 'auth/login' && method === 'POST') {
       const email = String(req.body.email || '').trim().toLowerCase();
       const password = String(req.body.password || '');
@@ -616,7 +693,7 @@ export default async function handler(req, res) {
       const user = await requireUser(req, res);
       if (!user) return;
       const uid = user.id;
-      for (const table of ['bookmarks', 'notebooks', 'codes', 'questions', 'categories', 'routines', 'ai_settings', 'chat_history']) {
+      for (const table of ['bookmarks', 'notebooks', 'codes', 'questions', 'categories', 'routines', 'ai_settings', 'chat_history', 'uploaded_files']) {
         await d1Query(`DELETE FROM ${table} WHERE userId = ?;`, [uid]);
       }
       await d1Query('DELETE FROM app_users WHERE id = ?;', [uid]);
