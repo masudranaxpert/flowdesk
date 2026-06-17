@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import CodeBlock from '../components/CodeBlock';
+import MarkdownView from '../components/MarkdownView';
 import { Spinner } from '../components/UI';
 import { normalizeUrl } from '../lib/utils';
 import type { Bookmark, CodeSnippet, Notebook, Question } from '../types';
@@ -87,7 +85,7 @@ export default function SharePage() {
 
             {type === 'notes' && 'content' in item && (
               <div className="prose-dark max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{item.content}</ReactMarkdown>
+                <MarkdownView allowHtml>{item.content}</MarkdownView>
               </div>
             )}
 
@@ -104,7 +102,7 @@ export default function SharePage() {
                   <section>
                     <h2 className="mb-2 text-sm font-semibold">Question</h2>
                     <div className="prose-dark max-w-none">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.problem}</ReactMarkdown>
+                      <MarkdownView>{item.problem}</MarkdownView>
                     </div>
                   </section>
                 )}
@@ -112,7 +110,7 @@ export default function SharePage() {
                   <section>
                     <h2 className="mb-2 text-sm font-semibold">Answer</h2>
                     <div className="prose-dark max-w-none">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.solution}</ReactMarkdown>
+                      <MarkdownView>{item.solution}</MarkdownView>
                     </div>
                   </section>
                 )}

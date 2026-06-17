@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Bold, Bot, Code2, Download, Eye, Heading2, Italic, List, Palette, Save, Sparkles, Type } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { runAiChat, type AiSettings, defaultAiSettings } from '../lib/ai';
+import MarkdownView from '../components/MarkdownView';
 import { FormField, Spinner } from '../components/UI';
 import { Select } from '../components/Select';
 import { categoryLabel } from '../lib/utils';
@@ -520,7 +518,7 @@ export default function NoteEditorPage() {
             <div className="min-h-[55vh] rounded-2xl border border-border bg-card/70 p-4">
               {content ? (
                 <div className="prose-dark max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{content}</ReactMarkdown>
+                  <MarkdownView allowHtml>{content}</MarkdownView>
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">Preview will appear here.</p>
