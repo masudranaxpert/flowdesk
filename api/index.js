@@ -183,6 +183,11 @@ async function listResource(resource, query, uid) {
 function validateResourceData(resource, data, { partial = false } = {}) {
   const hasCategoryScope = resource === 'categories' && Object.prototype.hasOwnProperty.call(data || {}, 'scope');
   const next = partial ? { ...data } : { ...resources[resource].defaults, ...data };
+  if (['bookmarks', 'notebooks', 'codes', 'questions'].includes(resource)) {
+    if (next.category !== undefined) {
+      next.category = slugify(String(next.category));
+    }
+  }
   if (resource === 'categories') {
     if (!partial && !hasCategoryScope) next.scope = 'bookmark';
     if (next.scope !== undefined) next.scope = normalizeCategoryScope(next.scope);
