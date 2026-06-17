@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 
-const SECRET = process.env.AUTH_SECRET || process.env.JWT_SECRET || process.env.D1_REST_TOKEN || process.env.token || 'bookmark-vault-dev-secret';
+const SECRET = (process.env.AUTH_SECRET || process.env.JWT_SECRET || process.env.D1_REST_TOKEN || process.env.token || 'bookmark-vault-dev-secret').trim().replace(/^["']|["']$/g, '');
 
 function base64url(value) {
   return Buffer.from(value).toString('base64url');
