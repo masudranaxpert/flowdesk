@@ -103,14 +103,14 @@ export default function ChatbotPage() {
   useEffect(() => {
     api.chatHistory.get()
       .then((data) => setMessages(data.messages.length ? data.messages.slice(-30) : defaultMessages))
-      .catch(() => {})
+      .catch(() => setMessages(defaultMessages))
       .finally(() => setHistoryReady(true));
   }, []);
 
   useEffect(() => {
     if (!historyReady) return;
     const t = setTimeout(() => {
-      api.chatHistory.update(messages.slice(-30)).catch(() => {});
+      api.chatHistory.update(messages.slice(-30).map((message) => ({ role: message.role, content: message.content }))).catch(() => {});
     }, 350);
     return () => clearTimeout(t);
   }, [messages, historyReady]);
@@ -156,7 +156,7 @@ export default function ChatbotPage() {
 
   const saveSettings = async () => {
     await api.aiSettings.update(settings as any);
-    toast.success('AI settings saved to MongoDB');
+    toast.success('AI settings saved to D1');
   };
 
   const addModel = async () => {
@@ -272,10 +272,10 @@ export default function ChatbotPage() {
         const { operation, resource, id, data = {} } = action;
         const cleanData = sanitizeActionData(resource, data);
         const actionId = id || String(cleanData.id || cleanData._id || '');
-        const { id: _ignoredId, _id: _ignoredMongoId, ...payload } = cleanData;
+        const { id: _ignoredId, _id: _ignoredLegacyId, ...payload } = cleanData;
         const target = map[resource];
         if (!target) throw new Error(`Unsupported action: ${resource}`);
-        if (operation === 'create') await target.create(cleanData);
+        if (operation === 'create') await target.create(payload);
         if (operation === 'update') {
           if (!actionId) throw new Error(`Update ${resource} needs id`);
           await target.update(actionId, payload);
@@ -300,7 +300,7 @@ export default function ChatbotPage() {
   };
 
   const clearHistory = async () => {
-    await api.chatHistory.clear();
+    await api.chatHistory.clear().catch(() => {});
     setMessages([{ role: 'assistant', content: 'History cleared. Ask me anything.' }]);
   };
 
@@ -557,7 +557,7 @@ export default function ChatbotPage() {
               <Button variant="outline" className="w-full justify-start" onClick={clearHistory}>Clear chat history</Button>
               <Button variant="outline" className="w-full justify-start" onClick={() => setInput('Find my related bookmarks, notes, code and questions about: ')}>Find in my data</Button>
               <Button variant="outline" className="w-full justify-start" onClick={() => setInput('Create a routine/event plan from this text: ')}>Draft routine/event</Button>
-              <p className="text-xs leading-5 text-muted-foreground">Models and chat history are stored per user in MongoDB.</p>
+              <p className="text-xs leading-5 text-muted-foreground">Model profiles are saved in D1. Recent chat stays on this browser.</p>
             </CardContent>
           </Card>
         </div>

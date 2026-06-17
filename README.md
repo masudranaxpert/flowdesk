@@ -23,8 +23,8 @@ A to Z Helper is a full-stack web app that keeps your bookmarks, notes, code sni
 |-------|------------|
 | Frontend | React, TypeScript, Tailwind CSS, Vite |
 | UI Components | Radix UI, shadcn/ui, Lucide Icons |
-| Backend | Node.js, Express (Vercel Serverless Functions) |
-| Database | MongoDB (Mongoose) |
+| Backend | Vercel Serverless Functions |
+| Database | Cloudflare D1 via d1-secret-rest |
 | AI | Google Gemini (`@google/genai`) |
 | Email | Nodemailer (Gmail SMTP) |
 | Hosting | Vercel |
@@ -34,7 +34,7 @@ A to Z Helper is a full-stack web app that keeps your bookmarks, notes, code sni
 ### Prerequisites
 
 - Node.js 18+
-- A MongoDB Atlas cluster
+- A Cloudflare D1 REST worker URL and bearer token
 - A Gmail account (for email verification)
 - A Google AI API key (for chatbot)
 
@@ -55,7 +55,8 @@ cp .env.example .env
 ```
 
 ```env
-MONGODB_URI=mongodb+srv://user:password@cluster.mongodb.net/bookmark-vault
+D1_REST_URL=https://d1-rest.<your-worker>.workers.dev
+D1_REST_TOKEN=your-d1-rest-token
 AUTH_SECRET=your-random-secret
 
 # Gmail

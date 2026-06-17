@@ -41,13 +41,13 @@ export const api = {
     changePassword: (data: { currentPassword?: string; newPassword: string }) => request<{ message: string }>('/auth/change-password', { method: 'PUT', body: JSON.stringify(data) }),
     deleteAccount: () => request<{ message: string }>('/auth/profile', { method: 'DELETE' }),
   },
-  chatHistory: {
-    get: () => request<{ messages: { role: 'user' | 'assistant'; content: string }[] }>('/chat-history'),
-    update: (messages: { role: 'user' | 'assistant'; content: string }[]) => request<{ messages: { role: 'user' | 'assistant'; content: string }[] }>('/chat-history', { method: 'PUT', body: JSON.stringify({ messages }) }),
-    clear: () => request<{ message: string }>('/chat-history', { method: 'DELETE' }),
-  },
   stats: {
     get: () => request<Stats>('/stats'),
+  },
+  chatHistory: {
+    get: () => request<{ messages: { role: 'user' | 'assistant'; content: string }[] }>('/history'),
+    update: (messages: { role: 'user' | 'assistant'; content: string }[]) => request<{ messages: { role: 'user' | 'assistant'; content: string }[] }>('/history', { method: 'PUT', body: JSON.stringify({ messages }) }),
+    clear: () => request<{ message: string }>('/history', { method: 'DELETE' }),
   },
   search: (q: string) => request<any>(`/search?q=${encodeURIComponent(q)}`),
   bookmarks: {
