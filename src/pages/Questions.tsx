@@ -1,13 +1,12 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, Edit3, CheckCircle2, Circle, ExternalLink, HelpCircle, Code2, Share2, Sparkles } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { api } from '../lib/api';
 import { PageHeader, EmptyState, Spinner, SearchInput, ConfirmDialog, FormField, TagInput, PaginationControls } from '../components/UI';
 import { Select } from '../components/Select';
 import Dialog from '../components/Dialog';
 import CodeBlock from '../components/CodeBlock';
+import MarkdownView from '../components/MarkdownView';
 import { PLATFORMS, DIFFICULTIES, LANGUAGES, capitalize, normalizeUrl, copyShareUrl, fuzzyMatch, categoryLabel } from '../lib/utils';
 import type { Category, Question } from '../types';
 import toast from 'react-hot-toast';
@@ -274,7 +273,7 @@ export default function QuestionsPage() {
               <div>
                 <h4 className="text-sm font-semibold mb-2" style={{ fontFamily: 'var(--font-heading)' }}>Problem</h4>
                 <div className="prose-dark max-w-none text-muted-foreground">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{viewQ.problem}</ReactMarkdown>
+                  <MarkdownView>{viewQ.problem}</MarkdownView>
                 </div>
               </div>
             )}
@@ -282,7 +281,7 @@ export default function QuestionsPage() {
               <div>
                 <h4 className="text-sm font-semibold mb-2" style={{ fontFamily: 'var(--font-heading)' }}>Solution</h4>
                 <div className="prose-dark max-w-none text-muted-foreground">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{viewQ.solution}</ReactMarkdown>
+                  <MarkdownView>{viewQ.solution}</MarkdownView>
                 </div>
               </div>
             )}

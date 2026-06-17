@@ -1,10 +1,9 @@
 import { type ClipboardEvent, type DragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Bot, FileImage, ImageOff, MessageSquare, Paperclip, Save, Send, Settings, Sparkles, X } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { fileToAiFile, runAiChat, type AiFile, type AiModelConfig, type AiSettings, type ChatMessage, defaultAiSettings } from '../lib/ai';
+import MarkdownView from '../components/MarkdownView';
 import { FormField, Spinner } from '../components/UI';
 import { Select } from '../components/Select';
 import { Button } from '@/components/ui/button';
@@ -743,7 +742,7 @@ export default function ChatbotPage() {
                           <div className="max-w-[92%] px-1 text-sm leading-7 text-foreground sm:max-w-[82%]">
                             {message.content ? (
                               <div className="assistant-message">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                                <MarkdownView>{message.content}</MarkdownView>
                                 {writingAction && sending && index === messages.length - 1 && (
                                   <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                                     <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />

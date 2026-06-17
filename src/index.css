@@ -492,6 +492,22 @@ code {
   max-width: 100%;
 }
 
+.prose-dark .katex {
+  color: var(--color-foreground);
+  font-size: 1.02em;
+}
+
+.prose-dark .katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.35rem 0;
+}
+
+.prose-dark .katex-display > .katex {
+  white-space: nowrap;
+}
+
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: 'Geist Variable', sans-serif;
