@@ -59,6 +59,7 @@ export default function NoteEditorPage() {
   const [selectedColor, setSelectedColor] = useState(colors[0].value);
   const [selectedFontSize, setSelectedFontSize] = useState(fontSizes[1].value);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [selectedText, setSelectedText] = useState('');
 
   useEffect(() => {
     api.categories.list({ scope: 'notebook' })
@@ -110,12 +111,18 @@ export default function NoteEditorPage() {
     }
   }, [id]);
 
-  const rememberSelection = () => {
+  const rememberSelection = (event?: any) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    if (start !== end) selectionRef.current = { start, end };
+    if (start !== end) {
+      selectionRef.current = { start, end };
+      setSelectedText(textarea.value.slice(start, end));
+    } else if (event && event.type !== 'blur') {
+      selectionRef.current = null;
+      setSelectedText('');
+    }
   };
 
   const insert = (before: string, after = '', placeholder = 'text') => {
@@ -168,11 +175,13 @@ export default function NoteEditorPage() {
 
   const applyColor = (color = selectedColor) => {
     wrapSelection(`<span style="color: ${color}">`, '</span>');
+    setSelectedText('');
     setContextMenu(null);
   };
 
   const applyFontSize = (size = selectedFontSize) => {
     wrapSelection(`<span style="font-size: ${size}">`, '</span>');
+    setSelectedText('');
     setContextMenu(null);
   };
 
@@ -203,8 +212,12 @@ export default function NoteEditorPage() {
       const answer = await runAiChat(runnableSettings, [{ role: 'user', content: `${instruction}\n\nText:\n${target}` }], 'Notebook editor selected text rewrite mode. Do not create app actions.', []);
       const cleaned = answer.replace(/```(?:markdown)?/gi, '').replace(/```/g, '').trim();
       if (!cleaned) return toast.error('AI returned empty text');
-      if (text.trim()) replaceRange(start, end, cleaned);
-      else setContent(cleaned);
+      if (text.trim()) {
+        replaceRange(start, end, cleaned);
+        setSelectedText('');
+      } else {
+        setContent(cleaned);
+      }
       toast.success(task === 'summarize' ? 'Summary inserted' : 'Text updated');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'AI failed');
@@ -342,6 +355,26 @@ export default function NoteEditorPage() {
                   </Button>
                 </div>
               </div>
+              {selectedText && (
+                <div className="flex items-center justify-between gap-3 rounded-xl bg-primary/10 border border-primary/20 p-2.5 text-xs">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                    <span className="text-muted-foreground font-medium shrink-0">Selected Text:</span>
+                    <span className="truncate font-mono text-primary">"{selectedText}"</span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-6 px-2 text-[10px] text-muted-foreground hover:text-foreground shrink-0"
+                    onClick={() => {
+                      selectionRef.current = null;
+                      setSelectedText('');
+                    }}
+                  >
+                    Clear Selection
+                  </Button>
+                </div>
+              )}
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Input value={customPrompt} onChange={(event) => setCustomPrompt(event.target.value)} placeholder="Ask AI to rewrite selected text your way..." disabled={aiActiveTask !== null} />
                 <Button disabled={aiActiveTask !== null} onClick={() => runNoteAi('custom')}>
@@ -368,12 +401,13 @@ export default function NoteEditorPage() {
               value={content}
               onChange={(event) => {
                 selectionRef.current = null;
+                setSelectedText('');
                 setContent(event.target.value);
               }}
-              onSelect={rememberSelection}
-              onMouseUp={rememberSelection}
-              onKeyUp={rememberSelection}
-              onBlur={rememberSelection}
+              onSelect={(e) => rememberSelection(e)}
+              onMouseUp={(e) => rememberSelection(e)}
+              onKeyUp={(e) => rememberSelection(e)}
+              onBlur={(e) => rememberSelection(e)}
               onContextMenu={openSelectionMenu}
               className="min-h-[55vh] rounded-2xl font-mono text-sm"
               placeholder="Start writing. Use toolbar buttons if markdown is unfamiliar..."
