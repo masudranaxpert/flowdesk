@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Edit3, CheckCircle2, Circle, ExternalLink, HelpCircle, Code2, Share2 } from 'lucide-react';
+import { Plus, Trash2, Edit3, CheckCircle2, Circle, ExternalLink, HelpCircle, Code2, Share2, Sparkles } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { api } from '../lib/api';
@@ -175,6 +175,12 @@ export default function QuestionsPage() {
     toast.success('Share link copied');
   };
 
+  const handleExplainWithAi = (code: string, language: string) => {
+    const prompt = `Please explain the following ${language.toUpperCase()} code for this competitive programming question:\n\n\`\`\`${language}\n${code}\n\`\`\``;
+    localStorage.setItem('chatbot-pending-prompt', prompt);
+    navigate('/chatbot');
+  };
+
   return (
     <div className="animate-fade-in space-y-5">
       <PageHeader title="Q&A" description="Save questions, links, explanations, final code and solved status in one place." eyebrow="Question tracker">
@@ -288,7 +294,12 @@ export default function QuestionsPage() {
             )}
             {viewQ.code && (
               <div>
-                <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5" style={{ fontFamily: 'var(--font-heading)' }}><Code2 className="h-4 w-4" /> Code</h4>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold flex items-center gap-1.5" style={{ fontFamily: 'var(--font-heading)' }}><Code2 className="h-4 w-4" /> Code</h4>
+                  <Button variant="outline" size="sm" onClick={() => handleExplainWithAi(viewQ.code, viewQ.language)}>
+                    <Sparkles className="h-3.5 w-3.5 mr-1 text-primary" /> Explain with AI
+                  </Button>
+                </div>
                 <CodeBlock code={viewQ.code} language={viewQ.language} />
               </div>
             )}
