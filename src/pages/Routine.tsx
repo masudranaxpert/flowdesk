@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Clock, MapPin, Plus, RotateCcw, Trash2, UserRound } from 'lucide-react';
+import { CalendarDays, Clock, MapPin, Plus, RotateCcw, Trash2, UserRound, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { PageHeader, FormField, Spinner } from '../components/UI';
@@ -132,11 +132,79 @@ export default function RoutinePage() {
     load();
   };
 
+  const exportToIcs = () => {
+    if (items.length === 0) return toast.error('No routine items to export');
+
+    const lines = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//BookmarkVault//Routine Calendar//EN',
+      'CALSCALE:GREGORIAN'
+    ];
+
+    const nowStr = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const byDayCodes = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+
+    items.forEach((item) => {
+      lines.push('BEGIN:VEVENT');
+      lines.push(`UID:${item._id || Math.random().toString(36).substring(2)}@bookmarkvault`);
+      lines.push(`DTSTAMP:${nowStr}`);
+      lines.push(`SUMMARY:${item.title}`);
+      
+      const descParts = [];
+      if (item.subject) descParts.push(`Subject: ${item.subject}`);
+      if (item.teacher) descParts.push(`Teacher: ${item.teacher}`);
+      if (item.notes) descParts.push(`Notes: ${item.notes}`);
+      lines.push(`DESCRIPTION:${descParts.join('\\n')}`);
+      
+      if (item.room) lines.push(`LOCATION:Room ${item.room}`);
+
+      const startTimeClean = (item.startTime || '09:00').replace(':', '') + '00';
+      const endTimeClean = (item.endTime || '10:00').replace(':', '') + '00';
+
+      if (item.repeatWeekly) {
+        const today = new Date();
+        const currentDay = today.getDay();
+        const targetDay = item.dayOfWeek;
+        const daysDiff = (targetDay - currentDay + 7) % 7;
+        const targetDate = new Date(today);
+        targetDate.setDate(today.getDate() + daysDiff);
+        
+        const dateStr = targetDate.toISOString().slice(0, 10).replace(/-/g, '');
+        lines.push(`DTSTART:${dateStr}T${startTimeClean}`);
+        lines.push(`DTEND:${dateStr}T${endTimeClean}`);
+        lines.push(`RRULE:FREQ=WEEKLY;BYDAY=${byDayCodes[item.dayOfWeek]}`);
+      } else {
+        const dateStr = (item.date || new Date().toISOString().slice(0, 10)).replace(/-/g, '');
+        lines.push(`DTSTART:${dateStr}T${startTimeClean}`);
+        lines.push(`DTEND:${dateStr}T${endTimeClean}`);
+      }
+
+      lines.push('END:VEVENT');
+    });
+
+    lines.push('END:VCALENDAR');
+
+    const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'study_routine.ics');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success('Routine exported to study_routine.ics');
+  };
+
   return (
     <div className="space-y-5 animate-fade-in">
       <PageHeader title="Class Routine" eyebrow="Planner" description="Weekly classes and one-time events in a clean schedule view.">
         <Button className="xl:hidden" onClick={() => setFormOpen((value) => !value)}>
           <Plus className="h-4 w-4" /> {formOpen ? 'Close' : 'Add'}
+        </Button>
+        <Button variant="outline" onClick={exportToIcs}>
+          <Download className="h-4 w-4" /> Export Calendar
         </Button>
         <Button variant="outline" onClick={reset}>
           <RotateCcw className="h-4 w-4" /> Reset
