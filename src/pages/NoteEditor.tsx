@@ -42,6 +42,114 @@ const fontSizes = [
 const textSizes = [14, 16, 18, 20, 22, 24, 26, 30, 34, 40];
 const historyLimit = 80;
 
+function splitStyle(style: string) {
+  return style
+    .split(';')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function styleWithoutProperty(style: string, property: string) {
+  const lower = property.toLowerCase();
+  return splitStyle(style)
+    .filter((item) => !item.toLowerCase().startsWith(`${lower}:`))
+    .join('; ');
+}
+
+function styleWithProperty(style: string, property: string, value: string) {
+  const rest = styleWithoutProperty(style, property);
+  return [rest, `${property}: ${value}`].filter(Boolean).join('; ');
+}
+
+function getStyleFromSpan(tag: string) {
+  return tag.match(/\sstyle=(["'])(.*?)\1/i)?.[2] || '';
+}
+
+function getFontSizeFromSpan(tag: string) {
+  const match = getStyleFromSpan(tag).match(/font-size\s*:\s*(\d+)px/i);
+  return match ? Number(match[1]) : 0;
+}
+
+function setSpanFontSize(tag: string, size: string) {
+  if (/\sstyle=(["'])(.*?)\1/i.test(tag)) {
+    return tag.replace(/\sstyle=(["'])(.*?)\1/i, (_match, quote, style) => ` style=${quote}${styleWithProperty(style, 'font-size', size)}${quote}`);
+  }
+  return tag.replace(/>$/, ` style="font-size: ${size}">`);
+}
+
+function removeFontSizeFromSpan(tag: string) {
+  const styleMatch = tag.match(/\sstyle=(["'])(.*?)\1/i);
+  if (!styleMatch) return { tag, removed: false };
+  const nextStyle = styleWithoutProperty(styleMatch[2], 'font-size');
+  if (nextStyle) {
+    return { tag: tag.replace(/\sstyle=(["'])(.*?)\1/i, ` style=${styleMatch[1]}${nextStyle}${styleMatch[1]}`), removed: false };
+  }
+  const withoutStyle = tag.replace(/\sstyle=(["'])(.*?)\1/i, '');
+  const hasOtherAttrs = /^<span\s+[^>]+>$/i.test(withoutStyle);
+  return hasOtherAttrs ? { tag: withoutStyle, removed: false } : { tag: '', removed: true };
+}
+
+function cleanFontSizeMarkup(fragment: string) {
+  const tagRe = /<\/?span\b[^>]*>/gi;
+  const removedStack: boolean[] = [];
+  let output = '';
+  let last = 0;
+  for (const match of fragment.matchAll(tagRe)) {
+    const tag = match[0];
+    const index = match.index || 0;
+    output += fragment.slice(last, index);
+    if (/^<\/span/i.test(tag)) {
+      const removed = removedStack.pop();
+      if (!removed) output += tag;
+    } else {
+      const cleaned = removeFontSizeFromSpan(tag);
+      removedStack.push(cleaned.removed);
+      output += cleaned.tag;
+    }
+    last = index + tag.length;
+  }
+  output += fragment.slice(last);
+  return output;
+}
+
+function findEnclosingFontSizeSpan(source: string, start: number, end: number) {
+  const tagRe = /<\/?span\b[^>]*>/gi;
+  const stack: Array<{ openStart: number; openEnd: number; openTag: string }> = [];
+  const matches: Array<{ openStart: number; openEnd: number; closeStart: number; closeEnd: number; openTag: string; size: number }> = [];
+  for (const match of source.matchAll(tagRe)) {
+    const tag = match[0];
+    const index = match.index || 0;
+    if (/^<\/span/i.test(tag)) {
+      const open = stack.pop();
+      if (!open) continue;
+      const size = getFontSizeFromSpan(open.openTag);
+      if (size && open.openEnd <= start && index >= end) {
+        matches.push({ ...open, closeStart: index, closeEnd: index + tag.length, size });
+      }
+    } else {
+      stack.push({ openStart: index, openEnd: index + tag.length, openTag: tag });
+    }
+  }
+  return matches.sort((a, b) => (a.closeEnd - a.openStart) - (b.closeEnd - b.openStart))[0] || null;
+}
+
+function firstFontSizeInText(text: string) {
+  const match = text.match(/font-size\s*:\s*(\d+)px/i);
+  return match ? Number(match[1]) : 0;
+}
+
+function changeRange(before: string, after: string) {
+  let start = 0;
+  while (start < before.length && start < after.length && before[start] === after[start]) start += 1;
+  let beforeEnd = before.length;
+  let afterEnd = after.length;
+  while (beforeEnd > start && afterEnd > start && before[beforeEnd - 1] === after[afterEnd - 1]) {
+    beforeEnd -= 1;
+    afterEnd -= 1;
+  }
+  return { start, end: Math.max(start, afterEnd) };
+}
+
 export default function NoteEditorPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -140,20 +248,35 @@ export default function NoteEditorPage() {
     if (notice) showEditorNotice(notice);
   };
 
+  const focusChangedRange = (range: { start: number; end: number }) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const safeStart = Math.max(0, Math.min(range.start, textarea.value.length));
+    const safeEnd = Math.max(safeStart, Math.min(range.end, textarea.value.length));
+    const line = textarea.value.slice(0, safeStart).split('\n').length - 1;
+    const lineHeight = Number.parseFloat(window.getComputedStyle(textarea).lineHeight) || 22;
+    textarea.focus({ preventScroll: true });
+    textarea.scrollTop = Math.max(0, (line * lineHeight) - (textarea.clientHeight / 2));
+    textarea.setSelectionRange(safeStart, safeEnd || safeStart);
+    selectionRef.current = safeEnd > safeStart ? { start: safeStart, end: safeEnd } : null;
+    setSelectedText(safeEnd > safeStart ? textarea.value.slice(safeStart, safeEnd) : '');
+  };
+
   const undoContent = () => {
     const previous = undoStackRef.current.pop();
     if (previous === undefined) {
       showEditorNotice('Nothing to undo');
       return;
     }
+    const range = changeRange(content, previous);
     redoStackRef.current = [content, ...redoStackRef.current].slice(0, historyLimit);
     historyPausedRef.current = true;
     setContent(previous);
     window.requestAnimationFrame(() => {
       historyPausedRef.current = false;
-      textareaRef.current?.focus({ preventScroll: true });
+      focusChangedRange(range);
     });
-    showEditorNotice('Undo');
+    showEditorNotice('Undo - changed text selected');
   };
 
   const redoContent = () => {
@@ -162,14 +285,15 @@ export default function NoteEditorPage() {
       showEditorNotice('Nothing to redo');
       return;
     }
+    const range = changeRange(content, next);
     undoStackRef.current = [...undoStackRef.current, content].slice(-historyLimit);
     historyPausedRef.current = true;
     setContent(next);
     window.requestAnimationFrame(() => {
       historyPausedRef.current = false;
-      textareaRef.current?.focus({ preventScroll: true });
+      focusChangedRange(range);
     });
-    showEditorNotice('Redo');
+    showEditorNotice('Redo - changed text selected');
   };
 
   useEffect(() => {
@@ -295,19 +419,36 @@ export default function NoteEditorPage() {
   };
 
   const applyFontSize = (size = selectedFontSize) => {
-    wrapSelection(`<span style="font-size: ${size}">`, '</span>');
+    const { start, end, text } = selectedRange();
+    if (!text.trim()) return toast.error('Select text first');
+    const enclosing = findEnclosingFontSizeSpan(content, start, end);
+    if (enclosing) {
+      const nextOpenTag = setSpanFontSize(enclosing.openTag, size);
+      const delta = nextOpenTag.length - enclosing.openTag.length;
+      const next = `${content.slice(0, enclosing.openStart)}${nextOpenTag}${content.slice(enclosing.openEnd)}`;
+      selectionRef.current = { start: start + delta, end: end + delta };
+      setContentWithHistory(next, `Text size ${size}`);
+      window.requestAnimationFrame(() => {
+        textareaRef.current?.focus({ preventScroll: true });
+        textareaRef.current?.setSelectionRange(start + delta, end + delta);
+      });
+    } else {
+      const cleaned = cleanFontSizeMarkup(text);
+      replaceRange(start, end, `<span style="font-size: ${size}">${cleaned}</span>`);
+      showEditorNotice(`Text size ${size}`);
+    }
     setSelectedText('');
     setContextMenu(null);
   };
 
   const increaseSelectionSize = () => {
-    const { text } = selectedRange();
+    const { start, end, text } = selectedRange();
     if (!text.trim()) return toast.error('Select text first');
-    const current = Number(String(selectedFontSize).replace('px', '')) || 16;
+    const enclosing = findEnclosingFontSizeSpan(content, start, end);
+    const current = enclosing?.size || firstFontSizeInText(text) || Number(String(selectedFontSize).replace('px', '')) || 16;
     const next = textSizes.find((size) => size > current) || textSizes[textSizes.length - 1];
     setSelectedFontSize(`${next}px`);
     applyFontSize(`${next}px`);
-    showEditorNotice(`Text size ${next}px`);
   };
 
   const applyBold = () => {
