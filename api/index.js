@@ -231,6 +231,57 @@ async function sendResetMail(email, name, code) {
   return sendResetPasswordEmail({ to: email, name, code });
 }
 
+async function getMetadata(targetUrl) {
+  try {
+    let urlString = targetUrl;
+    if (!/^https?:\/\//i.test(urlString)) {
+      urlString = 'https://' + urlString;
+    }
+    const parsedUrl = new URL(urlString);
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), 4000);
+    const response = await fetch(parsedUrl.toString(), {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    });
+    clearTimeout(id);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch URL: ${response.statusText}`);
+    }
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('text/html')) {
+      return { title: '', description: '' };
+    }
+    const html = await response.text();
+    const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    let title = titleMatch ? titleMatch[1].trim() : '';
+    if (title) {
+      title = title
+        .replaceAll('&amp;', '&')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#39;', "'")
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>');
+    }
+    let description = '';
+    const descMatch = html.match(/<meta[^>]+(?:name|property)=["'](?:og:)?description["'][^>]+content=["']([^"']*)["']/i)
+      || html.match(/<meta[^>]+content=["']([^"']*)["'][^>]+(?:name|property)=["'](?:og:)?description["']/i);
+    if (descMatch) {
+      description = descMatch[1].trim()
+        .replaceAll('&amp;', '&')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#39;', "'")
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>');
+    }
+    return { title, description };
+  } catch (err) {
+    return { title: '', description: '', error: err.message };
+  }
+}
+
 export default async function handler(req, res) {
   await ensureSchema();
   const { method, query = {} } = req;
@@ -444,6 +495,15 @@ export default async function handler(req, res) {
         const row = (await d1Query('SELECT * FROM ai_settings WHERE userId = ? AND singleton = ? LIMIT 1;', [uid, singleton]))[0];
         return res.json(mapBase(row));
       }
+    }
+
+    if (slug === 'bookmarks/meta' && method === 'GET') {
+      const user = await requireUser(req, res);
+      if (!user) return;
+      const targetUrl = String(query.url || '').trim();
+      if (!targetUrl) return res.status(400).json({ error: 'URL is required' });
+      const meta = await getMetadata(targetUrl);
+      return res.json(meta);
     }
 
     const parts = slug.split('/');

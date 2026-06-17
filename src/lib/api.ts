@@ -56,6 +56,7 @@ export const api = {
     create: (data: Partial<Bookmark>) => request<Bookmark>('/bookmarks', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: Partial<Bookmark>) => request<Bookmark>(`/bookmarks/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: string) => request<void>(`/bookmarks/${id}`, { method: 'DELETE' }),
+    getMeta: (url: string) => request<{ title: string; description: string; error?: string }>(`/bookmarks/meta?url=${encodeURIComponent(url)}`),
   },
   notebooks: {
     list: (params?: Record<string, string>) => request<any>(`/notebooks${qs(params)}`),
