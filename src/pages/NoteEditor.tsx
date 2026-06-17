@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Bold, Bot, Code2, Eye, Heading2, Italic, List, Palette, Save, Sparkles, Type } from 'lucide-react';
+import { ArrowLeft, Bold, Bot, Code2, Download, Eye, Heading2, Italic, List, Palette, Save, Sparkles, Type } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -212,6 +212,20 @@ export default function NoteEditorPage() {
     }
   };
 
+  const downloadMarkdown = () => {
+    if (!content) return toast.error('Content is empty');
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${title.trim() || 'note'}.md`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success('Markdown exported');
+  };
+
   if (loading) return <Spinner />;
 
   const categoryOptions = categories.map((item) => ({ value: item.slug, label: item.name }));
@@ -219,6 +233,9 @@ export default function NoteEditorPage() {
   const modelOptions = activeModels.length > 0
     ? activeModels.map((model) => ({ value: model.id, label: `${model.label} - ${model.model}` }))
     : [{ value: 'default', label: `${settings.provider} - ${settings.provider === 'gemini' ? settings.geminiModel : settings.provider === 'openrouter' ? settings.openRouterModel : settings.openAiModel}` }];
+
+  const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
+  const charCount = content.length;
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -229,10 +246,16 @@ export default function NoteEditorPage() {
             Notes
           </Link>
         </Button>
-        <Button onClick={save}>
-          <Save className="h-4 w-4" />
-          Save Note
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={downloadMarkdown}>
+            <Download className="h-4 w-4" />
+            Export Markdown
+          </Button>
+          <Button onClick={save}>
+            <Save className="h-4 w-4" />
+            Save Note
+          </Button>
+        </div>
       </div>
 
       <Card className="rounded-3xl">
@@ -352,6 +375,9 @@ export default function NoteEditorPage() {
               )}
             </div>
           )}
+          <div className="mt-3 flex justify-between text-xs text-muted-foreground px-1">
+            <span>{wordCount} words / {charCount} characters</span>
+          </div>
         </CardContent>
       </Card>
 

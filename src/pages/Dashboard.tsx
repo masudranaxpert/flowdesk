@@ -112,6 +112,42 @@ export default function Dashboard() {
     .filter((item) => (item.repeatWeekly && item.dayOfWeek === todayIndex) || (!item.repeatWeekly && item.date === todayDate))
     .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
+  const activeRoutine = useMemo(() => {
+    if (todaySchedule.length === 0) return null;
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const parseTime = (t: string) => {
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    };
+
+    const ongoing = todaySchedule.find(item => {
+      const start = parseTime(item.startTime);
+      const end = parseTime(item.endTime);
+      return currentMinutes >= start && currentMinutes <= end;
+    });
+
+    if (ongoing) {
+      const end = parseTime(ongoing.endTime);
+      const remaining = end - currentMinutes;
+      return { type: 'ongoing', item: ongoing, remaining };
+    }
+
+    const upcoming = todaySchedule.find(item => {
+      const start = parseTime(item.startTime);
+      return start > currentMinutes;
+    });
+
+    if (upcoming) {
+      const start = parseTime(upcoming.startTime);
+      const countdown = start - currentMinutes;
+      return { type: 'upcoming', item: upcoming, countdown };
+    }
+
+    return null;
+  }, [todaySchedule]);
+
   return (
     <div className="space-y-5 animate-fade-in">
       <Card className="rounded-3xl border-primary/20 bg-card/95">
@@ -125,7 +161,27 @@ export default function Dashboard() {
               <CalendarDays className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-base font-semibold tracking-tight">Today&apos;s routine</p>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="text-base font-semibold tracking-tight">Today&apos;s routine</span>
+                {activeRoutine && (
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-medium border ${
+                    activeRoutine.type === 'ongoing' 
+                      ? 'bg-destructive/12 text-destructive border-destructive/20 animate-pulse' 
+                      : 'bg-primary/12 text-primary border-primary/20'
+                  }`}>
+                    <span className="relative flex h-1.5 w-1.5 shrink-0">
+                      {activeRoutine.type === 'ongoing' && (
+                        <span className="absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping bg-destructive"></span>
+                      )}
+                      <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${activeRoutine.type === 'ongoing' ? 'bg-destructive' : 'bg-primary'}`}></span>
+                    </span>
+                    {activeRoutine.type === 'ongoing' 
+                      ? `Ongoing: ${activeRoutine.item.title} (${activeRoutine.remaining}m left)`
+                      : `Next: ${activeRoutine.item.title} (in ${activeRoutine.countdown}m)`
+                    }
+                  </span>
+                )}
+              </div>
               <p className="text-sm text-muted-foreground">{todayLabel} - {todaySchedule.length} item{todaySchedule.length === 1 ? '' : 's'}</p>
             </div>
             <ChevronDown className={`h-4 w-4 text-muted-foreground transition ${routineOpen ? 'rotate-180' : ''}`} />

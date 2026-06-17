@@ -50,6 +50,37 @@ export default function QuestionEditorPage() {
   const [categories, setCategories] = useState<Category[]>([fallbackCategory]);
   const [loading, setLoading] = useState(Boolean(id));
   const editing = Boolean(id);
+  const [detecting, setDetecting] = useState(false);
+
+  useEffect(() => {
+    if (editing || !form.link) return;
+    let active = true;
+    const url = form.link.trim();
+    if (!/^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/.*)?$/i.test(url)) return;
+    const t = setTimeout(async () => {
+      setDetecting(true);
+      try {
+        const meta = await api.questions.getMeta(url);
+        if (active && meta && !meta.error) {
+          setForm(prev => ({
+            ...prev,
+            title: prev.title || meta.title || '',
+            platform: meta.platform || prev.platform,
+            difficulty: meta.difficulty || prev.difficulty,
+            tags: prev.tags.length === 0 ? (meta.tags || []) : prev.tags
+          }));
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (active) setDetecting(false);
+      }
+    }, 800);
+    return () => {
+      active = false;
+      clearTimeout(t);
+    };
+  }, [form.link, editing]);
 
   useEffect(() => {
     api.categories.list({ scope: 'question' }).then((items) => setCategories([fallbackCategory, ...items])).catch(() => {});
@@ -107,8 +138,8 @@ export default function QuestionEditorPage() {
 
       <Card className="rounded-3xl">
         <CardContent className="space-y-4 p-4 sm:p-5">
-          <FormField label="Title">
-            <Input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Problem title" />
+          <FormField label={detecting ? "Title (fetching...)" : "Title"}>
+            <Input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder={detecting ? "Fetching details..." : "Problem title"} />
           </FormField>
           <div className="grid gap-4 md:grid-cols-4">
             <FormField label="Difficulty">
