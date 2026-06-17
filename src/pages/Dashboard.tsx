@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { Textarea } from '@/components/ui/textarea';
 import {
   ArrowRight,
   BookOpen,
@@ -70,6 +71,7 @@ let cachedStats: Stats | null = null;
 let cachedRoutines: RoutineItem[] = [];
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<Stats | null>(cachedStats);
   const [upcoming, setUpcoming] = useState<RoutineItem[]>(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -77,6 +79,8 @@ export default function Dashboard() {
   });
   const [routines, setRoutines] = useState<RoutineItem[]>(cachedRoutines);
   const [routineOpen, setRoutineOpen] = useState(false);
+  const [currentTimeStr, setCurrentTimeStr] = useState(() => new Date().toTimeString().slice(0, 5));
+  const [scratchpad, setScratchpad] = useState(() => localStorage.getItem('dashboard-scratchpad') || '');
 
   useEffect(() => {
     api.stats
@@ -92,6 +96,13 @@ export default function Dashboard() {
       const today = new Date().toISOString().slice(0, 10);
       setUpcoming(items.filter((item) => !item.repeatWeekly && item.date >= today).slice(0, 3));
     }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setCurrentTimeStr(new Date().toTimeString().slice(0, 5));
+    }, 30000);
+    return () => clearInterval(t);
   }, []);
 
   const total = useMemo(() => {
@@ -114,8 +125,8 @@ export default function Dashboard() {
 
   const activeRoutine = useMemo(() => {
     if (todaySchedule.length === 0) return null;
-    const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const [h, m] = currentTimeStr.split(':').map(Number);
+    const currentMinutes = h * 60 + m;
 
     const parseTime = (t: string) => {
       const [h, m] = t.split(':').map(Number);
@@ -295,49 +306,73 @@ export default function Dashboard() {
         })}
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-[0.9fr_1.1fr]">
-        <Card className="rounded-3xl">
-          <CardContent className="p-5 sm:p-6">
-            <div className="flex items-center gap-3">
-              <div className="grid h-11 w-11 place-items-center rounded-2xl bg-success/12 text-success">
-                <CheckCircle2 className="h-5 w-5" />
-              </div>
-              <div>
-                {!stats ? (
-                  <div className="h-8 w-16 animate-pulse rounded bg-muted" />
-                ) : (
-                  <p className="text-2xl font-semibold tracking-tight">{total}</p>
-                )}
-                <p className="text-sm text-muted-foreground">Total saved items</p>
-              </div>
+      <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
+        <Card className="rounded-3xl border-primary/20 bg-card/95">
+          <CardContent className="flex flex-col h-full p-5 sm:p-6">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-base font-semibold tracking-tight">Quick Scratchpad</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 rounded-xl"
+                onClick={() => navigate('/notebooks/new?source=scratchpad')}
+              >
+                Convert to Note
+              </Button>
             </div>
-            <p className="mt-5 text-sm leading-6 text-muted-foreground">
-              Use this app as your own memory system: collect resources, turn concepts into notes, and save complete answers with explanation.
-            </p>
+            <Textarea
+              value={scratchpad}
+              onChange={(e) => {
+                setScratchpad(e.target.value);
+                localStorage.setItem('dashboard-scratchpad', e.target.value);
+              }}
+              placeholder="Jot down quick thoughts, links, draft notes, or logs. Converts into a permanent markdown Note with one click..."
+              className="flex-1 min-h-[140px] resize-none rounded-2xl font-mono text-sm bg-muted/20 border-border"
+            />
           </CardContent>
         </Card>
 
-        <Card className="rounded-3xl">
-          <CardContent className="p-5 sm:p-6">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="grid h-11 w-11 place-items-center rounded-2xl bg-muted text-foreground">
-                <Layers3 className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-base font-semibold tracking-tight">Recommended workflow</p>
-                <p className="text-sm text-muted-foreground">Fast path for learning</p>
-              </div>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-3">
-              {['Save useful link', 'Write explanation', 'Store final answer'].map((step, index) => (
-                <div key={step} className="rounded-2xl border border-border bg-muted/35 p-3">
-                  <p className="text-xs font-semibold text-primary">0{index + 1}</p>
-                  <p className="mt-1 text-sm font-medium">{step}</p>
+        <div className="flex flex-col gap-3">
+          <Card className="rounded-3xl">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-3">
+                <div className="grid h-11 w-11 place-items-center rounded-2xl bg-success/12 text-success">
+                  <CheckCircle2 className="h-5 w-5" />
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                <div>
+                  {!stats ? (
+                    <div className="h-8 w-16 animate-pulse rounded bg-muted" />
+                  ) : (
+                    <p className="text-2xl font-semibold tracking-tight">{total}</p>
+                  )}
+                  <p className="text-sm text-muted-foreground">Total saved items</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-3xl">
+            <CardContent className="p-5 flex-1 flex flex-col justify-center">
+              <div className="mb-3 flex items-center gap-3">
+                <div className="grid h-11 w-11 place-items-center rounded-2xl bg-muted text-foreground">
+                  <Layers3 className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-base font-semibold tracking-tight">Recommended workflow</p>
+                  <p className="text-sm text-muted-foreground">Fast path for learning</p>
+                </div>
+              </div>
+              <div className="grid gap-2 grid-cols-3">
+                {['Save useful link', 'Write explanation', 'Store final answer'].map((step, index) => (
+                  <div key={step} className="rounded-2xl border border-border bg-muted/35 p-2 text-center">
+                    <p className="text-[10px] font-semibold text-primary">0{index + 1}</p>
+                    <p className="mt-0.5 text-xs font-medium">{step}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {upcoming.length > 0 && (

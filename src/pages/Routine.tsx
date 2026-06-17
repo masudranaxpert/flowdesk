@@ -78,7 +78,7 @@ export default function RoutinePage() {
   const [formOpen, setFormOpen] = useState(false);
 
   const todayIndex = new Date().getDay();
-  const currentTime = new Date().toTimeString().slice(0, 5);
+  const [currentTime, setCurrentTime] = useState(() => new Date().toTimeString().slice(0, 5));
   const dateLabels = useMemo(() => weekDateLabels(todayIndex), [todayIndex]);
   const dayOptions = days.map((day, index) => ({ value: String(index), label: day }));
 
@@ -88,6 +88,13 @@ export default function RoutinePage() {
   }, []);
 
   useEffect(() => load(), [load]);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setCurrentTime(new Date().toTimeString().slice(0, 5));
+    }, 30000);
+    return () => clearInterval(t);
+  }, []);
 
   const grouped = useMemo(() => days.map((day, index) => ({
     day,

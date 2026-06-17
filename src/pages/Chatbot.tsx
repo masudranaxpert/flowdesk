@@ -80,6 +80,7 @@ export default function ChatbotPage() {
   const [selectedModelId, setSelectedModelId] = useState('');
   const [dragging, setDragging] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [draftModel, setDraftModel] = useState<AiModelConfig>({
     id: '',
     label: '',
@@ -118,6 +119,18 @@ export default function ChatbotPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, sending, pendingActions]);
+
+  useEffect(() => {
+    const pending = localStorage.getItem('chatbot-pending-prompt');
+    if (pending) {
+      setInput(pending);
+      setTab('chat');
+      localStorage.removeItem('chatbot-pending-prompt');
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 100);
+    }
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -511,7 +524,7 @@ export default function ChatbotPage() {
                         ))}
                       </div>
                     )}
-                    <Textarea value={input} onPaste={pasteFiles} onChange={(event) => setInput(event.target.value)} className="min-h-11 resize-none rounded-2xl border-0 bg-transparent px-3 shadow-none focus-visible:ring-0" placeholder="Send a message, drop files, or paste an image..." onKeyDown={(event) => {
+                    <Textarea ref={textareaRef} value={input} onPaste={pasteFiles} onChange={(event) => setInput(event.target.value)} className="min-h-11 resize-none rounded-2xl border-0 bg-transparent px-3 shadow-none focus-visible:ring-0" placeholder="Send a message, drop files, or paste an image..." onKeyDown={(event) => {
                       if (event.key === 'Enter' && event.ctrlKey && event.shiftKey) {
                         event.preventDefault();
                         insertNewLine(event.currentTarget);

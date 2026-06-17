@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, Trash2, Edit3, Heart, Copy, Check, Code2, Share2, WrapText } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Trash2, Edit3, Heart, Copy, Check, Code2, Share2, WrapText, Sparkles } from 'lucide-react';
 import { api } from '../lib/api';
 import { PageHeader, EmptyState, Spinner, SearchInput, ConfirmDialog, FormField, TagInput, PaginationControls } from '../components/UI';
 import { Select } from '../components/Select';
@@ -43,6 +44,7 @@ function detectLanguage(code: string): string {
 }
 
 export default function CodeBookPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [language, setLanguage] = useState('all');
@@ -155,6 +157,12 @@ export default function CodeBookPage() {
     toast.success('Share link copied');
   };
 
+  const handleExplainWithAi = (code: string, language: string) => {
+    const prompt = `Please explain the following ${language.toUpperCase()} code snippet:\n\n\`\`\`${language}\n${code}\n\`\`\``;
+    localStorage.setItem('chatbot-pending-prompt', prompt);
+    navigate('/chatbot');
+  };
+
   return (
     <div className="animate-fade-in space-y-5">
       <PageHeader title="Code Book" description="Keep templates, snippets, accepted code and reusable utilities ready." eyebrow="Snippet vault">
@@ -197,6 +205,9 @@ export default function CodeBookPage() {
                     </button>
                   </div>
                   <div className="flex gap-0.5" onClick={(event) => event.stopPropagation()}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleExplainWithAi(c.code, c.language)} title="Explain with AI">
+                      <Sparkles className="h-3.5 w-3.5 text-primary" />
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyCode(c.code, c._id)}>
                       {copiedId === c._id ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
                     </Button>
@@ -265,6 +276,9 @@ export default function CodeBookPage() {
                 <span className="text-xs text-muted-foreground">{formatDate(viewSnippet.createdAt)}</span>
               </div>
               <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={() => handleExplainWithAi(viewSnippet.code, viewSnippet.language)}>
+                  <Sparkles className="h-4 w-4 mr-1 text-primary" /> Explain
+                </Button>
                 <Button variant={wrapCode ? 'default' : 'outline'} size="sm" onClick={() => setWrapCode((value) => !value)}>
                   <WrapText className="h-4 w-4" /> Wrap
                 </Button>
