@@ -123,6 +123,14 @@ For multiple items, use an actions array. Use this whenever the user asks for ma
   {"operation":"create","resource":"routines","data":{"title":"...","type":"class","dayOfWeek":1,"startTime":"09:00","endTime":"10:00","repeatWeekly":true}}
 ]}
 \`\`\`
+For categories, always include the exact scope where it should appear:
+\`\`\`ACTION_JSON
+{"operation":"create","resource":"categories","data":{"name":"Research","scope":"bookmark"}}
+\`\`\`
+Category scopes are: "bookmark", "notebook", "code", "question", or "all".
+If the user says bookmark-only, links-only, or just bookmark categories, use scope "bookmark".
+If the user says notebook-only or note categories, use scope "notebook".
+If a category with the same name already exists in App data context but has the wrong scope, use an update action with that existing category id instead of creating a duplicate.
 For deleting many existing items, prefer one compact delete_many action instead of many separate delete actions:
 \`\`\`ACTION_JSON
 {"operation":"delete_many","resource":"routines","ids":["existing-id-1","existing-id-2"]}
@@ -134,6 +142,7 @@ For deleting every item in a resource, use delete_all only when the user explici
 Allowed resources: bookmarks, notebooks, codes, questions, routines, categories.
 Allowed operations: create, update, delete, delete_many, delete_all. For update/delete/delete_many include exact existing ids from the App data context/actionIndex. For create, omit id.
 Use delete_all only for explicit delete-all requests. Never use delete_all for vague cleanup requests.
+For category create/update, data.scope must be one of "bookmark", "notebook", "code", "question", or "all"; never omit category scope.
 Routine type must be only "class" or "event". Map meeting, personal, gym, reading, reminder, or task-like schedule items to "event" unless it is clearly a weekly class.
 Question difficulty must be only "easy", "medium", or "hard".
 Do not combine unrelated sample items into one notebook when the user asks for diverse app data. Create the correct resource type for each item.

@@ -38,6 +38,22 @@ type VaultContext = {
   categories: any[];
 };
 
+const categoryScopes = ['all', 'bookmark', 'notebook', 'code', 'question'] as const;
+
+function slugifyCategory(value: string) {
+  return value.trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '') || 'category';
+}
+
+function normalizeCategoryScope(value: unknown) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (categoryScopes.includes(raw as any)) return raw;
+  if (['bookmarks', 'link', 'links', 'bookmark-only'].includes(raw)) return 'bookmark';
+  if (['notebooks', 'notes', 'note', 'notebook-only'].includes(raw)) return 'notebook';
+  if (['codes', 'codebook', 'snippet', 'snippets', 'code-only'].includes(raw)) return 'code';
+  if (['questions', 'question', 'qa', 'q&a', 'cp', 'problem', 'problems'].includes(raw)) return 'question';
+  return '';
+}
+
 const emptyVaultContext: VaultContext = {
   bookmarks: [],
   notes: [],
@@ -88,6 +104,20 @@ function isWritingAction(text: string) {
 
 function sanitizeActionData(resource: AiAction['resource'], data: Record<string, any>) {
   const next = { ...data };
+  if (resource === 'categories') {
+    const inferredScope =
+      normalizeCategoryScope(next.scope) ||
+      normalizeCategoryScope(next.section) ||
+      normalizeCategoryScope(next.target) ||
+      normalizeCategoryScope(next.resource) ||
+      normalizeCategoryScope(next.type);
+    next.scope = inferredScope || 'bookmark';
+    next.name = String(next.name || next.title || '').trim();
+    delete next.section;
+    delete next.target;
+    delete next.resource;
+    delete next.type;
+  }
   if (resource === 'routines') {
     const type = String(next.type || '').toLowerCase();
     next.type = type === 'class' ? 'class' : 'event';
@@ -262,7 +292,7 @@ export default function ChatbotPage() {
           codes: fullContext.codes.slice(0, 200).map(({ id, title }: any) => ({ id, title })),
           questions: fullContext.questions.slice(0, 200).map(({ id, title }: any) => ({ id, title })),
           routines: fullContext.routines.slice(0, 300).map(({ id, title, type }: any) => ({ id, title, type })),
-          categories: fullContext.categories.slice(0, 200).map(({ id, name }: any) => ({ id, title: name })),
+          categories: fullContext.categories.slice(0, 200).map(({ id, name, slug, scope }: any) => ({ id, title: name, slug, scope })),
         },
       };
       setVaultContext(fullContext);
@@ -454,7 +484,20 @@ export default function ChatbotPage() {
         const { id: _ignoredId, _id: _ignoredLegacyId, ...payload } = cleanData;
         const target = map[resource];
         if (!target) throw new Error(`Unsupported action: ${resource}`);
-        if (operation === 'create') await target.create(payload);
+        if (operation === 'create') {
+          if (resource === 'categories') {
+            const requestedName = String(payload.name || '').trim();
+            const requestedSlug = slugifyCategory(String(payload.slug || requestedName));
+            const existing = vaultContext.categories.find((item) => item.slug === requestedSlug || item.name?.toLowerCase?.() === requestedName.toLowerCase());
+            if (existing) {
+              await target.update(existing.id || existing._id, { scope: payload.scope || 'bookmark' });
+            } else {
+              await target.create(payload);
+            }
+          } else {
+            await target.create(payload);
+          }
+        }
         if (operation === 'delete_all') {
           if (resource === 'routines') await api.routines.reset('all');
           else {

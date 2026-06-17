@@ -158,7 +158,14 @@ async function listResource(resource, query, uid) {
 }
 
 function validateResourceData(resource, data, { partial = false } = {}) {
+  const hasCategoryScope = resource === 'categories' && Object.prototype.hasOwnProperty.call(data || {}, 'scope');
   const next = partial ? { ...data } : { ...resources[resource].defaults, ...data };
+  if (resource === 'categories') {
+    const allowedScopes = ['all', 'bookmark', 'notebook', 'code', 'question'];
+    if (!partial && !hasCategoryScope) next.scope = 'bookmark';
+    if (next.scope !== undefined && !allowedScopes.includes(next.scope)) next.scope = 'bookmark';
+    if (!partial) next.name = String(next.name || '').trim() || 'Untitled category';
+  }
   if (resource === 'questions' && next.difficulty !== undefined && !['easy', 'medium', 'hard'].includes(next.difficulty)) next.difficulty = 'medium';
   if (!partial && resource === 'bookmarks') {
     next.url = String(next.url || '').trim() || 'https://example.com';
