@@ -282,6 +282,127 @@ async function getMetadata(targetUrl) {
   }
 }
 
+async function getQuestionMetadata(targetUrl) {
+  try {
+    let urlString = targetUrl.trim();
+    if (!/^https?:\/\//i.test(urlString)) {
+      urlString = 'https://' + urlString;
+    }
+    const parsedUrl = new URL(urlString);
+    const host = parsedUrl.hostname.toLowerCase();
+    let title = '';
+    let difficulty = 'medium';
+    let platform = 'other';
+    let tags = [];
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), 4000);
+    if (host.includes('codeforces.com')) {
+      platform = 'codeforces';
+      const response = await fetch(parsedUrl.toString(), {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      });
+      clearTimeout(id);
+      if (response.ok) {
+        const html = await response.text();
+        const titleMatch = html.match(/<div class="title">\s*[A-Z\d]+\.\s*([^<]+)<\/div>/i) || html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+        if (titleMatch) {
+          title = titleMatch[1].trim()
+            .replaceAll('&amp;', '&')
+            .replaceAll('&quot;', '"')
+            .replaceAll('&#39;', "'")
+            .replaceAll('&lt;', '<')
+            .replaceAll('&gt;', '>');
+          title = title.replace(/\s*-\s*Codeforces\s*$/i, '');
+        }
+        const tagRegex = /<span class="tag-box"[^>]*>\s*([^<]+)\s*<\/span>/gi;
+        let match;
+        while ((match = tagRegex.exec(html)) !== null) {
+          const tag = match[1].trim();
+          if (tag.startsWith('*')) {
+            const rating = parseInt(tag.substring(1), 10);
+            if (!isNaN(rating)) {
+              if (rating < 1200) difficulty = 'easy';
+              else if (rating < 1900) difficulty = 'medium';
+              else difficulty = 'hard';
+            }
+          } else if (!tag.startsWith('Combined')) {
+            tags.push(tag.toLowerCase());
+          }
+        }
+      }
+    } else if (host.includes('leetcode.com')) {
+      platform = 'leetcode';
+      const match = parsedUrl.pathname.match(/\/problems\/([^/]+)/);
+      if (match && match[1]) {
+        const slug = match[1];
+        const graphqlResponse = await fetch('https://leetcode.com/graphql', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+          },
+          body: JSON.stringify({
+            query: `query questionTitle($titleSlug: String!) {
+              question(titleSlug: $titleSlug) {
+                title
+                difficulty
+                topicTags {
+                  name
+                }
+              }
+            }`,
+            variables: { titleSlug: slug }
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(id);
+        if (graphqlResponse.ok) {
+          const result = await graphqlResponse.json();
+          const q = result?.data?.question;
+          if (q) {
+            title = q.title || '';
+            difficulty = q.difficulty ? q.difficulty.toLowerCase() : 'medium';
+            tags = q.topicTags ? q.topicTags.map(t => t.name.toLowerCase()) : [];
+          }
+        }
+      }
+    } else {
+      const response = await fetch(parsedUrl.toString(), {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      });
+      clearTimeout(id);
+      if (response.ok) {
+        const html = await response.text();
+        const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+        if (titleMatch) {
+          title = titleMatch[1].trim()
+            .replaceAll('&amp;', '&')
+            .replaceAll('&quot;', '"')
+            .replaceAll('&#39;', "'")
+            .replaceAll('&lt;', '<')
+            .replaceAll('&gt;', '>');
+        }
+      }
+      if (host.includes('atcoder.jp')) {
+        platform = 'atcoder';
+      } else if (host.includes('codechef.com')) {
+        platform = 'codechef';
+      } else if (host.includes('hackerrank.com')) {
+        platform = 'hackerrank';
+      }
+    }
+    return { title, difficulty, platform, tags };
+  } catch (err) {
+    return { title: '', difficulty: 'medium', platform: 'other', tags: [], error: err.message };
+  }
+}
+
 export default async function handler(req, res) {
   await ensureSchema();
   const { method, query = {} } = req;
@@ -503,6 +624,15 @@ export default async function handler(req, res) {
       const targetUrl = String(query.url || '').trim();
       if (!targetUrl) return res.status(400).json({ error: 'URL is required' });
       const meta = await getMetadata(targetUrl);
+      return res.json(meta);
+    }
+
+    if (slug === 'questions/meta' && method === 'GET') {
+      const user = await requireUser(req, res);
+      if (!user) return;
+      const targetUrl = String(query.url || '').trim();
+      if (!targetUrl) return res.status(400).json({ error: 'URL is required' });
+      const meta = await getQuestionMetadata(targetUrl);
       return res.json(meta);
     }
 

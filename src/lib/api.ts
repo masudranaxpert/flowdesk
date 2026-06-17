@@ -78,6 +78,7 @@ export const api = {
     create: (data: Partial<Question>) => request<Question>('/questions', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: Partial<Question>) => request<Question>(`/questions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: string) => request<void>(`/questions/${id}`, { method: 'DELETE' }),
+    getMeta: (url: string) => request<{ title: string; difficulty: 'easy' | 'medium' | 'hard'; platform: string; tags: string[]; error?: string }>(`/questions/meta?url=${encodeURIComponent(url)}`),
   },
   categories: {
     list: (params?: Record<string, string>) => request<any>(`/categories${qs(params)}`),
