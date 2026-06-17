@@ -1,4 +1,4 @@
-name = "bookmark-vault"
+name = "a-to-z-helper"
 compatibility_date = "2024-04-03"
 compatibility_flags = [ "nodejs_compat" ]
 
