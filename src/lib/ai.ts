@@ -1,4 +1,4 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, createPartFromUri } from '@google/genai';
 
 export type AiProvider = 'gemini' | 'openrouter' | 'openai';
 
@@ -63,6 +63,19 @@ export function dataUrlToText(dataUrl: string) {
   } catch {
     return '';
   }
+}
+
+export function dataUrlToBlob(dataUrl: string): Blob {
+  const base64 = dataUrlToBase64(dataUrl);
+  const parts = dataUrl.split(',');
+  const mime = parts[0].match(/:(.*?);/)?.[1] || 'application/octet-stream';
+  const bstr = atob(base64);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new Blob([u8arr], { type: mime });
 }
 
 export async function fileToAiFile(file: File): Promise<AiFile> {
@@ -135,6 +148,20 @@ export async function runAiChat(settings: AiSettings, messages: ChatMessage[], c
   if (provider === 'gemini') {
     if (!apiKey) throw new Error('Gemini API key is missing');
     const ai = new GoogleGenAI({ apiKey });
+    const isGemma = modelName.toLowerCase().includes('gemma');
+    const gemmaUploadedParts: Record<string, any> = {};
+    if (isGemma) {
+      for (const file of activeFiles) {
+        if (file.mimeType.startsWith('image/')) {
+          const blob = dataUrlToBlob(file.dataUrl);
+          const uploadedFile = await ai.files.upload({
+            file: blob,
+            config: { mimeType: file.mimeType },
+          });
+          gemmaUploadedParts[file.dataUrl] = createPartFromUri(uploadedFile.uri || '', uploadedFile.mimeType || '');
+        }
+      }
+    }
     const history = messages.slice(-10);
     const contents: any[] = [];
     for (let i = 0; i < history.length; i++) {
@@ -144,7 +171,11 @@ export async function runAiChat(settings: AiSettings, messages: ChatMessage[], c
         const parts: any[] = [{ text: msg.content }];
         for (const file of activeFiles) {
           if (file.mimeType.startsWith('image/')) {
-            parts.push({ inlineData: { mimeType: file.mimeType, data: dataUrlToBase64(file.dataUrl) } });
+            if (isGemma && gemmaUploadedParts[file.dataUrl]) {
+              parts.push(gemmaUploadedParts[file.dataUrl]);
+            } else {
+              parts.push({ inlineData: { mimeType: file.mimeType, data: dataUrlToBase64(file.dataUrl) } });
+            }
           } else {
             parts.push({ text: `\nAttached file (${file.name}):\n${dataUrlToText(file.dataUrl).slice(0, 12000)}` });
           }
@@ -158,7 +189,11 @@ export async function runAiChat(settings: AiSettings, messages: ChatMessage[], c
       const parts: any[] = [{ text: lastUser }];
       for (const file of activeFiles) {
         if (file.mimeType.startsWith('image/')) {
-          parts.push({ inlineData: { mimeType: file.mimeType, data: dataUrlToBase64(file.dataUrl) } });
+          if (isGemma && gemmaUploadedParts[file.dataUrl]) {
+            parts.push(gemmaUploadedParts[file.dataUrl]);
+          } else {
+            parts.push({ inlineData: { mimeType: file.mimeType, data: dataUrlToBase64(file.dataUrl) } });
+          }
         } else {
           parts.push({ text: `\nAttached file (${file.name}):\n${dataUrlToText(file.dataUrl).slice(0, 12000)}` });
         }
