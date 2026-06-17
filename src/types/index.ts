@@ -30,6 +30,7 @@ export interface CodeSnippet {
   description: string;
   category: string;
   tags: string[];
+  attachments?: UploadedFile[];
   isFavorite: boolean;
   createdAt: string;
   updatedAt: string;
@@ -113,4 +114,13 @@ export interface AiModelConfig {
   model: string;
   multimodal: boolean;
   active: boolean;
+}
+
+export interface UploadedFile {
+  id: string;
+  name: string;
+  url: string;
+  markdown: string;
+  mimeType: string;
+  size: number;
 }

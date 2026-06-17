@@ -22,7 +22,7 @@ export const CATEGORIES = [
 export const BOOKMARK_CATEGORIES = CATEGORIES;
 export const PLATFORMS = ['codeforces', 'leetcode', 'codechef', 'atcoder', 'cses', 'hackerrank', 'other'] as const;
 export const DIFFICULTIES = ['easy', 'medium', 'hard'] as const;
-export const LANGUAGES = ['cpp', 'python', 'java', 'javascript', 'rust', 'go', 'other'] as const;
+export const LANGUAGES = ['cpp', 'python', 'java', 'javascript', 'typescript', 'rust', 'go', 'bash', 'sql', 'json', 'ipynb', 'other'] as const;
 
 export function formatDate(dateString: string) {
   const date = new Date(dateString);

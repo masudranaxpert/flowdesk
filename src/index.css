@@ -492,6 +492,15 @@ code {
   max-width: 100%;
 }
 
+.prose-dark .note-file-preview {
+  min-height: 32rem;
+  width: 100%;
+  max-width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  background: var(--color-card);
+}
+
 .prose-dark .katex {
   color: var(--color-foreground);
   font-size: 1.02em;

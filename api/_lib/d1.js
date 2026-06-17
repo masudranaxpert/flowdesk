@@ -99,6 +99,7 @@ export function mapBase(row) {
     tags: row.tags === undefined ? undefined : fromJson(row.tags),
     models: row.models === undefined ? undefined : fromJson(row.models),
     messages: row.messages === undefined ? undefined : fromJson(row.messages),
+    attachments: row.attachments === undefined ? undefined : fromJson(row.attachments),
   };
 }
 
@@ -142,7 +143,7 @@ export async function ensureSchema() {
       d1Query(`CREATE TABLE IF NOT EXISTS codes (
         id TEXT PRIMARY KEY, userId TEXT NOT NULL, title TEXT NOT NULL, code TEXT NOT NULL,
         language TEXT DEFAULT 'cpp', description TEXT DEFAULT '', category TEXT DEFAULT 'general',
-        tags TEXT DEFAULT '[]', isFavorite INTEGER DEFAULT 0, createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL
+        tags TEXT DEFAULT '[]', attachments TEXT DEFAULT '[]', isFavorite INTEGER DEFAULT 0, createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL
       );`),
       d1Query(`CREATE TABLE IF NOT EXISTS questions (
         id TEXT PRIMARY KEY, userId TEXT NOT NULL, title TEXT NOT NULL, problem TEXT DEFAULT '',
@@ -174,6 +175,11 @@ export async function ensureSchema() {
         id TEXT PRIMARY KEY, userId TEXT NOT NULL UNIQUE, messages TEXT DEFAULT '[]',
         createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL
       );`),
+      d1Query(`CREATE TABLE IF NOT EXISTS uploaded_files (
+        id TEXT PRIMARY KEY, userId TEXT NOT NULL, objectKey TEXT NOT NULL,
+        name TEXT NOT NULL, mimeType TEXT DEFAULT 'application/octet-stream', size INTEGER DEFAULT 0,
+        createdAt TEXT NOT NULL
+      );`),
     ]);
 
     await Promise.all([
@@ -182,6 +188,7 @@ export async function ensureSchema() {
       d1Query(`CREATE INDEX IF NOT EXISTS idx_codes_user_created ON codes(userId, createdAt);`),
       d1Query(`CREATE INDEX IF NOT EXISTS idx_questions_user_created ON questions(userId, createdAt);`),
       d1Query(`CREATE INDEX IF NOT EXISTS idx_routines_user_time ON routines(userId, dayOfWeek, date, startTime);`),
+      d1Query(`CREATE INDEX IF NOT EXISTS idx_uploaded_files_user_created ON uploaded_files(userId, createdAt);`),
     ]);
 
     await Promise.all([
@@ -190,6 +197,8 @@ export async function ensureSchema() {
       d1Query(`UPDATE categories SET scope = 'code' WHERE scope IN ('codes', 'codebook', 'snippet', 'snippets');`),
       d1Query(`UPDATE categories SET scope = 'question' WHERE scope IN ('questions', 'qa', 'q&a', 'problem', 'problems');`),
     ]);
+
+    await d1Query(`ALTER TABLE codes ADD COLUMN attachments TEXT DEFAULT '[]';`).catch(() => {});
   })();
   return schemaPromise;
 }

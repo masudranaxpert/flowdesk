@@ -35,6 +35,7 @@ export async function onRequest(context) {
     url: url.pathname + url.search,
     query,
     body,
+    rawRequest: request,
   };
 
   let statusCode = 200;
