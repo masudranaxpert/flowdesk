@@ -319,8 +319,8 @@ export default function Layout({ children }: { children: ReactNode }) {
           <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>
 
-        <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-6 rounded-2xl border border-border bg-card/90 p-1 shadow-2xl backdrop-blur-xl lg:hidden">
-          {navItems.filter((item) => ['/', '/chatbot', '/routine', '/bookmarks', '/notebooks', '/questions'].includes(item.to)).map((item) => (
+        <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-5 rounded-2xl border border-border bg-card/90 p-1 shadow-2xl backdrop-blur-xl lg:hidden">
+          {navItems.filter((item) => ['/', '/chatbot', '/routine', '/bookmarks', '/notebooks'].includes(item.to)).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

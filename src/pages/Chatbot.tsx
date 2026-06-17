@@ -436,7 +436,7 @@ export default function ChatbotPage() {
             onDragLeave={() => setDragging(false)}
             onDrop={dropFiles}
           >
-            <CardContent className="flex h-[74vh] min-h-[34rem] flex-col p-0">
+            <CardContent className="flex h-[calc(100vh-13rem)] lg:h-[74vh] min-h-[26rem] lg:min-h-[34rem] flex-col p-0">
               <div className="flex flex-col gap-2 border-b border-border/70 bg-card/50 p-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 items-center gap-2">
                   <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
