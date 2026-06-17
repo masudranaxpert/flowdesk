@@ -24,6 +24,15 @@ const clearCache = () => {
   for (const key in listCache) delete listCache[key];
 };
 
+function scopeLabel(scope: Category['scope']) {
+  const raw = String(scope || '').toLowerCase();
+  if (['bookmarks', 'link', 'links'].includes(raw)) return 'bookmark';
+  if (['notebooks', 'note', 'notes'].includes(raw)) return 'notebook';
+  if (['codes', 'codebook', 'snippet', 'snippets'].includes(raw)) return 'code';
+  if (['questions', 'qa', 'q&a', 'problem', 'problems'].includes(raw)) return 'question';
+  return raw || 'bookmark';
+}
+
 export default function CategoriesPage() {
   const [name, setName] = useState('');
   const [scope, setScope] = useState('bookmark');
@@ -130,7 +139,7 @@ export default function CategoriesPage() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{category.name}</p>
                   <div className="mt-1 flex items-center gap-2">
-                    <Badge variant="secondary" className="rounded-full text-[10px]">{category.scope}</Badge>
+                    <Badge variant="secondary" className="rounded-full text-[10px]">{scopeLabel(category.scope)}</Badge>
                     <span className="text-xs text-muted-foreground">{category.slug}</span>
                   </div>
                 </div>

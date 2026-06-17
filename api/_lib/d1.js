@@ -183,6 +183,13 @@ export async function ensureSchema() {
       d1Query(`CREATE INDEX IF NOT EXISTS idx_questions_user_created ON questions(userId, createdAt);`),
       d1Query(`CREATE INDEX IF NOT EXISTS idx_routines_user_time ON routines(userId, dayOfWeek, date, startTime);`),
     ]);
+
+    await Promise.all([
+      d1Query(`UPDATE categories SET scope = 'bookmark' WHERE scope IN ('bookmarks', 'link', 'links');`),
+      d1Query(`UPDATE categories SET scope = 'notebook' WHERE scope IN ('notebooks', 'note', 'notes');`),
+      d1Query(`UPDATE categories SET scope = 'code' WHERE scope IN ('codes', 'codebook', 'snippet', 'snippets');`),
+      d1Query(`UPDATE categories SET scope = 'question' WHERE scope IN ('questions', 'qa', 'q&a', 'problem', 'problems');`),
+    ]);
   })();
   return schemaPromise;
 }

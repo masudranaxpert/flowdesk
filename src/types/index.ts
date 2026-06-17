@@ -65,7 +65,7 @@ export interface Category {
   _id: string;
   name: string;
   slug: string;
-  scope: 'all' | 'bookmark' | 'notebook' | 'code' | 'question';
+  scope: 'all' | 'bookmark' | 'bookmarks' | 'notebook' | 'notebooks' | 'code' | 'codes' | 'question' | 'questions';
   color: string;
   createdAt: string;
   updatedAt: string;
