@@ -271,7 +271,7 @@ export default function Dashboard() {
       </Card>
 
       <section className="surface overflow-hidden rounded-3xl p-4 sm:p-5">
-        <div className="grid gap-4 lg:grid-cols-[1fr_22rem] lg:items-center">
+        <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-center">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between lg:block">
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
               <LibraryBig className="h-3.5 w-3.5" />
@@ -407,7 +407,7 @@ export default function Dashboard() {
         })}
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
+      <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
         <Card className="rounded-3xl border-primary/20 bg-card/95">
           <CardContent className="flex flex-col h-full p-5 sm:p-6">
             <div className="flex items-center justify-between mb-3">

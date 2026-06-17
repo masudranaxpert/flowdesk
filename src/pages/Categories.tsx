@@ -84,7 +84,7 @@ export default function CategoriesPage() {
 
       <Card className="rounded-3xl">
         <form onSubmit={(e) => { e.preventDefault(); create(); }}>
-          <CardContent className="grid gap-4 p-4 sm:grid-cols-[1fr_14rem_auto] sm:items-end">
+          <CardContent className="grid min-w-0 gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_14rem_auto] sm:items-end">
             <FormField label="Category name">
               <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Research, AI, Web Dev..." />
             </FormField>

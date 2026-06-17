@@ -253,7 +253,7 @@ export default function RoutinePage() {
   };
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="max-w-full overflow-x-hidden space-y-5 animate-fade-in">
       <PageHeader title="Class Routine" eyebrow="Planner" description="Weekly classes and one-time events in a clean schedule view.">
         <Button className="xl:hidden" onClick={() => setFormOpen((value) => !value)}>
           <Plus className="h-4 w-4" /> {formOpen ? 'Close' : 'Add'}
@@ -266,8 +266,8 @@ export default function RoutinePage() {
         </Button>
       </PageHeader>
 
-      <div className="grid gap-4 xl:grid-cols-[24rem_1fr]">
-        <Card className={`rounded-3xl border-primary/15 ${formOpen ? 'block' : 'hidden xl:block'}`}>
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[24rem_minmax(0,1fr)]">
+        <Card className={`min-w-0 rounded-3xl border-primary/15 ${formOpen ? 'block' : 'hidden xl:block'}`}>
           <CardContent className="space-y-4 p-4">
             <div className="flex items-center gap-2">
               <CalendarDays className="h-4 w-4 text-primary" />
@@ -335,34 +335,34 @@ export default function RoutinePage() {
           </CardContent>
         </Card>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           {loading ? <Spinner /> : (
             <>
-              <Card className="rounded-3xl border-primary/25 bg-card/95">
-                <CardContent className="p-4">
-                  <div className="mb-3 flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-primary" />
-                    <p className="text-sm font-semibold">Today&apos;s schedule</p>
-                    <Badge variant="secondary" className="ml-auto rounded-full">{days[todayIndex]} - {dateLabels[todayIndex]}</Badge>
+              <Card className="min-w-0 rounded-3xl border-primary/25 bg-card/95">
+                <CardContent className="min-w-0 p-4">
+                  <div className="mb-3 flex min-w-0 flex-wrap items-center gap-2">
+                    <Clock className="h-4 w-4 shrink-0 text-primary" />
+                    <p className="min-w-0 flex-1 text-sm font-semibold">Today&apos;s schedule</p>
+                    <Badge variant="secondary" className="max-w-full rounded-full text-xs sm:text-sm">{days[todayIndex]} - {dateLabels[todayIndex]}</Badge>
                   </div>
-                  <div className="grid gap-2 md:grid-cols-2">
+                  <div className="grid min-w-0 gap-2 md:grid-cols-2">
                     {todayItems.length === 0 ? (
                       <p className="text-sm text-muted-foreground">No class or event today.</p>
                     ) : todayItems.map((item) => {
                       const state = statusFor(item, currentTime);
                       return (
-                        <div key={item._id} className="rounded-2xl border border-border bg-muted/30 p-3">
-                          <div className="flex items-center gap-2">
-                            <p className="min-w-0 flex-1 truncate text-lg font-semibold tracking-tight">{item.title}</p>
-                            <Badge variant="outline" className="h-7 rounded-full px-3 text-xs font-semibold">{item.type === 'event' ? 'Event' : 'Class'}</Badge>
-                            <Badge variant="outline" className={`h-7 rounded-full px-3 text-xs font-semibold ${state.className}`}>{state.label}</Badge>
+                        <div key={item._id} className="min-w-0 rounded-2xl border border-border bg-muted/30 p-3">
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <p className="min-w-0 flex-[1_1_12rem] truncate text-base font-semibold tracking-tight sm:text-lg">{item.title}</p>
+                            <Badge variant="outline" className="h-7 shrink-0 rounded-full px-3 text-xs font-semibold">{item.type === 'event' ? 'Event' : 'Class'}</Badge>
+                            <Badge variant="outline" className={`h-7 shrink-0 rounded-full px-3 text-xs font-semibold ${state.className}`}>{state.label}</Badge>
                           </div>
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            <Badge variant="secondary" className="h-7 rounded-full bg-primary/12 px-3 text-sm font-semibold text-primary"><Clock className="h-3.5 w-3.5" /> {timeLabel(item)}</Badge>
-                            {item.room && <Badge variant="secondary" className="h-7 rounded-full bg-sky-500/15 px-3 text-sm font-semibold text-sky-300"><MapPin className="h-3.5 w-3.5" /> {item.type === 'event' ? item.room : `Room ${item.room}`}</Badge>}
-                            {item.breakTime && <Badge variant="secondary" className="h-7 rounded-full bg-amber-500/15 px-3 text-xs font-semibold text-amber-300">Break {item.breakTime}</Badge>}
-                            {item.teacher && <Badge variant="secondary" className="h-7 rounded-full bg-violet-500/15 px-3 text-xs font-semibold text-violet-300"><UserRound className="h-3 w-3" /> {item.teacher}</Badge>}
-                            {item.notes && <Badge variant="secondary" className="h-7 rounded-full bg-muted px-3 text-xs font-semibold text-muted-foreground">{item.notes}</Badge>}
+                          <div className="mt-2 flex min-w-0 flex-wrap gap-1.5">
+                            <Badge variant="secondary" className="h-7 max-w-full rounded-full bg-primary/12 px-3 text-xs font-semibold text-primary sm:text-sm"><Clock className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{timeLabel(item)}</span></Badge>
+                            {item.room && <Badge variant="secondary" className="h-7 max-w-full rounded-full bg-sky-500/15 px-3 text-xs font-semibold text-sky-300 sm:text-sm"><MapPin className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{item.type === 'event' ? item.room : `Room ${item.room}`}</span></Badge>}
+                            {item.breakTime && <Badge variant="secondary" className="h-7 max-w-full rounded-full bg-amber-500/15 px-3 text-xs font-semibold text-amber-300"><span className="truncate">Break {item.breakTime}</span></Badge>}
+                            {item.teacher && <Badge variant="secondary" className="h-7 max-w-full rounded-full bg-violet-500/15 px-3 text-xs font-semibold text-violet-300"><UserRound className="h-3 w-3 shrink-0" /> <span className="truncate">{item.teacher}</span></Badge>}
+                            {item.notes && <Badge variant="secondary" className="h-7 max-w-full rounded-full bg-muted px-3 text-xs font-semibold text-muted-foreground"><span className="truncate">{item.notes}</span></Badge>}
                           </div>
                         </div>
                       );
@@ -371,11 +371,11 @@ export default function RoutinePage() {
                 </CardContent>
               </Card>
 
-              <div className="space-y-3">
+              <div className="min-w-0 space-y-3">
                 {grouped.map((group) => (
-                  <Card key={group.day} className="rounded-3xl">
-                    <CardContent className="grid gap-3 p-4 lg:grid-cols-[12rem_1fr] lg:items-start">
-                      <div className="flex items-center justify-between gap-3 lg:block">
+                  <Card key={group.day} className="min-w-0 rounded-3xl">
+                    <CardContent className="grid min-w-0 gap-3 p-4 lg:grid-cols-[12rem_minmax(0,1fr)] lg:items-start">
+                      <div className="flex min-w-0 items-center justify-between gap-3 lg:block">
                         <div>
                           <p className="text-lg font-semibold tracking-tight">{group.day}</p>
                           <p className="mt-1 text-sm text-muted-foreground">{dateLabels[days.indexOf(group.day)]}</p>
@@ -384,20 +384,20 @@ export default function RoutinePage() {
                           {group.items.length} class{group.items.length === 1 ? '' : 'es'}
                         </Badge>
                       </div>
-                      <div className="space-y-2">
+                      <div className="min-w-0 space-y-2">
                         {group.items.length === 0 ? <p className="rounded-2xl border border-dashed border-border bg-muted/20 p-4 text-sm text-muted-foreground">No class</p> : group.items.map((item) => (
-                          <div key={item._id} className="rounded-2xl border border-border bg-muted/30 p-3">
-                            <div className="flex items-start gap-3">
+                          <div key={item._id} className="min-w-0 rounded-2xl border border-border bg-muted/30 p-3">
+                            <div className="flex min-w-0 items-start gap-3">
                               <div className="min-w-0 flex-1">
-                                <p className="text-base font-semibold tracking-tight sm:text-lg">{item.title}</p>
-                                <div className="mt-2 flex flex-wrap gap-1.5">
-                                  <Badge variant="secondary" className="h-7 rounded-full bg-primary/12 px-3 text-sm font-semibold text-primary">{timeLabel(item)}</Badge>
-                                  {item.room && <Badge variant="secondary" className="h-7 rounded-full bg-sky-500/15 px-3 text-sm font-semibold text-sky-300">Room {item.room}</Badge>}
-                                  {item.breakTime && <Badge variant="secondary" className="h-7 rounded-full bg-amber-500/15 px-3 text-xs font-semibold text-amber-300">Break {item.breakTime}</Badge>}
-                                  {item.teacher && <Badge variant="secondary" className="h-7 rounded-full bg-violet-500/15 px-3 text-xs font-semibold text-violet-300">{item.teacher}</Badge>}
+                                <p className="truncate text-base font-semibold tracking-tight sm:text-lg">{item.title}</p>
+                                <div className="mt-2 flex min-w-0 flex-wrap gap-1.5">
+                                  <Badge variant="secondary" className="h-7 max-w-full rounded-full bg-primary/12 px-3 text-xs font-semibold text-primary sm:text-sm"><span className="truncate">{timeLabel(item)}</span></Badge>
+                                  {item.room && <Badge variant="secondary" className="h-7 max-w-full rounded-full bg-sky-500/15 px-3 text-xs font-semibold text-sky-300 sm:text-sm"><span className="truncate">Room {item.room}</span></Badge>}
+                                  {item.breakTime && <Badge variant="secondary" className="h-7 max-w-full rounded-full bg-amber-500/15 px-3 text-xs font-semibold text-amber-300"><span className="truncate">Break {item.breakTime}</span></Badge>}
+                                  {item.teacher && <Badge variant="secondary" className="h-7 max-w-full rounded-full bg-violet-500/15 px-3 text-xs font-semibold text-violet-300"><span className="truncate">{item.teacher}</span></Badge>}
                                 </div>
                               </div>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => remove(item._id)}>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-destructive" onClick={() => remove(item._id)}>
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </div>
@@ -409,21 +409,21 @@ export default function RoutinePage() {
                 ))}
               </div>
 
-              <Card className="rounded-3xl">
-                <CardContent className="p-4">
+              <Card className="min-w-0 rounded-3xl">
+                <CardContent className="min-w-0 p-4">
                   <p className="text-sm font-semibold">Upcoming events</p>
-                  <div className="mt-3 grid gap-2 md:grid-cols-2">
+                  <div className="mt-3 grid min-w-0 gap-2 md:grid-cols-2">
                     {upcomingEvents.length === 0 ? <p className="text-sm text-muted-foreground">No upcoming events.</p> : upcomingEvents.map((item) => (
-                      <div key={item._id} className="flex items-start gap-3 rounded-2xl border border-border bg-muted/30 p-3">
+                      <div key={item._id} className="flex min-w-0 items-start gap-3 rounded-2xl border border-border bg-muted/30 p-3">
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium">{item.title}</p>
-                          <p className="text-xs text-muted-foreground">{item.date} - {timeLabel(item)}</p>
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            {item.room && <Badge variant="secondary" className="h-6 rounded-full bg-sky-500/15 px-2 text-xs font-semibold text-sky-300"><MapPin className="h-3 w-3" /> {item.room}</Badge>}
-                            {item.notes && <Badge variant="secondary" className="h-6 rounded-full bg-muted px-2 text-xs font-semibold text-muted-foreground">{item.notes}</Badge>}
+                          <p className="truncate text-xs text-muted-foreground">{item.date} - {timeLabel(item)}</p>
+                          <div className="mt-2 flex min-w-0 flex-wrap gap-1.5">
+                            {item.room && <Badge variant="secondary" className="h-6 max-w-full rounded-full bg-sky-500/15 px-2 text-xs font-semibold text-sky-300"><MapPin className="h-3 w-3 shrink-0" /> <span className="truncate">{item.room}</span></Badge>}
+                            {item.notes && <Badge variant="secondary" className="h-6 max-w-full rounded-full bg-muted px-2 text-xs font-semibold text-muted-foreground"><span className="truncate">{item.notes}</span></Badge>}
                           </div>
                         </div>
-                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => remove(item._id)}>
+                        <Button variant="ghost" size="icon" className="shrink-0 text-destructive" onClick={() => remove(item._id)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>

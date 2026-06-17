@@ -345,7 +345,7 @@ export default function NoteEditorPage() {
 
       <Card className="rounded-3xl">
         <CardContent className="space-y-4 p-4 sm:p-5">
-          <div className="grid gap-4 lg:grid-cols-[1fr_16rem]">
+          <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
             <FormField label="Title">
               <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Research note title..." />
             </FormField>
@@ -382,7 +382,7 @@ export default function NoteEditorPage() {
 
           <Card className="rounded-2xl border-primary/20 bg-muted/25">
             <CardContent className="space-y-3 p-3">
-              <div className="grid gap-2 lg:grid-cols-[minmax(14rem,22rem)_1fr] lg:items-center">
+              <div className="grid min-w-0 gap-2 lg:grid-cols-[minmax(14rem,22rem)_minmax(0,1fr)] lg:items-center">
                 <FormField label="AI model">
                   <Select value={selectedModelId || modelOptions[0]?.value || 'default'} onChange={setSelectedModelId} options={modelOptions} />
                 </FormField>
