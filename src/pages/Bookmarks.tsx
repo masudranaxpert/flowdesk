@@ -51,6 +51,35 @@ export default function BookmarksPage() {
   const [form, setForm] = useState(emptyForm);
   const [delId, setDelId] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([fallbackCategory]);
+  const [detecting, setDetecting] = useState(false);
+
+  useEffect(() => {
+    if (editing || !dialogOpen || !form.url) return;
+    let active = true;
+    const url = form.url.trim();
+    if (!/^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/.*)?$/i.test(url)) return;
+    const t = setTimeout(async () => {
+      setDetecting(true);
+      try {
+        const meta = await api.bookmarks.getMeta(url);
+        if (active && meta && !meta.error) {
+          setForm(prev => ({
+            ...prev,
+            title: prev.title || meta.title || '',
+            description: prev.description || meta.description || ''
+          }));
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (active) setDetecting(false);
+      }
+    }, 800);
+    return () => {
+      active = false;
+      clearTimeout(t);
+    };
+  }, [form.url, dialogOpen, editing]);
 
   const load = useCallback(() => {
     const key = `${category}-${debouncedSearch}-${page}`;
@@ -208,8 +237,8 @@ export default function BookmarksPage() {
           <FormField label="URL">
             <Input value={form.url} onChange={e => setForm({ ...form, url: e.target.value })} placeholder="https://..." />
           </FormField>
-          <FormField label="Title">
-            <Input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Bookmark title" />
+          <FormField label={detecting ? "Title (fetching...)" : "Title"}>
+            <Input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder={detecting ? "Fetching title..." : "Bookmark title"} />
           </FormField>
           <FormField label="Description">
             <Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Optional description" />
