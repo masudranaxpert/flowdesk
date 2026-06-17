@@ -32,11 +32,23 @@ const clearCache = () => {
 
 export default function CodeBookPage() {
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [language, setLanguage] = useState('all');
   const [category, setCategory] = useState('all');
   const [page, setPage] = useState(1);
 
-  const cacheKey = `${language}-${category}-${search}-${page}`;
+  useEffect(() => {
+    if (search === '') {
+      setDebouncedSearch('');
+      return;
+    }
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const cacheKey = `${language}-${category}-${debouncedSearch}-${page}`;
   const cached = listCache[cacheKey] || { items: [], total: 0 };
 
   const [items, setItems] = useState<CodeSnippet[]>(cached.items);
@@ -53,9 +65,9 @@ export default function CodeBookPage() {
   const [wrapCode, setWrapCode] = useState(false);
 
   const load = useCallback(() => {
-    const key = `${language}-${category}-${search}-${page}`;
+    const key = `${language}-${category}-${debouncedSearch}-${page}`;
     if (!listCache[key]) setLoading(true);
-    api.codes.list({ language, category, search, page: String(page), limit: String(PAGE_SIZE) })
+    api.codes.list({ language, category, search: debouncedSearch, page: String(page), limit: String(PAGE_SIZE) })
       .then((data: any) => {
         const resItems = data.items || [];
         const resTotal = data.total || 0;
@@ -65,10 +77,10 @@ export default function CodeBookPage() {
       })
       .catch(() => toast.error('Failed to load'))
       .finally(() => setLoading(false));
-  }, [language, category, search, page]);
+  }, [language, category, debouncedSearch, page]);
 
-  useEffect(() => { const t = setTimeout(load, 300); return () => clearTimeout(t); }, [load]);
-  useEffect(() => setPage(1), [search, language, category]);
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => setPage(1), [debouncedSearch, language, category]);
 
   useEffect(() => {
     api.categories.list({ scope: 'code' }).then((items) => setCategories([fallbackCategory, ...items])).catch(() => {});
