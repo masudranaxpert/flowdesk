@@ -22,6 +22,16 @@ const defaultMessages: ChatMessage[] = [{ role: 'assistant', content: 'Ask me to
 const chatHistoryKey = 'bookmark-vault-chat-history-v1';
 const chatHistoryLimit = 50;
 
+function cleanHistoryMessages(messages: ChatMessage[]) {
+  return messages
+    .filter((message) => message.content.trim())
+    .slice(-chatHistoryLimit)
+    .map((message) => ({
+      role: message.role === 'user' ? 'user' as const : 'assistant' as const,
+      content: message.content.slice(0, 20000),
+    }));
+}
+
 type AiAction = {
   operation: 'create' | 'update' | 'delete' | 'delete_many' | 'delete_all';
   resource: 'bookmarks' | 'notebooks' | 'codes' | 'questions' | 'routines' | 'categories';
@@ -261,14 +271,14 @@ export default function ChatbotPage() {
     api.chatHistory.get()
       .then(async (data) => {
         if (cancelled) return;
-        const dbMessages = Array.isArray(data.messages) ? data.messages.slice(-chatHistoryLimit) as ChatMessage[] : [];
+        const dbMessages = Array.isArray(data.messages) ? cleanHistoryMessages(data.messages as ChatMessage[]) : [];
         if (dbMessages.length > 0) {
           setMessages(dbMessages);
           return;
         }
 
         const localMessages = JSON.parse(localStorage.getItem(chatHistoryKey) || '[]') as ChatMessage[];
-        const migrated = Array.isArray(localMessages) ? localMessages.filter((message) => message.content?.trim()).slice(-chatHistoryLimit) : [];
+        const migrated = Array.isArray(localMessages) ? cleanHistoryMessages(localMessages) : [];
         if (migrated.length > 0) {
           setMessages(migrated);
           await api.chatHistory.update(migrated).catch(() => {});
@@ -281,7 +291,7 @@ export default function ChatbotPage() {
       .catch(() => {
         try {
           const saved = JSON.parse(localStorage.getItem(chatHistoryKey) || '[]') as ChatMessage[];
-          setMessages(saved.length ? saved.slice(-chatHistoryLimit) : defaultMessages);
+          setMessages(saved.length ? cleanHistoryMessages(saved) : defaultMessages);
         } catch {
           setMessages(defaultMessages);
         }
@@ -298,11 +308,8 @@ export default function ChatbotPage() {
   useEffect(() => {
     if (!historyReady) return;
     const t = setTimeout(() => {
-      const saved = messages
-        .filter((message) => message.content.trim())
-        .slice(-chatHistoryLimit)
-        .map((message) => ({ role: message.role, content: message.content, files: message.files }));
-      api.chatHistory.update(saved).catch(() => toast.error('Failed to save chat history'));
+      const saved = cleanHistoryMessages(messages);
+      api.chatHistory.update(saved).catch(() => {});
     }, 350);
     return () => clearTimeout(t);
   }, [messages, historyReady]);

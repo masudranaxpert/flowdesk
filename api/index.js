@@ -202,6 +202,17 @@ function validateResourceData(resource, data, { partial = false } = {}) {
   return next;
 }
 
+function cleanChatMessages(messages) {
+  return (Array.isArray(messages) ? messages : [])
+    .filter((message) => message && typeof message === 'object' && ['user', 'assistant'].includes(message.role))
+    .map((message) => ({
+      role: message.role,
+      content: String(message.content || '').slice(0, 20000),
+    }))
+    .filter((message) => message.content.trim())
+    .slice(-50);
+}
+
 async function createResource(resource, body, uid) {
   const config = resources[resource];
   const created = now();
@@ -559,7 +570,7 @@ export default async function handler(req, res) {
         return res.json({ messages: fromJson(row?.messages, []) });
       }
       if (method === 'PUT') {
-        const messages = Array.isArray(req.body.messages) ? req.body.messages.slice(-50) : [];
+        const messages = cleanChatMessages(req.body.messages);
         const stamp = now();
         await d1Query(`INSERT INTO chat_history (id, userId, messages, createdAt, updatedAt)
           VALUES (?, ?, ?, ?, ?)
