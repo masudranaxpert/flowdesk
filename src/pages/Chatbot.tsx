@@ -219,9 +219,9 @@ export default function ChatbotPage() {
     });
     if (incoming.length === 0) return;
     if (!selectedModel?.multimodal) return toast.error('Selected model file/image support inactive');
-    const converted = await Promise.all(incoming.slice(0, 4).map(fileToAiFile));
+    const converted = await Promise.all(incoming.slice(0, 5).map(fileToAiFile));
     setFiles((current) => {
-      const next = [...current, ...converted].slice(0, 4);
+      const next = [...current, ...converted].slice(0, 5);
       return next;
     });
     toast.success(`${converted.length} ${source}${converted.length === 1 ? '' : 's'} attached`);
