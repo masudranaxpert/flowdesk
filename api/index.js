@@ -555,14 +555,16 @@ export default async function handler(req, res) {
       const user = await requireUser(req, res);
       if (!user) return;
       const uid = userId(user);
-      const [bookmarks, notebooks, codes, questions, solved] = await Promise.all([
-        d1Query('SELECT COUNT(*) AS total FROM bookmarks WHERE userId = ?;', [uid]),
-        d1Query('SELECT COUNT(*) AS total FROM notebooks WHERE userId = ?;', [uid]),
-        d1Query('SELECT COUNT(*) AS total FROM codes WHERE userId = ?;', [uid]),
-        d1Query('SELECT COUNT(*) AS total FROM questions WHERE userId = ?;', [uid]),
-        d1Query('SELECT COUNT(*) AS total FROM questions WHERE userId = ? AND isSolved = 1;', [uid]),
-      ]);
-      return res.json({ bookmarks: bookmarks[0].total, notebooks: notebooks[0].total, codes: codes[0].total, questions: questions[0].total, solved: solved[0].total });
+      const rows = await d1Query(`
+        SELECT 
+          (SELECT COUNT(*) FROM bookmarks WHERE userId = ?) AS bookmarks,
+          (SELECT COUNT(*) FROM notebooks WHERE userId = ?) AS notebooks,
+          (SELECT COUNT(*) FROM codes WHERE userId = ?) AS codes,
+          (SELECT COUNT(*) FROM questions WHERE userId = ?) AS questions,
+          (SELECT COUNT(*) FROM questions WHERE userId = ? AND isSolved = 1) AS solved
+      `, [uid, uid, uid, uid, uid]);
+      const stats = rows[0] || { bookmarks: 0, notebooks: 0, codes: 0, questions: 0, solved: 0 };
+      return res.json(stats);
     }
 
     if (slug === 'search' && method === 'GET') {
@@ -572,18 +574,24 @@ export default async function handler(req, res) {
       if (!q) return res.json([]);
       const uid = userId(user);
       const term = like(q);
-      const [bookmarks, notebooks, codes, questions] = await Promise.all([
-        d1Query('SELECT * FROM bookmarks WHERE userId = ? AND (title LIKE ? OR url LIKE ? OR tags LIKE ?) ORDER BY createdAt DESC LIMIT 5;', [uid, term, term, term]),
-        d1Query('SELECT * FROM notebooks WHERE userId = ? AND (title LIKE ? OR content LIKE ? OR tags LIKE ?) ORDER BY updatedAt DESC LIMIT 5;', [uid, term, term, term]),
-        d1Query('SELECT * FROM codes WHERE userId = ? AND (title LIKE ? OR code LIKE ? OR tags LIKE ?) ORDER BY createdAt DESC LIMIT 5;', [uid, term, term, term]),
-        d1Query('SELECT * FROM questions WHERE userId = ? AND (title LIKE ? OR tags LIKE ?) ORDER BY createdAt DESC LIMIT 5;', [uid, term, term]),
-      ]);
-      return res.json([
-        ...bookmarks.map((item) => ({ id: item.id, type: 'Bookmark', title: item.title, subtitle: item.url, to: '/bookmarks' })),
-        ...notebooks.map((item) => ({ id: item.id, type: 'Note', title: item.title, subtitle: item.category, to: '/notebooks' })),
-        ...codes.map((item) => ({ id: item.id, type: 'Code', title: item.title, subtitle: item.language, to: '/codes' })),
-        ...questions.map((item) => ({ id: item.id, type: 'Q&A', title: item.title, subtitle: item.platform, to: '/questions' })),
-      ]);
+      const rows = await d1Query(`
+        (SELECT 'bookmarks' AS type, id, title, url AS subtitle FROM bookmarks WHERE userId = ? AND (title LIKE ? OR url LIKE ? OR tags LIKE ?) ORDER BY createdAt DESC LIMIT 5)
+        UNION ALL
+        (SELECT 'notebooks' AS type, id, title, category AS subtitle FROM notebooks WHERE userId = ? AND (title LIKE ? OR content LIKE ? OR tags LIKE ?) ORDER BY updatedAt DESC LIMIT 5)
+        UNION ALL
+        (SELECT 'codes' AS type, id, title, language AS subtitle FROM codes WHERE userId = ? AND (title LIKE ? OR code LIKE ? OR tags LIKE ?) ORDER BY createdAt DESC LIMIT 5)
+        UNION ALL
+        (SELECT 'questions' AS type, id, title, platform AS subtitle FROM questions WHERE userId = ? AND (title LIKE ? OR tags LIKE ?) ORDER BY createdAt DESC LIMIT 5)
+      `, [uid, term, term, term, uid, term, term, term, uid, term, term, term, uid, term, term]);
+      return res.json(
+        rows.map((row) => ({
+          id: row.id,
+          type: row.type === 'bookmarks' ? 'Bookmark' : row.type === 'notebooks' ? 'Note' : row.type === 'codes' ? 'Code' : 'Q&A',
+          title: row.title,
+          subtitle: row.subtitle,
+          to: row.type === 'bookmarks' ? '/bookmarks' : row.type === 'notebooks' ? '/notebooks' : row.type === 'codes' ? '/codes' : '/questions',
+        }))
+      );
     }
 
     if (slug === 'ai-settings') {
