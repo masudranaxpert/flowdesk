@@ -43,6 +43,18 @@ const difficultyOptions = DIFFICULTIES.map((item) => ({ value: item, label: capi
 const platformOptions = PLATFORMS.map((item) => ({ value: item, label: capitalize(item) }));
 const languageOptions = LANGUAGES.map((item) => ({ value: item, label: item.toUpperCase() }));
 
+function detectLanguage(code: string): string {
+  const text = code.trim();
+  if (/^\s*(#include|using namespace std|int main\s*\()/i.test(text)) return 'cpp';
+  if (/^\s*(import java\.|public class |class Main)/i.test(text)) return 'java';
+  if (/^\s*(def |import |from |class [a-zA-Z0-9_]+\(object\):)/i.test(text)) return 'python';
+  if (/^\s*(import React|const |let |function |import \{)/i.test(text)) return 'javascript';
+  if (/^\s*(package |import "fmt"|func main)/i.test(text)) return 'go';
+  if (/^\s*(#\s*!.*bash|echo |if \[ |for i in)/i.test(text)) return 'bash';
+  if (/^\s*(select |insert |update |delete |create table)/i.test(text)) return 'sql';
+  return 'cpp';
+}
+
 export default function QuestionEditorPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -51,6 +63,14 @@ export default function QuestionEditorPage() {
   const [loading, setLoading] = useState(Boolean(id));
   const editing = Boolean(id);
   const [detecting, setDetecting] = useState(false);
+
+  useEffect(() => {
+    if (editing || !form.code) return;
+    const detected = detectLanguage(form.code);
+    if (detected !== form.language && form.language === 'cpp') {
+      setForm(prev => ({ ...prev, language: detected }));
+    }
+  }, [form.code, editing, form.language]);
 
   useEffect(() => {
     if (editing || !form.link) return;
