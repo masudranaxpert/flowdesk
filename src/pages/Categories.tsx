@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { FolderPlus, Tags, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
-import { PageHeader, EmptyState, Spinner, FormField, PaginationControls } from '../components/UI';
+import { PageHeader, EmptyState, Spinner, FormField, PaginationControls, SearchInput } from '../components/UI';
 import { Select } from '../components/Select';
 import type { Category } from '../types';
 import { Button } from '@/components/ui/button';
@@ -11,11 +11,11 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 
 const scopeOptions = [
-  { value: 'all', label: 'All Sections' },
   { value: 'bookmark', label: 'Bookmarks only' },
   { value: 'notebook', label: 'Notebooks only' },
   { value: 'code', label: 'Code Book only' },
   { value: 'question', label: 'Q&A only' },
+  { value: 'all', label: 'All Sections' },
 ];
 const PAGE_SIZE = 12;
 
@@ -26,10 +26,17 @@ const clearCache = () => {
 
 export default function CategoriesPage() {
   const [name, setName] = useState('');
-  const [scope, setScope] = useState('all');
+  const [scope, setScope] = useState('bookmark');
+  const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
 
-  const cacheKey = `${page}`;
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 250);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const cacheKey = `${debouncedSearch}-${page}`;
   const cached = listCache[cacheKey] || { items: [], total: 0 };
 
   const [items, setItems] = useState<Category[]>(cached.items);
@@ -37,9 +44,9 @@ export default function CategoriesPage() {
   const [loading, setLoading] = useState(cached.items.length === 0);
 
   const load = useCallback(() => {
-    const key = `${page}`;
+    const key = `${debouncedSearch}-${page}`;
     if (!listCache[key]) setLoading(true);
-    api.categories.list({ page: String(page), limit: String(PAGE_SIZE) })
+    api.categories.list({ search: debouncedSearch, page: String(page), limit: String(PAGE_SIZE) })
       .then((data: any) => {
         const resItems = data.items || [];
         const resTotal = data.total || 0;
@@ -49,9 +56,10 @@ export default function CategoriesPage() {
       })
       .catch(() => toast.error('Failed to load categories'))
       .finally(() => setLoading(false));
-  }, [page]);
+  }, [debouncedSearch, page]);
 
   useEffect(() => load(), [load]);
+  useEffect(() => setPage(1), [debouncedSearch]);
 
   const create = async () => {
     if (!name.trim()) return toast.error('Category name is required');
@@ -59,7 +67,7 @@ export default function CategoriesPage() {
       await api.categories.create({ name: name.trim(), scope: scope as Category['scope'] });
       toast.success('Category created');
       setName('');
-      setScope('all');
+      setScope('bookmark');
       clearCache();
       load();
     } catch (error) {
@@ -99,11 +107,17 @@ export default function CategoriesPage() {
         </form>
       </Card>
 
+      <Card className="rounded-3xl">
+        <CardContent className="p-4">
+          <SearchInput value={search} onChange={setSearch} placeholder="Search categories..." />
+        </CardContent>
+      </Card>
+
       {loading ? <Spinner /> : items.length === 0 ? (
         <EmptyState
           icon={<Tags className="h-6 w-6" />}
-          title="No custom categories"
-          description="Create categories once and use them across bookmarks, notes, code snippets and questions."
+          title={debouncedSearch ? 'No matching categories' : 'No custom categories'}
+          description={debouncedSearch ? 'Try a different category name or slug.' : 'Create categories once and use them across bookmarks, notes, code snippets and questions.'}
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
