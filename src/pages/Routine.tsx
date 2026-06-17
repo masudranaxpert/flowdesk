@@ -144,23 +144,35 @@ export default function RoutinePage() {
       teacher: form.type === 'class' ? form.teacher : '',
       breakTime: form.type === 'class' ? form.breakTime : '',
     };
-    await api.routines.create(payload);
-    toast.success(form.type === 'event' ? 'Event saved' : 'Class routine saved');
-    setForm({ ...emptyForm, dayOfWeek: todayIndex });
-    setFormOpen(false);
-    load();
+    try {
+      await api.routines.create(payload);
+      toast.success(form.type === 'event' ? 'Event saved' : 'Class routine saved');
+      setForm({ ...emptyForm, dayOfWeek: todayIndex });
+      setFormOpen(false);
+      load();
+    } catch {
+      toast.error('Failed to save routine item');
+    }
   };
 
   const remove = async (id: string) => {
-    await api.routines.delete(id);
-    toast.success('Deleted');
-    load();
+    try {
+      await api.routines.delete(id);
+      toast.success('Deleted');
+      load();
+    } catch {
+      toast.error('Failed to delete routine item');
+    }
   };
 
   const reset = async () => {
-    await api.routines.reset('all');
-    toast.success('Routine reset');
-    load();
+    try {
+      await api.routines.reset('all');
+      toast.success('Routine reset');
+      load();
+    } catch {
+      toast.error('Failed to reset routine');
+    }
   };
 
   const exportToIcs = () => {
@@ -201,12 +213,24 @@ export default function RoutinePage() {
         const targetDate = new Date(today);
         targetDate.setDate(today.getDate() + daysDiff);
         
-        const dateStr = targetDate.toISOString().slice(0, 10).replace(/-/g, '');
+        const y = targetDate.getFullYear();
+        const m = String(targetDate.getMonth() + 1).padStart(2, '0');
+        const d = String(targetDate.getDate()).padStart(2, '0');
+        const dateStr = `${y}${m}${d}`;
         lines.push(`DTSTART:${dateStr}T${startTimeClean}`);
         lines.push(`DTEND:${dateStr}T${endTimeClean}`);
         lines.push(`RRULE:FREQ=WEEKLY;BYDAY=${byDayCodes[item.dayOfWeek]}`);
       } else {
-        const dateStr = (item.date || new Date().toISOString().slice(0, 10)).replace(/-/g, '');
+        let dateStr = '';
+        if (item.date) {
+          dateStr = item.date.replace(/-/g, '');
+        } else {
+          const fallbackDate = new Date();
+          const y = fallbackDate.getFullYear();
+          const m = String(fallbackDate.getMonth() + 1).padStart(2, '0');
+          const d = String(fallbackDate.getDate()).padStart(2, '0');
+          dateStr = `${y}${m}${d}`;
+        }
         lines.push(`DTSTART:${dateStr}T${startTimeClean}`);
         lines.push(`DTEND:${dateStr}T${endTimeClean}`);
       }
