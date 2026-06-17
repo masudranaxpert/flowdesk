@@ -57,6 +57,26 @@ export default function BookmarksPage() {
   const [delId, setDelId] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([fallbackCategory]);
   const [detecting, setDetecting] = useState(false);
+  const [isDuplicate, setIsDuplicate] = useState(false);
+  const [existingUrls, setExistingUrls] = useState<string[]>([]);
+
+  useEffect(() => {
+    const url = normalizeUrl(form.url).toLowerCase();
+    if (url && existingUrls.includes(url)) {
+      setIsDuplicate(true);
+    } else {
+      setIsDuplicate(false);
+    }
+  }, [form.url, existingUrls]);
+
+  const loadAllUrls = () => {
+    api.bookmarks.list({ limit: '1000' })
+      .then((data: any) => {
+        const urls = (data.items || []).map((b: any) => normalizeUrl(b.url).toLowerCase());
+        setExistingUrls(urls);
+      })
+      .catch(() => {});
+  };
 
   useEffect(() => {
     if (editing || !dialogOpen || !form.url) return;
@@ -110,8 +130,20 @@ export default function BookmarksPage() {
 
   const formCategoryOptions = useMemo(() => categories.map((item) => ({ value: item.slug, label: item.name })), [categories]);
 
-  const openCreate = () => { setEditing(null); setForm(emptyForm); setDialogOpen(true); };
-  const openEdit = (b: BookmarkType) => { setEditing(b); setForm({ url: b.url, title: b.title, description: b.description, tags: b.tags, category: b.category }); setDialogOpen(true); };
+  const openCreate = () => { 
+    setEditing(null); 
+    setForm(emptyForm); 
+    setIsDuplicate(false);
+    setDialogOpen(true); 
+    loadAllUrls();
+  };
+  const openEdit = (b: BookmarkType) => { 
+    setEditing(b); 
+    setForm({ url: b.url, title: b.title, description: b.description, tags: b.tags, category: b.category }); 
+    setIsDuplicate(false);
+    setDialogOpen(true); 
+    loadAllUrls();
+  };
 
   const handleSubmit = async () => {
     if (!form.url || !form.title) return toast.error('URL and title are required');
@@ -242,6 +274,9 @@ export default function BookmarksPage() {
         <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-4">
           <FormField label="URL">
             <Input value={form.url} onChange={e => setForm({ ...form, url: e.target.value })} placeholder="https://..." />
+            {isDuplicate && (
+              <p className="text-[11px] text-destructive mt-1 font-medium animate-fade-in">This URL is already bookmarked.</p>
+            )}
           </FormField>
           <FormField label={detecting ? "Title (fetching...)" : "Title"}>
             <Input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder={detecting ? "Fetching title..." : "Bookmark title"} />

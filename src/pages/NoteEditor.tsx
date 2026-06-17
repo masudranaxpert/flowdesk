@@ -60,6 +60,50 @@ export default function NoteEditorPage() {
   const [selectedFontSize, setSelectedFontSize] = useState(fontSizes[1].value);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const [selectedText, setSelectedText] = useState('');
+  const [hasDraft, setHasDraft] = useState(false);
+  const [draftData, setDraftData] = useState<{ title: string; content: string } | null>(null);
+
+  useEffect(() => {
+    const key = `notebook-draft-${id || 'new'}`;
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && (parsed.title || parsed.content)) {
+          setHasDraft(true);
+          setDraftData(parsed);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (!title.trim() && !content.trim()) return;
+    const key = `notebook-draft-${id || 'new'}`;
+    const t = setTimeout(() => {
+      localStorage.setItem(key, JSON.stringify({ title, content }));
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [title, content, id]);
+
+  const restoreDraft = () => {
+    if (draftData) {
+      setTitle(draftData.title);
+      setContent(draftData.content);
+      setHasDraft(false);
+      toast.success('Draft restored');
+    }
+  };
+
+  const discardDraft = () => {
+    const key = `notebook-draft-${id || 'new'}`;
+    localStorage.removeItem(key);
+    setHasDraft(false);
+    setDraftData(null);
+    toast.success('Draft discarded');
+  };
 
   useEffect(() => {
     api.categories.list({ scope: 'notebook' })
@@ -233,6 +277,7 @@ export default function NoteEditorPage() {
       if (id) await api.notebooks.update(id, payload);
       else await api.notebooks.create(payload);
       toast.success('Note saved');
+      localStorage.removeItem(`notebook-draft-${id || 'new'}`);
       navigate('/notebooks');
     } catch {
       toast.error('Failed to save note');
@@ -284,6 +329,19 @@ export default function NoteEditorPage() {
           </Button>
         </div>
       </div>
+
+      {hasDraft && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-yellow-500/20 bg-yellow-500/10 p-4 sm:flex-row sm:items-center sm:justify-between animate-fade-in">
+          <div>
+            <p className="text-sm font-semibold text-yellow-600 dark:text-yellow-400">You have an unsaved draft for this note</p>
+            <p className="text-xs text-muted-foreground">Would you like to restore your last unsaved edits?</p>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <Button size="sm" onClick={restoreDraft}>Restore</Button>
+            <Button size="sm" variant="outline" onClick={discardDraft}>Discard</Button>
+          </div>
+        </div>
+      )}
 
       <Card className="rounded-3xl">
         <CardContent className="space-y-4 p-4 sm:p-5">
