@@ -1,5 +1,5 @@
 import { type ClipboardEvent, type DragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Bot, FileImage, ImageOff, MessageSquare, Paperclip, Save, Send, Settings, Sparkles, X } from 'lucide-react';
+import { Bot, CheckCircle2, ChevronDown, Circle, FileImage, ImageOff, Loader2, MessageSquare, Paperclip, Save, Send, Settings, Sparkles, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import toast from 'react-hot-toast';
@@ -19,6 +19,7 @@ const providerOptions = [
   { value: 'openai', label: 'OpenAI compatible' },
 ];
 const defaultMessages: ChatMessage[] = [{ role: 'assistant', content: 'Ask me to find notes, summarize code, plan routines, or turn an idea into a bookmark/note/question.' }];
+const chatHistoryKey = 'bookmark-vault-chat-history-v1';
 
 type AiAction = {
   operation: 'create' | 'update' | 'delete';
@@ -47,7 +48,10 @@ function extractActions(text: string): AiAction[] {
 }
 
 function hideActionBlock(text: string) {
-  return text.replace(/```ACTION_JSON\s*[\s\S]*?```/gi, '').trim();
+  return text
+    .replace(/```ACTION_JSON\s*[\s\S]*?```/gi, '')
+    .replace(/```ACTION_JSON\s*[\s\S]*$/i, '')
+    .trim();
 }
 
 function sanitizeActionData(resource: AiAction['resource'], data: Record<string, any>) {
@@ -79,6 +83,8 @@ export default function ChatbotPage() {
   const [pendingActions, setPendingActions] = useState<AiAction[]>([]);
   const [selectedModelId, setSelectedModelId] = useState('');
   const [dragging, setDragging] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
+  const [activitySteps, setActivitySteps] = useState<string[]>([]);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [draftModel, setDraftModel] = useState<AiModelConfig>({
@@ -102,16 +108,24 @@ export default function ChatbotPage() {
   useEffect(() => loadSettings(), [loadSettings]);
 
   useEffect(() => {
-    api.chatHistory.get()
-      .then((data) => setMessages(data.messages.length ? data.messages.slice(-30) : defaultMessages))
-      .catch(() => setMessages(defaultMessages))
-      .finally(() => setHistoryReady(true));
+    try {
+      const saved = JSON.parse(localStorage.getItem(chatHistoryKey) || '[]') as ChatMessage[];
+      setMessages(saved.length ? saved.slice(-30) : defaultMessages);
+    } catch {
+      setMessages(defaultMessages);
+    } finally {
+      setHistoryReady(true);
+    }
   }, []);
 
   useEffect(() => {
     if (!historyReady) return;
     const t = setTimeout(() => {
-      api.chatHistory.update(messages.slice(-30).map((message) => ({ role: message.role, content: message.content }))).catch(() => {});
+      const saved = messages
+        .filter((message) => message.content.trim())
+        .slice(-30)
+        .map((message) => ({ role: message.role, content: message.content, files: message.files }));
+      localStorage.setItem(chatHistoryKey, JSON.stringify(saved));
     }, 350);
     return () => clearTimeout(t);
   }, [messages, historyReady]);
@@ -248,22 +262,57 @@ export default function ChatbotPage() {
     });
   };
 
+  const pushActivity = useCallback((step: string) => {
+    setActivitySteps((current) => (current[current.length - 1] === step ? current : [...current, step].slice(-8)));
+  }, []);
+
   const send = async () => {
     if ((!input.trim() && files.length === 0) || sending) return;
+    if (!selectedModel) {
+      toast.error('Activate one AI model first');
+      setTab('settings');
+      return;
+    }
     const sentFiles = files;
     const attachmentLabel = sentFiles.length > 0 ? `\n\nAttached: ${sentFiles.map((file) => file.name).join(', ')}` : '';
     const user: ChatMessage = { role: 'user', content: `${input.trim() || '[attached file]'}${attachmentLabel}`, files: sentFiles };
-    const next = [...messages, user];
+    const next = [...messages, user, { role: 'assistant' as const, content: '' }];
+    let streamedAnswer = '';
     setMessages(next);
     setInput('');
     setFiles([]);
+    setPendingActions([]);
+    setActivityOpen(true);
+    setActivitySteps(['Preparing your vault context']);
     setSending(true);
     try {
-      const answer = await runAiChat(selectedRunSettings, next, context, sentFiles);
+      pushActivity(sentFiles.length > 0 ? 'Reading attached files' : 'Checking recent thread');
+      const answer = await runAiChat(selectedRunSettings, [...messages, user], context, sentFiles, {
+        onStatus: pushActivity,
+        onDelta: (delta) => {
+          streamedAnswer += delta;
+          setMessages((current) => {
+            const copy = [...current];
+            const lastIndex = copy.length - 1;
+            if (copy[lastIndex]?.role === 'assistant') copy[lastIndex] = { role: 'assistant', content: hideActionBlock(streamedAnswer) };
+            return copy;
+          });
+        },
+      });
+      pushActivity('Checking suggested app actions');
       const actions = extractActions(answer);
       if (actions.length > 0) setPendingActions(actions);
-      setMessages((current) => [...current, { role: 'assistant', content: hideActionBlock(answer) || `${actions.length} action${actions.length === 1 ? '' : 's'} ready. Please approve below.` }]);
+      const finalContent = hideActionBlock(answer) || `${actions.length} action${actions.length === 1 ? '' : 's'} ready. Please approve below.`;
+      setMessages((current) => {
+        const copy = [...current];
+        const lastIndex = copy.length - 1;
+        if (copy[lastIndex]?.role === 'assistant') copy[lastIndex] = { role: 'assistant', content: finalContent };
+        else copy.push({ role: 'assistant', content: finalContent });
+        return copy;
+      });
+      pushActivity(actions.length > 0 ? 'Waiting for your approval' : 'Ready');
     } catch (error) {
+      setMessages((current) => current.filter((message, index) => index !== current.length - 1 || message.role !== 'assistant' || message.content.trim()));
       toast.error(error instanceof Error ? error.message : 'AI request failed');
     } finally {
       setSending(false);
@@ -313,8 +362,10 @@ export default function ChatbotPage() {
   };
 
   const clearHistory = async () => {
-    await api.chatHistory.clear().catch(() => {});
+    localStorage.removeItem(chatHistoryKey);
     setMessages([{ role: 'assistant', content: 'History cleared. Ask me anything.' }]);
+    setActivitySteps([]);
+    setPendingActions([]);
   };
 
   return (
@@ -421,6 +472,39 @@ export default function ChatbotPage() {
                 </div>
               </div>
 
+              {(sending || activitySteps.length > 0) && (
+                <div className="border-b border-border/70 bg-muted/18 px-3 py-2">
+                  <button
+                    type="button"
+                    onClick={() => setActivityOpen((open) => !open)}
+                    className="flex w-full items-center justify-between gap-3 rounded-2xl px-2 py-1.5 text-left transition hover:bg-muted/45"
+                  >
+                    <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-muted-foreground">
+                      {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" /> : <CheckCircle2 className="h-3.5 w-3.5 text-success" />}
+                      <span className="truncate">{sending ? (activitySteps[activitySteps.length - 1] || 'Thinking') : 'Last response process'}</span>
+                    </span>
+                    <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition ${activityOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {activityOpen && (
+                    <div className="mt-2 grid gap-1 rounded-2xl border border-border/70 bg-card/65 p-2">
+                      {activitySteps.length === 0 ? (
+                        <div className="flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground">
+                          <Circle className="h-3 w-3" /> Ready
+                        </div>
+                      ) : activitySteps.map((step, index) => {
+                        const isLast = index === activitySteps.length - 1;
+                        return (
+                          <div key={`${step}-${index}`} className="flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground">
+                            {sending && isLast ? <Loader2 className="h-3 w-3 animate-spin text-primary" /> : <CheckCircle2 className="h-3 w-3 text-success" />}
+                            <span>{step}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="flex-1 overflow-y-auto">
                 <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-3 py-5 sm:px-5">
                   {messages.length <= 1 && (
@@ -444,7 +528,16 @@ export default function ChatbotPage() {
                       <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                         {message.role === 'assistant' ? (
                           <div className="max-w-[92%] px-1 text-sm leading-7 text-foreground sm:max-w-[82%]">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                            {message.content ? (
+                              <div className="assistant-message">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 rounded-2xl bg-muted/35 px-3 py-2 text-muted-foreground">
+                                <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+                                <span className="text-xs font-medium">Starting response</span>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div className="max-w-[88%] sm:max-w-[75%]">
@@ -470,12 +563,6 @@ export default function ChatbotPage() {
                         )}
                       </div>
                     ))}
-                    {sending && (
-                      <div className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
-                        <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
-                        Thinking...
-                      </div>
-                    )}
                     <div ref={bottomRef} />
                   </div>
                 </div>

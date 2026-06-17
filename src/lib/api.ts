@@ -44,11 +44,6 @@ export const api = {
   stats: {
     get: () => request<Stats>('/stats'),
   },
-  chatHistory: {
-    get: () => request<{ messages: { role: 'user' | 'assistant'; content: string }[] }>('/history'),
-    update: (messages: { role: 'user' | 'assistant'; content: string }[]) => request<{ messages: { role: 'user' | 'assistant'; content: string }[] }>('/history', { method: 'PUT', body: JSON.stringify({ messages }) }),
-    clear: () => request<{ message: string }>('/history', { method: 'DELETE' }),
-  },
   search: (q: string) => request<any>(`/search?q=${encodeURIComponent(q)}`),
   bookmarks: {
     list: (params?: Record<string, string>) => request<any>(`/bookmarks${qs(params)}`),

@@ -40,6 +40,53 @@ body {
   color: oklch(0.985 0 0);
 }
 
+.assistant-message {
+  overflow-wrap: anywhere;
+}
+
+.assistant-message > :first-child {
+  margin-top: 0;
+}
+
+.assistant-message > :last-child {
+  margin-bottom: 0;
+}
+
+.assistant-message p,
+.assistant-message ul,
+.assistant-message ol {
+  margin-bottom: 0.75rem;
+}
+
+.assistant-message ul,
+.assistant-message ol {
+  padding-left: 1.25rem;
+}
+
+.assistant-message li {
+  margin-bottom: 0.25rem;
+}
+
+.assistant-message a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.assistant-message table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+  border-radius: var(--radius);
+}
+
+.assistant-message th,
+.assistant-message td {
+  border: 1px solid var(--color-border);
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+}
+
 input, textarea, select, button {
   font-family: inherit;
 }

@@ -36,6 +36,11 @@ export type ChatMessage = {
   files?: AiFile[];
 };
 
+export type AiChatOptions = {
+  onDelta?: (delta: string) => void;
+  onStatus?: (status: string) => void;
+};
+
 export const defaultAiSettings: AiSettings = {
   provider: 'gemini',
   geminiKey: '',
@@ -100,7 +105,15 @@ App data context:
 ${context}`;
 }
 
-export async function runAiChat(settings: AiSettings, messages: ChatMessage[], context: string, files: AiFile[]) {
+function emitDelta(options: AiChatOptions | undefined, value: string) {
+  if (value) options?.onDelta?.(value);
+}
+
+function emitStatus(options: AiChatOptions | undefined, value: string) {
+  options?.onStatus?.(value);
+}
+
+export async function runAiChat(settings: AiSettings, messages: ChatMessage[], context: string, files: AiFile[], options?: AiChatOptions) {
   const userMessages = messages.filter((message) => message.role === 'user');
   const lastUser = userMessages[userMessages.length - 1]?.content ?? '';
   if (!lastUser.trim() && files.length === 0) throw new Error('Message is required');
@@ -113,6 +126,7 @@ export async function runAiChat(settings: AiSettings, messages: ChatMessage[], c
 
   if (provider === 'gemini') {
     if (!apiKey) throw new Error('Gemini API key is missing');
+    emitStatus(options, 'Connecting to Gemini');
     const ai = new GoogleGenAI({ apiKey });
     const history = messages.slice(-10);
     const contents: any[] = [];
@@ -144,14 +158,21 @@ export async function runAiChat(settings: AiSettings, messages: ChatMessage[], c
       }
       contents.push({ role: 'user', parts });
     }
-    const response = await ai.models.generateContent({
+    emitStatus(options, 'Streaming response');
+    const response = await ai.models.generateContentStream({
       model: modelName,
       contents,
       config: {
         systemInstruction: buildSystemPrompt(context),
       },
     });
-    return response.text || '';
+    let full = '';
+    for await (const chunk of response) {
+      const delta = chunk.text || '';
+      full += delta;
+      emitDelta(options, delta);
+    }
+    return full;
   }
 
   const isOpenRouter = provider === 'openrouter';
@@ -167,6 +188,7 @@ export async function runAiChat(settings: AiSettings, messages: ChatMessage[], c
   const formattedHistory = history.map((message) => ({ role: message.role, content: message.content }));
 
   const endpoint = isOpenRouter ? 'https://openrouter.ai/api/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions';
+  emitStatus(options, `Connecting to ${isOpenRouter ? 'OpenRouter' : 'OpenAI'}`);
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
@@ -181,9 +203,47 @@ export async function runAiChat(settings: AiSettings, messages: ChatMessage[], c
         ...formattedHistory,
         { role: 'user', content },
       ],
+      stream: true,
     }),
   });
-  const json = await response.json();
-  if (!response.ok) throw new Error(json.error?.message || 'AI request failed');
-  return json.choices?.[0]?.message?.content || '';
+
+  if (!response.ok) {
+    const json = await response.json().catch(() => ({}));
+    throw new Error(json.error?.message || 'AI request failed');
+  }
+
+  if (!response.body) {
+    const json = await response.json().catch(() => ({}));
+    return json.choices?.[0]?.message?.content || '';
+  }
+
+  emitStatus(options, 'Streaming response');
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let full = '';
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line.startsWith('data:')) continue;
+      const data = line.slice(5).trim();
+      if (!data || data === '[DONE]') continue;
+      try {
+        const json = JSON.parse(data);
+        const delta = json.choices?.[0]?.delta?.content || '';
+        full += delta;
+        emitDelta(options, delta);
+      } catch {
+        // Ignore partial vendor-specific stream events.
+      }
+    }
+  }
+
+  return full;
 }
