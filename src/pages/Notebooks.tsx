@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Pin, Plus, Trash2, Edit3, FileText, Share2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import { api } from '../lib/api';
 import { PageHeader, EmptyState, Spinner, SearchInput, ConfirmDialog, PaginationControls } from '../components/UI';
 import { Select } from '../components/Select';
@@ -152,8 +153,8 @@ export default function NotebooksPage() {
                   </div>
                 </div>
                 <div className="relative">
-                  <div className="prose-dark max-w-none text-sm text-muted-foreground line-clamp-3">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{n.content.slice(0, 200) || 'Empty note...'}</ReactMarkdown>
+                  <div className="prose-dark max-h-28 max-w-none overflow-hidden text-sm text-muted-foreground">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{n.content || 'Empty note...'}</ReactMarkdown>
                   </div>
                   <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-card to-transparent pointer-events-none" />
                 </div>
@@ -173,7 +174,7 @@ export default function NotebooksPage() {
       <Dialog open={!!viewNote} onOpenChange={v => !v && setViewNote(null)} title={viewNote?.title || ''} maxWidth="sm:max-w-2xl">
         {viewNote && (
           <div className="prose-dark max-w-none">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{viewNote.content}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{viewNote.content}</ReactMarkdown>
           </div>
         )}
       </Dialog>

@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import CodeBlock from '../components/CodeBlock';
@@ -86,7 +87,7 @@ export default function SharePage() {
 
             {type === 'notes' && 'content' in item && (
               <div className="prose-dark max-w-none">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.content}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{item.content}</ReactMarkdown>
               </div>
             )}
 

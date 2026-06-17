@@ -53,7 +53,8 @@ export default function NoteEditorPage() {
   const [categories, setCategories] = useState<Category[]>([fallbackCategory]);
   const [mode, setMode] = useState<'write' | 'preview'>('write');
   const [settings, setSettings] = useState<AiSettings>(defaultAiSettings);
-  const [aiActiveTask, setAiActiveTask] = useState<'summarize' | 'polish' | 'custom' | null>(null);
+  const [aiActiveTask, setAiActiveTask] = useState<'summarize' | 'polish' | 'shorten' | 'custom' | 'title' | null>(null);
+  const [aiMode, setAiMode] = useState<'summarize' | 'polish' | 'shorten' | 'custom'>('polish');
   const [selectedModelId, setSelectedModelId] = useState('');
   const [customPrompt, setCustomPrompt] = useState('');
   const [selectedColor, setSelectedColor] = useState(colors[0].value);
@@ -229,6 +230,13 @@ export default function NoteEditorPage() {
     setContextMenu(null);
   };
 
+  const runnableAiSettings = () => {
+    const selectedModel = settings.models?.find((model) => model.id === selectedModelId);
+    return selectedModel
+      ? { ...settings, models: (settings.models || []).map((model) => ({ ...model, active: model.id === selectedModel.id })) }
+      : settings;
+  };
+
   const openSelectionMenu = (event: MouseEvent<HTMLTextAreaElement>) => {
     const { text } = selectedRange();
     if (!text.trim()) return;
@@ -236,7 +244,7 @@ export default function NoteEditorPage() {
     setContextMenu({ x: event.clientX, y: event.clientY });
   };
 
-  const runNoteAi = async (task: 'summarize' | 'polish' | 'custom') => {
+  const runNoteAi = async (task: 'summarize' | 'polish' | 'shorten' | 'custom') => {
     const { start, end, text } = selectedRange();
     const target = text.trim() ? text : content;
     if (!target.trim()) return toast.error('Write or select some text first');
@@ -244,16 +252,17 @@ export default function NoteEditorPage() {
     setAiActiveTask(task);
     setContextMenu(null);
     try {
+      const extraInstruction = customPrompt.trim()
+        ? `\nExtra user instruction: ${customPrompt.trim()}`
+        : '';
       const instruction = task === 'summarize'
-        ? 'Summarize this notebook text into clean markdown bullet points. Return only the replacement markdown.'
+        ? `Summarize this notebook text into clean markdown bullet points while keeping the important ideas.${extraInstruction}\nReturn only the replacement markdown.`
         : task === 'polish'
-          ? 'Polish and rewrite this notebook text in clear, organized markdown. Keep the original meaning. Return only the replacement markdown.'
-          : `${customPrompt.trim()}\nReturn only the replacement markdown.`;
-      const selectedModel = settings.models?.find((model) => model.id === selectedModelId);
-      const runnableSettings = selectedModel
-        ? { ...settings, models: (settings.models || []).map((model) => ({ ...model, active: model.id === selectedModel.id })) }
-        : settings;
-      const answer = await runAiChat(runnableSettings, [{ role: 'user', content: `${instruction}\n\nText:\n${target}` }], 'Notebook editor selected text rewrite mode. Do not create app actions.', []);
+          ? `Polish and rewrite this notebook text in clear, organized markdown. Keep the original meaning, improve structure, wording, and readability.${extraInstruction}\nReturn only the replacement markdown.`
+          : task === 'shorten'
+            ? `Shorten this notebook text into a concise, to-the-point version. Keep only the key points, remove repetition, and organize it cleanly in markdown.${extraInstruction}\nReturn only the replacement markdown.`
+            : `${customPrompt.trim()}\nReturn only the replacement markdown.`;
+      const answer = await runAiChat(runnableAiSettings(), [{ role: 'user', content: `${instruction}\n\nText:\n${target}` }], 'Notebook editor selected text rewrite mode. Do not create app actions.', []);
       const cleaned = answer.replace(/```(?:markdown)?/gi, '').replace(/```/g, '').trim();
       if (!cleaned) return toast.error('AI returned empty text');
       if (text.trim()) {
@@ -262,7 +271,38 @@ export default function NoteEditorPage() {
       } else {
         setContent(cleaned);
       }
-      toast.success(task === 'summarize' ? 'Summary inserted' : 'Text updated');
+      toast.success(task === 'summarize' ? 'Summary inserted' : task === 'shorten' ? 'Text shortened' : 'Text updated');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'AI failed');
+    } finally {
+      setAiActiveTask(null);
+    }
+  };
+
+  const generateTitle = async () => {
+    const target = content.trim();
+    if (!target) return toast.error('Write note content first');
+    setAiActiveTask('title');
+    try {
+      const answer = await runAiChat(
+        runnableAiSettings(),
+        [{
+          role: 'user',
+          content: `Generate one clean notebook title from this note. Return only the title, no quotes, no markdown, max 8 words.\n\nNote:\n${target.slice(0, 8000)}`,
+        }],
+        'Notebook title generation mode. Do not create app actions.',
+        []
+      );
+      const nextTitle = answer
+        .replace(/```[\s\S]*?```/g, '')
+        .replace(/^title\s*:\s*/i, '')
+        .replace(/^["'`]|["'`]$/g, '')
+        .trim()
+        .split(/\r?\n/)[0]
+        .slice(0, 90);
+      if (!nextTitle) return toast.error('AI returned empty title');
+      setTitle(nextTitle);
+      toast.success('Title generated');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'AI failed');
     } finally {
@@ -347,7 +387,22 @@ export default function NoteEditorPage() {
         <CardContent className="space-y-4 p-4 sm:p-5">
           <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
             <FormField label="Title">
-              <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Research note title..." />
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Research note title..." />
+                <Button type="button" variant="secondary" className="shrink-0" disabled={aiActiveTask !== null || !content.trim()} onClick={generateTitle}>
+                  {aiActiveTask === 'title' ? (
+                    <>
+                      <div className="mr-2 h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      AI Title
+                    </>
+                  )}
+                </Button>
+              </div>
             </FormField>
             <FormField label="Category">
               <Select value={category} onChange={setCategory} options={categoryOptions} />
@@ -387,29 +442,17 @@ export default function NoteEditorPage() {
                   <Select value={selectedModelId || modelOptions[0]?.value || 'default'} onChange={setSelectedModelId} options={modelOptions} />
                 </FormField>
                 <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                  <Button variant="secondary" size="sm" disabled={aiActiveTask !== null} onMouseDown={(e) => e.preventDefault()} onClick={() => runNoteAi('summarize')}>
-                    {aiActiveTask === 'summarize' ? (
-                      <>
-                        <div className="mr-2 h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                        Summarizing...
-                      </>
-                    ) : (
-                      <>
-                        <Bot className="h-4 w-4" /> Summarize selection
-                      </>
-                    )}
+                  <Button variant={aiMode === 'summarize' ? 'secondary' : 'outline'} size="sm" disabled={aiActiveTask !== null} onMouseDown={(e) => e.preventDefault()} onClick={() => setAiMode('summarize')}>
+                    <Bot className="h-4 w-4" /> Summarize
                   </Button>
-                  <Button variant="secondary" size="sm" disabled={aiActiveTask !== null} onMouseDown={(e) => e.preventDefault()} onClick={() => runNoteAi('polish')}>
-                    {aiActiveTask === 'polish' ? (
-                      <>
-                        <div className="mr-2 h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                        Polishing...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="h-4 w-4" /> Polish text
-                      </>
-                    )}
+                  <Button variant={aiMode === 'polish' ? 'secondary' : 'outline'} size="sm" disabled={aiActiveTask !== null} onMouseDown={(e) => e.preventDefault()} onClick={() => setAiMode('polish')}>
+                    <Sparkles className="h-4 w-4" /> Polish
+                  </Button>
+                  <Button variant={aiMode === 'shorten' ? 'secondary' : 'outline'} size="sm" disabled={aiActiveTask !== null} onMouseDown={(e) => e.preventDefault()} onClick={() => setAiMode('shorten')}>
+                    <List className="h-4 w-4" /> Shorten
+                  </Button>
+                  <Button variant={aiMode === 'custom' ? 'secondary' : 'outline'} size="sm" disabled={aiActiveTask !== null} onMouseDown={(e) => e.preventDefault()} onClick={() => setAiMode('custom')}>
+                    <Type className="h-4 w-4" /> Custom
                   </Button>
                 </div>
               </div>
@@ -437,9 +480,9 @@ export default function NoteEditorPage() {
                 </div>
               )}
               <div className="flex flex-col gap-2 sm:flex-row">
-                <Input value={customPrompt} onChange={(event) => setCustomPrompt(event.target.value)} placeholder="Ask AI to rewrite selected text your way..." disabled={aiActiveTask !== null} />
-                <Button disabled={aiActiveTask !== null} onMouseDown={(e) => e.preventDefault()} onClick={() => runNoteAi('custom')}>
-                  {aiActiveTask === 'custom' ? (
+                <Input value={customPrompt} onChange={(event) => setCustomPrompt(event.target.value)} placeholder={aiMode === 'custom' ? 'Write exactly what AI should do...' : 'Optional extra instruction for the selected AI action...'} disabled={aiActiveTask !== null} />
+                <Button disabled={aiActiveTask !== null} onMouseDown={(e) => e.preventDefault()} onClick={() => runNoteAi(aiMode)}>
+                  {aiActiveTask !== null && aiActiveTask !== 'title' ? (
                     <>
                       <div className="mr-2 h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
                       Applying...
@@ -517,6 +560,9 @@ export default function NoteEditorPage() {
             </Button>
             <Button variant="secondary" size="sm" disabled={aiActiveTask !== null} onClick={() => runNoteAi('polish')}>
               {aiActiveTask === 'polish' ? 'Polishing...' : 'Polish'}
+            </Button>
+            <Button variant="secondary" size="sm" disabled={aiActiveTask !== null} onClick={() => runNoteAi('shorten')}>
+              {aiActiveTask === 'shorten' ? 'Shortening...' : 'Shorten'}
             </Button>
           </div>
         </div>
