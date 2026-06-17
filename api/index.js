@@ -552,7 +552,7 @@ export default async function handler(req, res) {
         return res.json({ messages: fromJson(row?.messages, []) });
       }
       if (method === 'PUT') {
-        const messages = Array.isArray(req.body.messages) ? req.body.messages.slice(-30) : [];
+        const messages = Array.isArray(req.body.messages) ? req.body.messages.slice(-50) : [];
         const stamp = now();
         await d1Query(`INSERT INTO chat_history (id, userId, messages, createdAt, updatedAt)
           VALUES (?, ?, ?, ?, ?)

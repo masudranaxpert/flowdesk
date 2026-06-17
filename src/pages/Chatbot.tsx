@@ -22,10 +22,38 @@ const defaultMessages: ChatMessage[] = [{ role: 'assistant', content: 'Ask me to
 const chatHistoryKey = 'bookmark-vault-chat-history-v1';
 
 type AiAction = {
-  operation: 'create' | 'update' | 'delete';
+  operation: 'create' | 'update' | 'delete' | 'delete_many' | 'delete_all';
   resource: 'bookmarks' | 'notebooks' | 'codes' | 'questions' | 'routines' | 'categories';
   id?: string;
+  ids?: string[];
   data?: Record<string, any>;
+};
+
+type VaultContext = {
+  bookmarks: any[];
+  notes: any[];
+  codes: any[];
+  questions: any[];
+  routines: any[];
+  categories: any[];
+};
+
+const emptyVaultContext: VaultContext = {
+  bookmarks: [],
+  notes: [],
+  codes: [],
+  questions: [],
+  routines: [],
+  categories: [],
+};
+
+const resourceContextKey: Record<AiAction['resource'], keyof VaultContext> = {
+  bookmarks: 'bookmarks',
+  notebooks: 'notes',
+  codes: 'codes',
+  questions: 'questions',
+  routines: 'routines',
+  categories: 'categories',
 };
 
 function normalizeActions(value: unknown): AiAction[] {
@@ -54,6 +82,10 @@ function hideActionBlock(text: string) {
     .trim();
 }
 
+function isWritingAction(text: string) {
+  return /```ACTION_JSON/i.test(text) && !/```ACTION_JSON\s*[\s\S]*?```/i.test(text);
+}
+
 function sanitizeActionData(resource: AiAction['resource'], data: Record<string, any>) {
   const next = { ...data };
   if (resource === 'routines') {
@@ -70,6 +102,60 @@ function sanitizeActionData(resource: AiAction['resource'], data: Record<string,
   return next;
 }
 
+function validateActions(actions: AiAction[], vault: VaultContext) {
+  const valid: AiAction[] = [];
+  const rejected: AiAction[] = [];
+
+  for (const action of actions) {
+    if (!['create', 'update', 'delete', 'delete_many', 'delete_all'].includes(action.operation) || !(action.resource in resourceContextKey)) {
+      rejected.push(action);
+      continue;
+    }
+
+    if (action.operation === 'create') {
+      valid.push(action);
+      continue;
+    }
+
+    if (action.operation === 'delete_all') {
+      if (action.data?.scope === 'all' || action.data?.confirm === 'all') valid.push(action);
+      else rejected.push(action);
+      continue;
+    }
+
+    if (action.operation === 'delete_many' || (action.operation === 'delete' && Array.isArray(action.ids))) {
+      const rawIds = action.ids || (Array.isArray(action.data?.ids) ? action.data.ids : []);
+      const ids = Array.from(new Set(rawIds.map((id) => String(id).trim()).filter(Boolean)));
+      const list = vault[resourceContextKey[action.resource]] || [];
+      const existing = new Set(list.map((item) => String(item.id || item._id)));
+      const validIds = ids.filter((id) => existing.has(id));
+      if (validIds.length !== ids.length || validIds.length === 0) {
+        rejected.push(action);
+        continue;
+      }
+      valid.push({ ...action, operation: 'delete_many', ids: validIds });
+      continue;
+    }
+
+    const actionId = String(action.id || action.data?.id || action.data?._id || '').trim();
+    if (!actionId) {
+      rejected.push(action);
+      continue;
+    }
+
+    const list = vault[resourceContextKey[action.resource]] || [];
+    const exists = list.some((item) => String(item.id || item._id) === actionId);
+    if (!exists) {
+      rejected.push(action);
+      continue;
+    }
+
+    valid.push({ ...action, id: actionId });
+  }
+
+  return { valid, rejected };
+}
+
 export default function ChatbotPage() {
   const [tab, setTab] = useState<'chat' | 'settings'>('chat');
   const [settings, setSettings] = useState<AiSettings>(defaultAiSettings);
@@ -83,6 +169,8 @@ export default function ChatbotPage() {
   const [pendingActions, setPendingActions] = useState<AiAction[]>([]);
   const [selectedModelId, setSelectedModelId] = useState('');
   const [dragging, setDragging] = useState(false);
+  const [writingAction, setWritingAction] = useState(false);
+  const [vaultContext, setVaultContext] = useState<VaultContext>(emptyVaultContext);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [draftModel, setDraftModel] = useState<AiModelConfig>({
@@ -108,7 +196,7 @@ export default function ChatbotPage() {
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(chatHistoryKey) || '[]') as ChatMessage[];
-      setMessages(saved.length ? saved.slice(-30) : defaultMessages);
+      setMessages(saved.length ? saved.slice(-50) : defaultMessages);
     } catch {
       setMessages(defaultMessages);
     } finally {
@@ -121,7 +209,7 @@ export default function ChatbotPage() {
     const t = setTimeout(() => {
       const saved = messages
         .filter((message) => message.content.trim())
-        .slice(-30)
+        .slice(-50)
         .map((message) => ({ role: message.role, content: message.content, files: message.files }));
       localStorage.setItem(chatHistoryKey, JSON.stringify(saved));
     }, 350);
@@ -153,14 +241,32 @@ export default function ChatbotPage() {
       api.routines.list(),
       api.categories.list(),
     ]).then(([bookmarks, notes, codes, questions, routines, categories]) => {
-      setContext(JSON.stringify({
-        bookmarks: bookmarks.slice(0, 50).map((item: any) => ({ id: item._id, title: item.title, url: item.url, category: item.category, tags: item.tags })),
-        notes: notes.slice(0, 50).map((item: any) => ({ id: item._id, title: item.title, category: item.category, preview: item.content.slice(0, 500) })),
-        codes: codes.slice(0, 30).map((item: any) => ({ id: item._id, title: item.title, language: item.language, category: item.category, description: item.description })),
-        questions: questions.slice(0, 50).map((item: any) => ({ id: item._id, title: item.title, platform: item.platform, category: item.category, solved: item.isSolved })),
-        routines: routines.slice(0, 50).map((item: any) => ({ id: item._id, title: item.title, type: item.type, dayOfWeek: item.dayOfWeek, date: item.date, startTime: item.startTime, endTime: item.endTime, room: item.room, teacher: item.teacher })),
-        categories: categories.slice(0, 50).map((item: any) => ({ id: item._id, name: item.name, slug: item.slug, scope: item.scope })),
-      }, null, 2));
+      const fullContext = {
+        bookmarks: bookmarks.map((item: any) => ({ id: item._id, title: item.title, url: item.url, category: item.category, tags: item.tags })),
+        notes: notes.map((item: any) => ({ id: item._id, title: item.title, category: item.category, preview: item.content?.slice?.(0, 500) || '' })),
+        codes: codes.map((item: any) => ({ id: item._id, title: item.title, language: item.language, category: item.category, description: item.description })),
+        questions: questions.map((item: any) => ({ id: item._id, title: item.title, platform: item.platform, category: item.category, solved: item.isSolved })),
+        routines: routines.map((item: any) => ({ id: item._id, title: item.title, type: item.type, dayOfWeek: item.dayOfWeek, date: item.date, startTime: item.startTime, endTime: item.endTime, room: item.room, teacher: item.teacher })),
+        categories: categories.map((item: any) => ({ id: item._id, name: item.name, slug: item.slug, scope: item.scope })),
+      };
+      const promptContext = {
+        bookmarks: fullContext.bookmarks.slice(0, 80),
+        notes: fullContext.notes.slice(0, 60),
+        codes: fullContext.codes.slice(0, 60),
+        questions: fullContext.questions.slice(0, 80),
+        routines: fullContext.routines.slice(0, 120),
+        categories: fullContext.categories.slice(0, 120),
+        actionIndex: {
+          bookmarks: fullContext.bookmarks.slice(0, 200).map(({ id, title }: any) => ({ id, title })),
+          notebooks: fullContext.notes.slice(0, 200).map(({ id, title }: any) => ({ id, title })),
+          codes: fullContext.codes.slice(0, 200).map(({ id, title }: any) => ({ id, title })),
+          questions: fullContext.questions.slice(0, 200).map(({ id, title }: any) => ({ id, title })),
+          routines: fullContext.routines.slice(0, 300).map(({ id, title, type }: any) => ({ id, title, type })),
+          categories: fullContext.categories.slice(0, 200).map(({ id, name }: any) => ({ id, title: name })),
+        },
+      };
+      setVaultContext(fullContext);
+      setContext(JSON.stringify(promptContext, null, 2));
     }).catch(() => {});
   }, []);
 
@@ -280,22 +386,32 @@ export default function ChatbotPage() {
     setInput('');
     setFiles([]);
     setPendingActions([]);
+    setWritingAction(false);
     setSending(true);
     try {
       const answer = await runAiChat(selectedRunSettings, [...messages, user], context, sentFiles, {
         onDelta: (delta) => {
           streamedAnswer += delta;
+          const visible = hideActionBlock(streamedAnswer);
+          const writing = isWritingAction(streamedAnswer);
+          setWritingAction(writing);
           setMessages((current) => {
             const copy = [...current];
             const lastIndex = copy.length - 1;
-            if (copy[lastIndex]?.role === 'assistant') copy[lastIndex] = { role: 'assistant', content: hideActionBlock(streamedAnswer) };
+            if (copy[lastIndex]?.role === 'assistant') copy[lastIndex] = { role: 'assistant', content: visible };
             return copy;
           });
         },
       });
+      setWritingAction(false);
       const actions = extractActions(answer);
-      if (actions.length > 0) setPendingActions(actions);
-      const finalContent = hideActionBlock(answer) || `${actions.length} action${actions.length === 1 ? '' : 's'} ready. Please approve below.`;
+      const validation = validateActions(actions, vaultContext);
+      if (validation.valid.length > 0) setPendingActions(validation.valid);
+      const finalContent = hideActionBlock(answer) || (
+        validation.valid.length > 0
+          ? `${validation.valid.length} action${validation.valid.length === 1 ? '' : 's'} ready. Please approve below.`
+          : 'I could not prepare a safe action because the target item was not found in your current data.'
+      );
       setMessages((current) => {
         const copy = [...current];
         const lastIndex = copy.length - 1;
@@ -303,7 +419,11 @@ export default function ChatbotPage() {
         else copy.push({ role: 'assistant', content: finalContent });
         return copy;
       });
+      if (validation.rejected.length > 0) {
+        toast.error(`${validation.rejected.length} unsafe action${validation.rejected.length === 1 ? '' : 's'} blocked`);
+      }
     } catch (error) {
+      setWritingAction(false);
       setMessages((current) => current.filter((message, index) => index !== current.length - 1 || message.role !== 'assistant' || message.content.trim()));
       toast.error(error instanceof Error ? error.message : 'AI request failed');
     } finally {
@@ -322,7 +442,12 @@ export default function ChatbotPage() {
       categories: api.categories,
     };
     try {
-      for (const action of pendingActions) {
+      const validation = validateActions(pendingActions, vaultContext);
+      if (validation.rejected.length > 0) {
+        setPendingActions(validation.valid);
+        throw new Error(`${validation.rejected.length} unsafe action blocked because the target id was not found in your data`);
+      }
+      for (const action of validation.valid) {
         const { operation, resource, id, data = {} } = action;
         const cleanData = sanitizeActionData(resource, data);
         const actionId = id || String(cleanData.id || cleanData._id || '');
@@ -330,6 +455,16 @@ export default function ChatbotPage() {
         const target = map[resource];
         if (!target) throw new Error(`Unsupported action: ${resource}`);
         if (operation === 'create') await target.create(payload);
+        if (operation === 'delete_all') {
+          if (resource === 'routines') await api.routines.reset('all');
+          else {
+            const currentItems = await target.list();
+            for (const item of currentItems) await target.delete(item._id || item.id);
+          }
+        }
+        if (operation === 'delete_many') {
+          for (const itemId of action.ids || []) await target.delete(itemId);
+        }
         if (operation === 'update') {
           if (!actionId) throw new Error(`Update ${resource} needs id`);
           await target.update(actionId, payload);
@@ -359,11 +494,12 @@ export default function ChatbotPage() {
     localStorage.removeItem(chatHistoryKey);
     setMessages([{ role: 'assistant', content: 'History cleared. Ask me anything.' }]);
     setPendingActions([]);
+    setWritingAction(false);
   };
 
   return (
-    <div className="space-y-5 animate-fade-in">
-      <Card className="rounded-3xl border-primary/15">
+    <div className="max-w-full overflow-x-hidden space-y-5 animate-fade-in">
+      <Card className="min-w-0 rounded-3xl border-primary/15">
         <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-2 text-primary">
@@ -385,7 +521,7 @@ export default function ChatbotPage() {
       </Card>
 
       {tab === 'settings' ? (
-        <Card className="rounded-3xl">
+        <Card className="min-w-0 rounded-3xl">
           <CardContent className="space-y-4 p-5">
             {loadingSettings ? <Spinner /> : (
               <>
@@ -432,9 +568,9 @@ export default function ChatbotPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <Card
-            className={`overflow-hidden rounded-3xl border-border/70 bg-background/65 ${dragging ? 'ring-2 ring-primary/60' : ''}`}
+            className={`min-w-0 overflow-hidden rounded-3xl border-border/70 bg-background/65 ${dragging ? 'ring-2 ring-primary/60' : ''}`}
             onDragOver={(event) => {
               event.preventDefault();
               setDragging(true);
@@ -491,11 +627,17 @@ export default function ChatbotPage() {
                             {message.content ? (
                               <div className="assistant-message">
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                                {writingAction && sending && index === messages.length - 1 && (
+                                  <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+                                    Preparing action preview...
+                                  </div>
+                                )}
                               </div>
                             ) : (
                               <div className="flex items-center gap-2 rounded-2xl bg-muted/35 px-3 py-2 text-muted-foreground">
                                 <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
-                                <span className="text-xs font-medium">Starting response</span>
+                                <span className="text-xs font-medium">{writingAction ? 'Preparing action preview...' : 'Writing response...'}</span>
                               </div>
                             )}
                           </div>
@@ -607,7 +749,7 @@ export default function ChatbotPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-3xl">
+          <Card className="min-w-0 rounded-3xl">
             <CardContent className="space-y-3 p-4">
               <div className="flex items-center gap-2">
                 <Bot className="h-4 w-4 text-primary" />
