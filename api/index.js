@@ -177,6 +177,18 @@ function validateResourceData(resource, data, { partial = false } = {}) {
       next.startTime = String(next.startTime || '').trim() || '09:00';
       next.endTime = String(next.endTime || '').trim() || '10:00';
     }
+    if (next.startTime !== undefined) {
+      next.startTime = String(next.startTime).trim();
+      if (/^\d:\d\d$/.test(next.startTime)) {
+        next.startTime = '0' + next.startTime;
+      }
+    }
+    if (next.endTime !== undefined) {
+      next.endTime = String(next.endTime).trim();
+      if (/^\d:\d\d$/.test(next.endTime)) {
+        next.endTime = '0' + next.endTime;
+      }
+    }
     if (next.dayOfWeek !== undefined) next.dayOfWeek = Math.max(0, Math.min(6, Number(next.dayOfWeek ?? 0)));
     if (next.repeatWeekly !== undefined) next.repeatWeekly = next.repeatWeekly !== false;
   }
@@ -232,6 +244,7 @@ async function sendResetMail(email, name, code) {
 }
 
 async function getMetadata(targetUrl) {
+  let id;
   try {
     let urlString = targetUrl;
     if (!/^https?:\/\//i.test(urlString)) {
@@ -239,14 +252,13 @@ async function getMetadata(targetUrl) {
     }
     const parsedUrl = new URL(urlString);
     const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), 4000);
+    id = setTimeout(() => controller.abort(), 4000);
     const response = await fetch(parsedUrl.toString(), {
       signal: controller.signal,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
       }
     });
-    clearTimeout(id);
     if (!response.ok) {
       throw new Error(`Failed to fetch URL: ${response.statusText}`);
     }
@@ -279,10 +291,13 @@ async function getMetadata(targetUrl) {
     return { title, description };
   } catch (err) {
     return { title: '', description: '', error: err.message };
+  } finally {
+    if (id) clearTimeout(id);
   }
 }
 
 async function getQuestionMetadata(targetUrl) {
+  let id;
   try {
     let urlString = targetUrl.trim();
     if (!/^https?:\/\//i.test(urlString)) {
@@ -295,7 +310,7 @@ async function getQuestionMetadata(targetUrl) {
     let platform = 'other';
     let tags = [];
     const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), 4000);
+    id = setTimeout(() => controller.abort(), 4000);
     if (host.includes('codeforces.com')) {
       platform = 'codeforces';
       const response = await fetch(parsedUrl.toString(), {
@@ -304,7 +319,6 @@ async function getQuestionMetadata(targetUrl) {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
       });
-      clearTimeout(id);
       if (response.ok) {
         const html = await response.text();
         const titleMatch = html.match(/<div class="title">\s*[A-Z\d]+\.\s*([^<]+)<\/div>/i) || html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
@@ -358,7 +372,6 @@ async function getQuestionMetadata(targetUrl) {
           }),
           signal: controller.signal
         });
-        clearTimeout(id);
         if (graphqlResponse.ok) {
           const result = await graphqlResponse.json();
           const q = result?.data?.question;
@@ -376,7 +389,6 @@ async function getQuestionMetadata(targetUrl) {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
       });
-      clearTimeout(id);
       if (response.ok) {
         const html = await response.text();
         const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
@@ -400,6 +412,8 @@ async function getQuestionMetadata(targetUrl) {
     return { title, difficulty, platform, tags };
   } catch (err) {
     return { title: '', difficulty: 'medium', platform: 'other', tags: [], error: err.message };
+  } finally {
+    if (id) clearTimeout(id);
   }
 }
 
@@ -564,6 +578,19 @@ export default async function handler(req, res) {
           (SELECT COUNT(*) FROM questions WHERE userId = ? AND isSolved = 1) AS solved
       `, [uid, uid, uid, uid, uid]);
       const stats = rows[0] || { bookmarks: 0, notebooks: 0, codes: 0, questions: 0, solved: 0 };
+      const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+      const heatmapRows = await d1Query(`
+        SELECT date, SUM(count) AS count FROM (
+          SELECT substr(createdAt, 1, 10) AS date, COUNT(*) AS count FROM bookmarks WHERE userId = ? AND createdAt >= ? GROUP BY date
+          UNION ALL
+          SELECT substr(createdAt, 1, 10) AS date, COUNT(*) AS count FROM notebooks WHERE userId = ? AND createdAt >= ? GROUP BY date
+          UNION ALL
+          SELECT substr(createdAt, 1, 10) AS date, COUNT(*) AS count FROM codes WHERE userId = ? AND createdAt >= ? GROUP BY date
+          UNION ALL
+          SELECT substr(createdAt, 1, 10) AS date, COUNT(*) AS count FROM questions WHERE userId = ? AND createdAt >= ? GROUP BY date
+        ) GROUP BY date ORDER BY date ASC;
+      `, [uid, ninetyDaysAgo, uid, ninetyDaysAgo, uid, ninetyDaysAgo, uid, ninetyDaysAgo]);
+      stats.heatmap = heatmapRows.map((row) => ({ date: row.date, count: Number(row.count) }));
       return res.json(stats);
     }
 

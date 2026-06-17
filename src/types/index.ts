@@ -58,6 +58,7 @@ export interface Stats {
   codes: number;
   questions: number;
   solved: number;
+  heatmap?: { date: string; count: number }[];
 }
 
 export interface Category {
