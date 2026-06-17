@@ -2,3 +2,8 @@ name = "bookmark-vault"
 compatibility_date = "2026-06-17"
 compatibility_flags = [ "nodejs_compat" ]
 pages_build_output_dir = "./dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "knowledge"
+database_id = "d75d8791-6023-4865-ab5b-b3566307c250"
