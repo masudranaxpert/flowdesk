@@ -15,7 +15,7 @@ A to Z Helper is a full-stack web app that keeps your bookmarks, notes, code sni
 - **Categories** — Organize everything with custom categories
 - **Share** — Generate public links for your notes and snippets
 - **Dark/Light Mode** — Toggle between themes
-- **Email Verification** — Secure signup with OTP-based verification
+- **Email Verification** — Secure signup with OTP-based verification (via Resend)
 
 ## Tech Stack
 
@@ -23,20 +23,19 @@ A to Z Helper is a full-stack web app that keeps your bookmarks, notes, code sni
 |-------|------------|
 | Frontend | React, TypeScript, Tailwind CSS, Vite |
 | UI Components | Radix UI, shadcn/ui, Lucide Icons |
-| Backend | Vercel Serverless Functions |
-| Database | Cloudflare D1 via d1-secret-rest |
+| Backend | Cloudflare Pages Functions (Edge Runtime) |
+| Database | Cloudflare D1 (Direct bindings / REST proxy) |
 | AI | Google Gemini (`@google/genai`) |
-| Email | Nodemailer (Gmail SMTP) |
-| Hosting | Vercel |
+| Email | Resend (HTTP REST API) |
+| Hosting | Cloudflare Pages |
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+
-- A Cloudflare D1 REST worker URL and bearer token
-- A Gmail account (for email verification)
-- A Google AI API key (for chatbot)
+- Node.js 20+
+- A Cloudflare D1 Database (for production/local binding)
+- A Resend API Key (for email verification)
 
 ### Setup
 
@@ -55,17 +54,16 @@ cp .env.example .env
 ```
 
 ```env
-D1_REST_URL=https://d1-rest.<your-worker>.workers.dev
-D1_REST_TOKEN=your-d1-rest-token
-AUTH_SECRET=your-random-secret
+# Optional fallback database credentials if not using direct bindings
+D1_REST_URL=https://api.cloudflare.com/client/v4/accounts/your-account-id/d1/database/your-database-id
+D1_REST_TOKEN=your-cloudflare-api-token
 
-# Gmail
-EMAIL_USER=yourgmail@gmail.com
-EMAIL_APP_PASSWORD=your-app-password
-EMAIL_FROM=yourgmail@gmail.com
+AUTH_SECRET=your-jwt-auth-secret-key
+RESEND_API_KEY=re_your_resend_api_key
+EMAIL_FROM="BookmarkVault <onboarding@resend.dev>"
 ```
 
-### Run
+### Run Locally
 
 ```bash
 npm run dev
@@ -73,10 +71,23 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173).
 
-## Deploy
+## Deploy to Cloudflare Pages
 
-Built for Vercel. Just push to GitHub and connect your repo on [vercel.com](https://vercel.com).
+1. Create a new Cloudflare Pages project from your Git repository.
+2. In **Build Settings**, configure the following:
+   - **Framework preset**: `Vite`
+   - **Build command**: `npm run build`
+   - **Build output directory**: `dist`
+3. Go to **Settings** -> **Functions** -> **Compatibility flags** and add `nodejs_compat` to both production and preview.
+4. Go to **Settings** -> **Functions** -> **D1 database bindings** and add a binding:
+   - **Variable name**: `DB`
+   - **D1 database**: Select your Cloudflare D1 database.
+5. Under **Settings** -> **Environment variables**, define the following variables:
+   - `AUTH_SECRET`: Your secret JWT key.
+   - `RESEND_API_KEY`: Your Resend API key.
+   - `EMAIL_FROM`: The verified email address or domain sender.
 
 ## License
 
 MIT
+
