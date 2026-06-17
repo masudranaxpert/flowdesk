@@ -4,6 +4,8 @@ import { setDbBinding } from '../../api/_lib/d1.js';
 export async function onRequest(context) {
   const { request, env } = context;
 
+  globalThis.APP_ENV = env;
+
   if (env.DB) {
     setDbBinding(env.DB);
   }

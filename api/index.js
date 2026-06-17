@@ -66,7 +66,7 @@ function userId(user) {
 async function requireUser(req, res) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : '';
-  const session = verifyToken(token);
+  const session = await verifyToken(token);
   if (!session?.id) {
     res.status(401).json({ error: 'Login required' });
     return null;
@@ -243,9 +243,9 @@ export default async function handler(req, res) {
       const password = String(req.body.password || '');
       const rows = await d1Query('SELECT * FROM app_users WHERE email = ? LIMIT 1;', [email]);
       const user = rows[0];
-      if (!user || !verifyPassword(password, user.salt, user.passwordHash)) return res.status(401).json({ error: 'Invalid email or password' });
+      if (!user || !(await verifyPassword(password, user.salt, user.passwordHash))) return res.status(401).json({ error: 'Invalid email or password' });
       if (!user.emailVerified) return res.status(403).json({ error: 'Please verify your email before login', requiresVerification: true, email: user.email });
-      return res.json({ token: createToken(user), user: { id: user.id, name: user.name, email: user.email } });
+      return res.json({ token: await createToken(user), user: { id: user.id, name: user.name, email: user.email } });
     }
 
     if (slug === 'auth/register' && method === 'POST') {
@@ -254,18 +254,18 @@ export default async function handler(req, res) {
       const password = String(req.body.password || '');
       if (!name || !email || password.length < 6) return res.status(400).json({ error: 'Name, email and 6+ character password required' });
       const existing = (await d1Query('SELECT * FROM app_users WHERE email = ? LIMIT 1;', [email]))[0];
-      const { salt, passwordHash } = hashPassword(password);
+      const { salt, passwordHash } = await hashPassword(password);
       const code = createVerificationCode();
       const expiry = new Date(Date.now() + 10 * 60 * 1000).toISOString();
       const stamp = now();
       if (existing) {
         if (existing.emailVerified) return res.status(409).json({ error: 'Email already registered' });
-        await d1Query('UPDATE app_users SET name = ?, salt = ?, passwordHash = ?, verificationCodeHash = ?, verificationExpires = ?, updatedAt = ? WHERE id = ?;', [name, salt, passwordHash, hashValue(code), expiry, stamp, existing.id]);
+        await d1Query('UPDATE app_users SET name = ?, salt = ?, passwordHash = ?, verificationCodeHash = ?, verificationExpires = ?, updatedAt = ? WHERE id = ?;', [name, salt, passwordHash, await hashValue(code), expiry, stamp, existing.id]);
         await sendVerifyMail(email, name, code);
         return res.status(201).json({ requiresVerification: true, email, message: 'Verification code sent' });
       }
       const rowId = newId();
-      await d1Query('INSERT INTO app_users (id, name, email, passwordHash, salt, emailVerified, verificationCodeHash, verificationExpires, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?);', [rowId, name, email, passwordHash, salt, hashValue(code), expiry, stamp, stamp]);
+      await d1Query('INSERT INTO app_users (id, name, email, passwordHash, salt, emailVerified, verificationCodeHash, verificationExpires, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?);', [rowId, name, email, passwordHash, salt, await hashValue(code), expiry, stamp, stamp]);
       await sendVerifyMail(email, name, code);
       return res.status(201).json({ requiresVerification: true, email, message: 'Verification code sent' });
     }
@@ -275,11 +275,11 @@ export default async function handler(req, res) {
       const code = String(req.body.code || '').trim();
       const user = (await d1Query('SELECT * FROM app_users WHERE email = ? LIMIT 1;', [email]))[0];
       if (!user) return res.status(404).json({ error: 'Account not found' });
-      if (user.emailVerified) return res.json({ token: createToken(user), user: { id: user.id, name: user.name, email: user.email } });
+      if (user.emailVerified) return res.json({ token: await createToken(user), user: { id: user.id, name: user.name, email: user.email } });
       if (!user.verificationExpires || new Date(user.verificationExpires).getTime() < Date.now()) return res.status(400).json({ error: 'Verification code expired' });
-      if (user.verificationCodeHash !== hashValue(code)) return res.status(400).json({ error: 'Invalid verification code' });
+      if (user.verificationCodeHash !== await hashValue(code)) return res.status(400).json({ error: 'Invalid verification code' });
       await d1Query('UPDATE app_users SET emailVerified = 1, verificationCodeHash = ?, verificationExpires = NULL, updatedAt = ? WHERE id = ?;', ['', now(), user.id]);
-      return res.json({ token: createToken(user), user: { id: user.id, name: user.name, email: user.email } });
+      return res.json({ token: await createToken(user), user: { id: user.id, name: user.name, email: user.email } });
     }
 
     if (slug === 'auth/resend' && method === 'POST') {
@@ -288,7 +288,7 @@ export default async function handler(req, res) {
       if (!user) return res.status(404).json({ error: 'Account not found' });
       if (user.emailVerified) return res.json({ message: 'Email already verified' });
       const code = createVerificationCode();
-      await d1Query('UPDATE app_users SET verificationCodeHash = ?, verificationExpires = ?, updatedAt = ? WHERE id = ?;', [hashValue(code), new Date(Date.now() + 10 * 60 * 1000).toISOString(), now(), user.id]);
+      await d1Query('UPDATE app_users SET verificationCodeHash = ?, verificationExpires = ?, updatedAt = ? WHERE id = ?;', [await hashValue(code), new Date(Date.now() + 10 * 60 * 1000).toISOString(), now(), user.id]);
       await sendVerifyMail(user.email, user.name, code);
       return res.json({ message: 'Verification code sent' });
     }
@@ -299,7 +299,7 @@ export default async function handler(req, res) {
       if (!user) return res.json({ message: 'If the email is registered, a password reset code has been sent.' });
       if (!user.emailVerified) return res.status(400).json({ error: 'This email is not verified yet. Please register or verify first.' });
       const code = createVerificationCode();
-      await d1Query('UPDATE app_users SET resetCodeHash = ?, resetExpires = ?, updatedAt = ? WHERE id = ?;', [hashValue(code), new Date(Date.now() + 10 * 60 * 1000).toISOString(), now(), user.id]);
+      await d1Query('UPDATE app_users SET resetCodeHash = ?, resetExpires = ?, updatedAt = ? WHERE id = ?;', [await hashValue(code), new Date(Date.now() + 10 * 60 * 1000).toISOString(), now(), user.id]);
       await sendResetMail(user.email, user.name, code);
       return res.json({ message: 'Password reset code sent to your email.' });
     }
@@ -312,8 +312,8 @@ export default async function handler(req, res) {
       const user = (await d1Query('SELECT * FROM app_users WHERE email = ? LIMIT 1;', [email]))[0];
       if (!user) return res.status(404).json({ error: 'Account not found' });
       if (!user.resetExpires || new Date(user.resetExpires).getTime() < Date.now()) return res.status(400).json({ error: 'Reset code expired' });
-      if (user.resetCodeHash !== hashValue(code)) return res.status(400).json({ error: 'Invalid reset code' });
-      const { salt, passwordHash } = hashPassword(newPassword);
+      if (user.resetCodeHash !== await hashValue(code)) return res.status(400).json({ error: 'Invalid reset code' });
+      const { salt, passwordHash } = await hashPassword(newPassword);
       await d1Query('UPDATE app_users SET salt = ?, passwordHash = ?, resetCodeHash = ?, resetExpires = NULL, updatedAt = ? WHERE id = ?;', [salt, passwordHash, '', now(), user.id]);
       return res.json({ message: 'Password has been reset successfully' });
     }
@@ -340,8 +340,8 @@ export default async function handler(req, res) {
       const newPassword = String(req.body.newPassword || '');
       if (newPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters' });
       const user = (await d1Query('SELECT * FROM app_users WHERE id = ? LIMIT 1;', [sessionUser.id]))[0];
-      if (!verifyPassword(currentPassword, user.salt, user.passwordHash)) return res.status(400).json({ error: 'Incorrect current password' });
-      const { salt, passwordHash } = hashPassword(newPassword);
+      if (!(await verifyPassword(currentPassword, user.salt, user.passwordHash))) return res.status(400).json({ error: 'Incorrect current password' });
+      const { salt, passwordHash } = await hashPassword(newPassword);
       await d1Query('UPDATE app_users SET salt = ?, passwordHash = ?, updatedAt = ? WHERE id = ?;', [salt, passwordHash, now(), user.id]);
       return res.json({ message: 'Password changed successfully' });
     }
