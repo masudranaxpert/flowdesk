@@ -615,3 +615,7 @@ code {
     @apply font-sans;
   }
 }
+
+.no-scrollbar {
+  -webkit-overflow-scrolling: touch;
+}
