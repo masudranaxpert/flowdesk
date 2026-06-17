@@ -144,7 +144,7 @@ export default function ChatbotPage() {
     }
   }, []);
 
-  useEffect(() => {
+  const refreshContext = useCallback(() => {
     Promise.all([
       api.bookmarks.list(),
       api.notebooks.list(),
@@ -163,6 +163,10 @@ export default function ChatbotPage() {
       }, null, 2));
     }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    refreshContext();
+  }, [refreshContext]);
 
   const enabledModels = useMemo(() => (settings.models || []).filter((model) => model.active), [settings.models]);
   const selectedModel = useMemo(
@@ -337,6 +341,7 @@ export default function ChatbotPage() {
       }
       setPendingActions([]);
       toast.success(`${pendingActions.length} action${pendingActions.length === 1 ? '' : 's'} completed`);
+      refreshContext();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Action failed');
     }
@@ -347,6 +352,7 @@ export default function ChatbotPage() {
     if (!last) return;
     await api.notebooks.create({ title: 'AI note', content: last.content, category: 'general', tags: ['ai'] });
     toast.success('Saved as note');
+    refreshContext();
   };
 
   const clearHistory = async () => {
