@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 const D1_URL = (process.env.D1_REST_URL || process.env.D1_REST_ENDPOINT || process.env.D1_URL || '').trim().replace(/^["']|["']$/g, '').replace(/\/$/, '');
 const D1_TOKEN = (process.env.D1_REST_TOKEN || process.env.D1_SECRET || process.env.token || process.env.TOKEN || '').trim().replace(/^["']|["']$/g, '');

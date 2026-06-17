@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 const SECRET = (process.env.AUTH_SECRET || process.env.JWT_SECRET || process.env.D1_REST_TOKEN || process.env.token || 'bookmark-vault-dev-secret').trim().replace(/^["']|["']$/g, '');
 
