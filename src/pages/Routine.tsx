@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Clock, MapPin, Plus, RotateCcw, Trash2, UserRound, Download } from 'lucide-react';
+import { CalendarDays, Clock, Download, MapPin, Plus, RotateCcw, Trash2, UserRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { PageHeader, FormField, Spinner } from '../components/UI';
@@ -11,6 +11,13 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function localDateString(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 const timeOptions = Array.from({ length: 48 }, (_, index) => {
   const hours = Math.floor(index / 2);
@@ -78,9 +85,11 @@ export default function RoutinePage() {
   const [formOpen, setFormOpen] = useState(false);
 
   const todayIndex = new Date().getDay();
+  const todayDate = localDateString();
   const [currentTime, setCurrentTime] = useState(() => new Date().toTimeString().slice(0, 5));
   const dateLabels = useMemo(() => weekDateLabels(todayIndex), [todayIndex]);
   const dayOptions = days.map((day, index) => ({ value: String(index), label: day }));
+  const isEvent = form.type === 'event';
 
   const load = useCallback(() => {
     setLoading(true);
@@ -101,20 +110,42 @@ export default function RoutinePage() {
     items: items.filter((item) => item.repeatWeekly && item.dayOfWeek === index).sort((a, b) => a.startTime.localeCompare(b.startTime)),
   })), [items]);
 
-  const todayClasses = useMemo(
-    () => items.filter((item) => item.repeatWeekly && item.dayOfWeek === todayIndex).sort((a, b) => a.startTime.localeCompare(b.startTime)),
-    [items, todayIndex]
+  const todayItems = useMemo(
+    () => items
+      .filter((item) => (item.repeatWeekly && item.dayOfWeek === todayIndex) || (!item.repeatWeekly && item.date === todayDate))
+      .sort((a, b) => a.startTime.localeCompare(b.startTime)),
+    [items, todayIndex, todayDate]
   );
 
   const upcomingEvents = useMemo(
-    () => items.filter((item) => !item.repeatWeekly && item.date).sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`)),
-    [items]
+    () => items.filter((item) => !item.repeatWeekly && item.date && item.date >= todayDate).sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`)),
+    [items, todayDate]
   );
+
+  const setType = (type: 'class' | 'event') => {
+    setForm((current) => ({
+      ...current,
+      type,
+      repeatWeekly: type === 'class',
+      date: type === 'event' ? (current.date || localDateString()) : '',
+      teacher: type === 'event' ? '' : current.teacher,
+      breakTime: type === 'event' ? '' : current.breakTime,
+    }));
+  };
 
   const save = async () => {
     if (!form.title.trim() || !form.startTime || !form.endTime) return toast.error('Title, start and end time are required');
-    await api.routines.create({ ...form, subject: form.subject || form.title });
-    toast.success('Routine saved');
+    if (form.type === 'event' && !form.date) return toast.error('Event date is required');
+    const payload = {
+      ...form,
+      repeatWeekly: form.type === 'class',
+      date: form.type === 'event' ? form.date : '',
+      subject: form.type === 'class' ? (form.subject || form.title) : '',
+      teacher: form.type === 'class' ? form.teacher : '',
+      breakTime: form.type === 'class' ? form.breakTime : '',
+    };
+    await api.routines.create(payload);
+    toast.success(form.type === 'event' ? 'Event saved' : 'Class routine saved');
     setForm({ ...emptyForm, dayOfWeek: todayIndex });
     setFormOpen(false);
     load();
@@ -219,20 +250,29 @@ export default function RoutinePage() {
               <p className="text-sm font-semibold">Add class or event</p>
             </div>
 
-            <FormField label="Type">
-              <Select value={form.type} onChange={(type) => setForm({ ...form, type: type as 'class' | 'event', repeatWeekly: type === 'class' })} options={[{ value: 'class', label: 'Weekly Class' }, { value: 'event', label: 'One-time Event' }]} />
-            </FormField>
-            <FormField label="Title / Subject">
-              <Input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value, subject: event.target.value })} placeholder="Algorithms Lab, Research meetup..." />
+            <div className="grid grid-cols-2 gap-2 rounded-2xl border border-border bg-muted/25 p-1">
+              <Button type="button" variant={!isEvent ? 'secondary' : 'ghost'} className="h-10 rounded-xl" onClick={() => setType('class')}>
+                Weekly class
+              </Button>
+              <Button type="button" variant={isEvent ? 'secondary' : 'ghost'} className="h-10 rounded-xl" onClick={() => setType('event')}>
+                Event
+              </Button>
+            </div>
+
+            <FormField label={isEvent ? 'Event title' : 'Title / Subject'}>
+              <Input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value, subject: isEvent ? '' : event.target.value })} placeholder={isEvent ? 'Research meetup, exam, reminder...' : 'Algorithms Lab, Physics class...'} />
             </FormField>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <FormField label="Day">
-                <Select value={String(form.dayOfWeek)} onChange={(day) => setForm({ ...form, dayOfWeek: Number(day) })} options={dayOptions} />
-              </FormField>
-              <FormField label="Event date">
-                <Input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value, repeatWeekly: !event.target.value })} />
-              </FormField>
+              {isEvent ? (
+                <FormField label="Event date">
+                  <Input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value, repeatWeekly: false })} />
+                </FormField>
+              ) : (
+                <FormField label="Day">
+                  <Select value={String(form.dayOfWeek)} onChange={(day) => setForm({ ...form, dayOfWeek: Number(day), repeatWeekly: true, date: '' })} options={dayOptions} />
+                </FormField>
+              )}
               <FormField label="Start">
                 <Select value={form.startTime} onChange={(startTime) => setForm({ ...form, startTime })} options={timeOptions} placeholder="Start time" />
               </FormField>
@@ -241,19 +281,32 @@ export default function RoutinePage() {
               </FormField>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <FormField label="Class room">
-                <Input value={form.room} onChange={(event) => setForm({ ...form, room: event.target.value })} placeholder="G1-003" />
-              </FormField>
-              <FormField label="Break time">
-                <Input value={form.breakTime} onChange={(event) => setForm({ ...form, breakTime: event.target.value })} placeholder="10 min" />
-              </FormField>
-            </div>
-            <FormField label="Teacher name optional">
-              <Input value={form.teacher} onChange={(event) => setForm({ ...form, teacher: event.target.value })} placeholder="Teacher name" />
-            </FormField>
+            {isEvent ? (
+              <>
+                <FormField label="Location optional">
+                  <Input value={form.room} onChange={(event) => setForm({ ...form, room: event.target.value })} placeholder="Auditorium, online, library..." />
+                </FormField>
+                <FormField label="Notes optional">
+                  <Input value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="Short event note" />
+                </FormField>
+              </>
+            ) : (
+              <>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <FormField label="Class room">
+                    <Input value={form.room} onChange={(event) => setForm({ ...form, room: event.target.value })} placeholder="G1-003" />
+                  </FormField>
+                  <FormField label="Break time">
+                    <Input value={form.breakTime} onChange={(event) => setForm({ ...form, breakTime: event.target.value })} placeholder="10 min" />
+                  </FormField>
+                </div>
+                <FormField label="Teacher name optional">
+                  <Input value={form.teacher} onChange={(event) => setForm({ ...form, teacher: event.target.value })} placeholder="Teacher name" />
+                </FormField>
+              </>
+            )}
             <Button onClick={save} className="w-full">
-              <Plus className="h-4 w-4" /> Save routine
+              <Plus className="h-4 w-4" /> {isEvent ? 'Save event' : 'Save routine'}
             </Button>
           </CardContent>
         </Card>
@@ -265,25 +318,27 @@ export default function RoutinePage() {
                 <CardContent className="p-4">
                   <div className="mb-3 flex items-center gap-2">
                     <Clock className="h-4 w-4 text-primary" />
-                    <p className="text-sm font-semibold">Today&apos;s classes</p>
+                    <p className="text-sm font-semibold">Today&apos;s schedule</p>
                     <Badge variant="secondary" className="ml-auto rounded-full">{days[todayIndex]} - {dateLabels[todayIndex]}</Badge>
                   </div>
                   <div className="grid gap-2 md:grid-cols-2">
-                    {todayClasses.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No class today.</p>
-                    ) : todayClasses.map((item) => {
+                    {todayItems.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No class or event today.</p>
+                    ) : todayItems.map((item) => {
                       const state = statusFor(item, currentTime);
                       return (
                         <div key={item._id} className="rounded-2xl border border-border bg-muted/30 p-3">
                           <div className="flex items-center gap-2">
                             <p className="min-w-0 flex-1 truncate text-lg font-semibold tracking-tight">{item.title}</p>
+                            <Badge variant="outline" className="h-7 rounded-full px-3 text-xs font-semibold">{item.type === 'event' ? 'Event' : 'Class'}</Badge>
                             <Badge variant="outline" className={`h-7 rounded-full px-3 text-xs font-semibold ${state.className}`}>{state.label}</Badge>
                           </div>
                           <div className="mt-2 flex flex-wrap gap-1.5">
                             <Badge variant="secondary" className="h-7 rounded-full bg-primary/12 px-3 text-sm font-semibold text-primary"><Clock className="h-3.5 w-3.5" /> {timeLabel(item)}</Badge>
-                            {item.room && <Badge variant="secondary" className="h-7 rounded-full bg-sky-500/15 px-3 text-sm font-semibold text-sky-300"><MapPin className="h-3.5 w-3.5" /> Room {item.room}</Badge>}
+                            {item.room && <Badge variant="secondary" className="h-7 rounded-full bg-sky-500/15 px-3 text-sm font-semibold text-sky-300"><MapPin className="h-3.5 w-3.5" /> {item.type === 'event' ? item.room : `Room ${item.room}`}</Badge>}
                             {item.breakTime && <Badge variant="secondary" className="h-7 rounded-full bg-amber-500/15 px-3 text-xs font-semibold text-amber-300">Break {item.breakTime}</Badge>}
                             {item.teacher && <Badge variant="secondary" className="h-7 rounded-full bg-violet-500/15 px-3 text-xs font-semibold text-violet-300"><UserRound className="h-3 w-3" /> {item.teacher}</Badge>}
+                            {item.notes && <Badge variant="secondary" className="h-7 rounded-full bg-muted px-3 text-xs font-semibold text-muted-foreground">{item.notes}</Badge>}
                           </div>
                         </div>
                       );
@@ -335,10 +390,14 @@ export default function RoutinePage() {
                   <p className="text-sm font-semibold">Upcoming events</p>
                   <div className="mt-3 grid gap-2 md:grid-cols-2">
                     {upcomingEvents.length === 0 ? <p className="text-sm text-muted-foreground">No upcoming events.</p> : upcomingEvents.map((item) => (
-                      <div key={item._id} className="flex items-center gap-3 rounded-2xl border border-border bg-muted/30 p-3">
+                      <div key={item._id} className="flex items-start gap-3 rounded-2xl border border-border bg-muted/30 p-3">
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium">{item.title}</p>
                           <p className="text-xs text-muted-foreground">{item.date} - {timeLabel(item)}</p>
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {item.room && <Badge variant="secondary" className="h-6 rounded-full bg-sky-500/15 px-2 text-xs font-semibold text-sky-300"><MapPin className="h-3 w-3" /> {item.room}</Badge>}
+                            {item.notes && <Badge variant="secondary" className="h-6 rounded-full bg-muted px-2 text-xs font-semibold text-muted-foreground">{item.notes}</Badge>}
+                          </div>
                         </div>
                         <Button variant="ghost" size="icon" className="text-destructive" onClick={() => remove(item._id)}>
                           <Trash2 className="h-4 w-4" />

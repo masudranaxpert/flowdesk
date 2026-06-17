@@ -70,6 +70,13 @@ const sections = [
 let cachedStats: Stats | null = null;
 let cachedRoutines: RoutineItem[] = [];
 
+function localDateString(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function formatMinutes(minutes: number) {
   if (minutes < 60) return `${minutes}m`;
   const h = Math.floor(minutes / 60);
@@ -81,7 +88,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState<Stats | null>(cachedStats);
   const [upcoming, setUpcoming] = useState<RoutineItem[]>(() => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateString();
     return cachedRoutines.filter((item) => !item.repeatWeekly && item.date >= today).slice(0, 3);
   });
   const [routines, setRoutines] = useState<RoutineItem[]>(cachedRoutines);
@@ -100,7 +107,7 @@ export default function Dashboard() {
     api.routines.list().then((items) => {
       setRoutines(items);
       cachedRoutines = items;
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localDateString();
       setUpcoming(items.filter((item) => !item.repeatWeekly && item.date >= today).slice(0, 3));
     }).catch(() => {});
   }, []);
@@ -124,7 +131,7 @@ export default function Dashboard() {
 
   const today = new Date();
   const todayIndex = today.getDay();
-  const todayDate = today.toISOString().slice(0, 10);
+  const todayDate = localDateString(today);
   const todayLabel = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'short', day: 'numeric' }).format(today);
   const todaySchedule = routines
     .filter((item) => (item.repeatWeekly && item.dayOfWeek === todayIndex) || (!item.repeatWeekly && item.date === todayDate))
