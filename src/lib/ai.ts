@@ -114,17 +114,42 @@ export async function runAiChat(settings: AiSettings, messages: ChatMessage[], c
   if (provider === 'gemini') {
     if (!apiKey) throw new Error('Gemini API key is missing');
     const ai = new GoogleGenAI({ apiKey });
-    const parts: any[] = [{ text: `${buildSystemPrompt(context)}\n\nUser: ${lastUser}` }];
-    for (const file of activeFiles) {
-      if (file.mimeType.startsWith('image/')) {
-        parts.push({ inlineData: { mimeType: file.mimeType, data: dataUrlToBase64(file.dataUrl) } });
+    const history = messages.slice(-10);
+    const contents: any[] = [];
+    for (let i = 0; i < history.length; i++) {
+      const msg = history[i];
+      const role = msg.role === 'assistant' ? 'model' : 'user';
+      if (i === history.length - 1 && msg.role === 'user') {
+        const parts: any[] = [{ text: msg.content }];
+        for (const file of activeFiles) {
+          if (file.mimeType.startsWith('image/')) {
+            parts.push({ inlineData: { mimeType: file.mimeType, data: dataUrlToBase64(file.dataUrl) } });
+          } else {
+            parts.push({ text: `\nAttached file (${file.name}):\n${dataUrlToText(file.dataUrl).slice(0, 12000)}` });
+          }
+        }
+        contents.push({ role, parts });
       } else {
-        parts.push({ text: `\nAttached file (${file.name}):\n${dataUrlToText(file.dataUrl).slice(0, 12000)}` });
+        contents.push({ role, parts: [{ text: msg.content }] });
       }
+    }
+    if (contents.length === 0) {
+      const parts: any[] = [{ text: lastUser }];
+      for (const file of activeFiles) {
+        if (file.mimeType.startsWith('image/')) {
+          parts.push({ inlineData: { mimeType: file.mimeType, data: dataUrlToBase64(file.dataUrl) } });
+        } else {
+          parts.push({ text: `\nAttached file (${file.name}):\n${dataUrlToText(file.dataUrl).slice(0, 12000)}` });
+        }
+      }
+      contents.push({ role: 'user', parts });
     }
     const response = await ai.models.generateContent({
       model: modelName,
-      contents: [{ role: 'user', parts }],
+      contents,
+      config: {
+        systemInstruction: buildSystemPrompt(context),
+      },
     });
     return response.text || '';
   }
