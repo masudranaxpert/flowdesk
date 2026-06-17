@@ -83,6 +83,28 @@ function slugify(value) {
   return value.trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '') || 'category';
 }
 
+function normalizeCategoryScope(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (['all', 'bookmark', 'notebook', 'code', 'question'].includes(raw)) return raw;
+  if (['bookmarks', 'link', 'links'].includes(raw)) return 'bookmark';
+  if (['notebooks', 'note', 'notes'].includes(raw)) return 'notebook';
+  if (['codes', 'codebook', 'snippet', 'snippets'].includes(raw)) return 'code';
+  if (['questions', 'qa', 'q&a', 'problem', 'problems'].includes(raw)) return 'question';
+  return 'bookmark';
+}
+
+function categoryScopeAliases(scope) {
+  const canonical = normalizeCategoryScope(scope);
+  const aliases = {
+    all: ['all'],
+    bookmark: ['bookmark', 'bookmarks', 'link', 'links'],
+    notebook: ['notebook', 'notebooks', 'note', 'notes'],
+    code: ['code', 'codes', 'codebook', 'snippet', 'snippets'],
+    question: ['question', 'questions', 'qa', 'q&a', 'problem', 'problems'],
+  };
+  return aliases[canonical] || [canonical];
+}
+
 function cleanBoolColumn(column, value) {
   return ['isFavorite', 'isPinned', 'isSolved', 'repeatWeekly', 'emailVerified', 'multimodalEnabled'].includes(column) ? bool(value) : value;
 }
@@ -130,8 +152,9 @@ function buildWhere(resource, query, uid) {
   }
   if (resource === 'categories') {
     if (query.scope && query.scope !== 'all') {
-      where.push('(scope = ? OR scope = ?)');
-      params.push('all', query.scope);
+      const scopes = ['all', ...categoryScopeAliases(query.scope)];
+      where.push(`scope IN (${scopes.map(() => '?').join(', ')})`);
+      params.push(...scopes);
     }
   }
   if (resource === 'routines') {
@@ -161,9 +184,8 @@ function validateResourceData(resource, data, { partial = false } = {}) {
   const hasCategoryScope = resource === 'categories' && Object.prototype.hasOwnProperty.call(data || {}, 'scope');
   const next = partial ? { ...data } : { ...resources[resource].defaults, ...data };
   if (resource === 'categories') {
-    const allowedScopes = ['all', 'bookmark', 'notebook', 'code', 'question'];
     if (!partial && !hasCategoryScope) next.scope = 'bookmark';
-    if (next.scope !== undefined && !allowedScopes.includes(next.scope)) next.scope = 'bookmark';
+    if (next.scope !== undefined) next.scope = normalizeCategoryScope(next.scope);
     if (!partial) next.name = String(next.name || '').trim() || 'Untitled category';
   }
   if (resource === 'questions' && next.difficulty !== undefined && !['easy', 'medium', 'hard'].includes(next.difficulty)) next.difficulty = 'medium';
