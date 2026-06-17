@@ -1,5 +1,5 @@
 import { type ClipboardEvent, type DragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Bot, CheckCircle2, ChevronDown, Circle, FileImage, ImageOff, Loader2, MessageSquare, Paperclip, Save, Send, Settings, Sparkles, X } from 'lucide-react';
+import { Bot, FileImage, ImageOff, MessageSquare, Paperclip, Save, Send, Settings, Sparkles, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import toast from 'react-hot-toast';
@@ -83,8 +83,6 @@ export default function ChatbotPage() {
   const [pendingActions, setPendingActions] = useState<AiAction[]>([]);
   const [selectedModelId, setSelectedModelId] = useState('');
   const [dragging, setDragging] = useState(false);
-  const [activityOpen, setActivityOpen] = useState(false);
-  const [activitySteps, setActivitySteps] = useState<string[]>([]);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [draftModel, setDraftModel] = useState<AiModelConfig>({
@@ -262,10 +260,6 @@ export default function ChatbotPage() {
     });
   };
 
-  const pushActivity = useCallback((step: string) => {
-    setActivitySteps((current) => (current[current.length - 1] === step ? current : [...current, step].slice(-8)));
-  }, []);
-
   const send = async () => {
     if ((!input.trim() && files.length === 0) || sending) return;
     if (!selectedModel) {
@@ -282,13 +276,9 @@ export default function ChatbotPage() {
     setInput('');
     setFiles([]);
     setPendingActions([]);
-    setActivityOpen(true);
-    setActivitySteps(['Preparing your vault context']);
     setSending(true);
     try {
-      pushActivity(sentFiles.length > 0 ? 'Reading attached files' : 'Checking recent thread');
       const answer = await runAiChat(selectedRunSettings, [...messages, user], context, sentFiles, {
-        onStatus: pushActivity,
         onDelta: (delta) => {
           streamedAnswer += delta;
           setMessages((current) => {
@@ -299,7 +289,6 @@ export default function ChatbotPage() {
           });
         },
       });
-      pushActivity('Checking suggested app actions');
       const actions = extractActions(answer);
       if (actions.length > 0) setPendingActions(actions);
       const finalContent = hideActionBlock(answer) || `${actions.length} action${actions.length === 1 ? '' : 's'} ready. Please approve below.`;
@@ -310,7 +299,6 @@ export default function ChatbotPage() {
         else copy.push({ role: 'assistant', content: finalContent });
         return copy;
       });
-      pushActivity(actions.length > 0 ? 'Waiting for your approval' : 'Ready');
     } catch (error) {
       setMessages((current) => current.filter((message, index) => index !== current.length - 1 || message.role !== 'assistant' || message.content.trim()));
       toast.error(error instanceof Error ? error.message : 'AI request failed');
@@ -364,7 +352,6 @@ export default function ChatbotPage() {
   const clearHistory = async () => {
     localStorage.removeItem(chatHistoryKey);
     setMessages([{ role: 'assistant', content: 'History cleared. Ask me anything.' }]);
-    setActivitySteps([]);
     setPendingActions([]);
   };
 
@@ -471,39 +458,6 @@ export default function ChatbotPage() {
                   />
                 </div>
               </div>
-
-              {(sending || activitySteps.length > 0) && (
-                <div className="border-b border-border/70 bg-muted/18 px-3 py-2">
-                  <button
-                    type="button"
-                    onClick={() => setActivityOpen((open) => !open)}
-                    className="flex w-full items-center justify-between gap-3 rounded-2xl px-2 py-1.5 text-left transition hover:bg-muted/45"
-                  >
-                    <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-muted-foreground">
-                      {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" /> : <CheckCircle2 className="h-3.5 w-3.5 text-success" />}
-                      <span className="truncate">{sending ? (activitySteps[activitySteps.length - 1] || 'Thinking') : 'Last response process'}</span>
-                    </span>
-                    <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition ${activityOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  {activityOpen && (
-                    <div className="mt-2 grid gap-1 rounded-2xl border border-border/70 bg-card/65 p-2">
-                      {activitySteps.length === 0 ? (
-                        <div className="flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground">
-                          <Circle className="h-3 w-3" /> Ready
-                        </div>
-                      ) : activitySteps.map((step, index) => {
-                        const isLast = index === activitySteps.length - 1;
-                        return (
-                          <div key={`${step}-${index}`} className="flex items-center gap-2 px-2 py-1.5 text-xs text-muted-foreground">
-                            {sending && isLast ? <Loader2 className="h-3 w-3 animate-spin text-primary" /> : <CheckCircle2 className="h-3 w-3 text-success" />}
-                            <span>{step}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
 
               <div className="flex-1 overflow-y-auto">
                 <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-3 py-5 sm:px-5">

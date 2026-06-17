@@ -38,7 +38,6 @@ export type ChatMessage = {
 
 export type AiChatOptions = {
   onDelta?: (delta: string) => void;
-  onStatus?: (status: string) => void;
 };
 
 export const defaultAiSettings: AiSettings = {
@@ -78,6 +77,19 @@ export async function fileToAiFile(file: File): Promise<AiFile> {
 function buildSystemPrompt(context: string) {
   return `You are BookmarkVault AI. Help the user find, summarize, and organize their personal bookmarks, notes, code snippets, questions, routines, and events.
 
+Language behavior:
+- Reply in the same language/style the user uses.
+- If the user writes Bangla, reply in Bangla.
+- If the user writes Banglish/romanized Bengali, reply in natural Banglish/romanized Bengali.
+- If the user writes English, reply in English.
+- Do not answer in two languages or add translations unless the user asks.
+- Keep casual greetings short and natural. Do not over-explain basic greetings.
+
+Context behavior:
+- Use the app data context when it is relevant.
+- If the context does not contain enough information, say that clearly and ask for what is needed.
+- Do not invent saved notes, bookmarks, code, questions, routines, or categories that are not present in the context.
+
 When useful, suggest exact actions the user can take in the app. Keep answers concise and practical.
 If the user asks you to create, update, or delete app data, include a short explanation plus one action block at the end.
 For one item, action block format:
@@ -109,10 +121,6 @@ function emitDelta(options: AiChatOptions | undefined, value: string) {
   if (value) options?.onDelta?.(value);
 }
 
-function emitStatus(options: AiChatOptions | undefined, value: string) {
-  options?.onStatus?.(value);
-}
-
 export async function runAiChat(settings: AiSettings, messages: ChatMessage[], context: string, files: AiFile[], options?: AiChatOptions) {
   const userMessages = messages.filter((message) => message.role === 'user');
   const lastUser = userMessages[userMessages.length - 1]?.content ?? '';
@@ -126,7 +134,6 @@ export async function runAiChat(settings: AiSettings, messages: ChatMessage[], c
 
   if (provider === 'gemini') {
     if (!apiKey) throw new Error('Gemini API key is missing');
-    emitStatus(options, 'Connecting to Gemini');
     const ai = new GoogleGenAI({ apiKey });
     const history = messages.slice(-10);
     const contents: any[] = [];
@@ -158,7 +165,6 @@ export async function runAiChat(settings: AiSettings, messages: ChatMessage[], c
       }
       contents.push({ role: 'user', parts });
     }
-    emitStatus(options, 'Streaming response');
     const response = await ai.models.generateContentStream({
       model: modelName,
       contents,
@@ -188,7 +194,6 @@ export async function runAiChat(settings: AiSettings, messages: ChatMessage[], c
   const formattedHistory = history.map((message) => ({ role: message.role, content: message.content }));
 
   const endpoint = isOpenRouter ? 'https://openrouter.ai/api/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions';
-  emitStatus(options, `Connecting to ${isOpenRouter ? 'OpenRouter' : 'OpenAI'}`);
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
@@ -217,7 +222,6 @@ export async function runAiChat(settings: AiSettings, messages: ChatMessage[], c
     return json.choices?.[0]?.message?.content || '';
   }
 
-  emitStatus(options, 'Streaming response');
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
