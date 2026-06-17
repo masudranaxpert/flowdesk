@@ -151,9 +151,11 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey) {
-        const target = event.target as HTMLElement;
-        if (['INPUT', 'TEXTAREA'].includes(target.tagName)) return;
+      const isSearchShortcut =
+        (event.key === '/' && !['INPUT', 'TEXTAREA'].includes((event.target as HTMLElement).tagName)) ||
+        (event.key === 'k' && (event.ctrlKey || event.metaKey));
+
+      if (isSearchShortcut) {
         event.preventDefault();
         setSearchOpen(true);
       }

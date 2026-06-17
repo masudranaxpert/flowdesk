@@ -239,7 +239,7 @@ export default function BookmarksPage() {
       <PaginationControls page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen} title={editing ? 'Edit Bookmark' : 'Add Bookmark'}>
-        <div className="space-y-4">
+        <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-4">
           <FormField label="URL">
             <Input value={form.url} onChange={e => setForm({ ...form, url: e.target.value })} placeholder="https://..." />
           </FormField>
@@ -256,10 +256,10 @@ export default function BookmarksPage() {
             <TagInput tags={form.tags} onChange={tags => setForm({ ...form, tags })} />
           </FormField>
           <div className="flex gap-2 justify-end pt-2">
-            <Button variant="outline" size="sm" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button size="sm" onClick={handleSubmit}>{editing ? 'Update' : 'Create'}</Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button type="submit" size="sm">{editing ? 'Update' : 'Create'}</Button>
           </div>
-        </div>
+        </form>
       </Dialog>
 
       <ConfirmDialog

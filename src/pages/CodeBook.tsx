@@ -244,7 +244,7 @@ export default function CodeBookPage() {
       <PaginationControls page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen} title={editing ? 'Edit Snippet' : 'Add Snippet'} maxWidth="sm:max-w-2xl">
-        <div className="space-y-4">
+        <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-4">
           <FormField label="Title">
             <Input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Snippet title" />
           </FormField>
@@ -266,10 +266,10 @@ export default function CodeBookPage() {
             <TagInput tags={form.tags} onChange={tags => setForm({ ...form, tags })} />
           </FormField>
           <div className="flex gap-2 justify-end pt-2">
-            <Button variant="outline" size="sm" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button size="sm" onClick={handleSubmit}>{editing ? 'Update' : 'Create'}</Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button type="submit" size="sm">{editing ? 'Update' : 'Create'}</Button>
           </div>
-        </div>
+        </form>
       </Dialog>
 
       <Dialog open={!!viewSnippet} onOpenChange={(open) => !open && setViewSnippet(null)} title={viewSnippet?.title || 'Code'} maxWidth="sm:max-w-5xl">

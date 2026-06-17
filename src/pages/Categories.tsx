@@ -83,18 +83,20 @@ export default function CategoriesPage() {
       />
 
       <Card className="rounded-3xl">
-        <CardContent className="grid gap-4 p-4 sm:grid-cols-[1fr_14rem_auto] sm:items-end">
-          <FormField label="Category name">
-            <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Research, AI, Web Dev..." />
-          </FormField>
-          <FormField label="Where to use">
-            <Select value={scope} onChange={setScope} options={scopeOptions} />
-          </FormField>
-          <Button onClick={create} className="h-10">
-            <FolderPlus className="h-4 w-4" />
-            Create
-          </Button>
-        </CardContent>
+        <form onSubmit={(e) => { e.preventDefault(); create(); }}>
+          <CardContent className="grid gap-4 p-4 sm:grid-cols-[1fr_14rem_auto] sm:items-end">
+            <FormField label="Category name">
+              <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Research, AI, Web Dev..." />
+            </FormField>
+            <FormField label="Where to use">
+              <Select value={scope} onChange={setScope} options={scopeOptions} />
+            </FormField>
+            <Button type="submit" className="h-10">
+              <FolderPlus className="h-4 w-4" />
+              Create
+            </Button>
+          </CardContent>
+        </form>
       </Card>
 
       {loading ? <Spinner /> : items.length === 0 ? (
