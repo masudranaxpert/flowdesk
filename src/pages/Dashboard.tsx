@@ -70,6 +70,13 @@ const sections = [
 let cachedStats: Stats | null = null;
 let cachedRoutines: RoutineItem[] = [];
 
+function formatMinutes(minutes: number) {
+  if (minutes < 60) return `${minutes}m`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState<Stats | null>(cachedStats);
@@ -218,8 +225,8 @@ export default function Dashboard() {
                       <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${activeRoutine.type === 'ongoing' ? 'bg-destructive' : 'bg-primary'}`}></span>
                     </span>
                     {activeRoutine.type === 'ongoing' 
-                      ? `Ongoing: ${activeRoutine.item.title} (${activeRoutine.remaining}m left)`
-                      : `Next: ${activeRoutine.item.title} (in ${activeRoutine.countdown}m)`
+                      ? `Ongoing: ${activeRoutine.item.title} (${formatMinutes(activeRoutine.remaining!)} left)`
+                      : `Next: ${activeRoutine.item.title} (in ${formatMinutes(activeRoutine.countdown!)})`
                     }
                   </span>
                 )}
