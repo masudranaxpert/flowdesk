@@ -96,6 +96,20 @@ export default function NoteEditorPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  useEffect(() => {
+    if (id) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('source') === 'scratchpad') {
+      const val = localStorage.getItem('dashboard-scratchpad') || '';
+      if (val) {
+        setTitle('Scratchpad Note');
+        setContent(val);
+        localStorage.removeItem('dashboard-scratchpad');
+        toast.success('Scratchpad content imported');
+      }
+    }
+  }, [id]);
+
   const rememberSelection = () => {
     const textarea = textareaRef.current;
     if (!textarea) return;
