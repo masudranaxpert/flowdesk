@@ -4,12 +4,22 @@ const D1_URL = (process.env.D1_REST_URL || process.env.D1_REST_ENDPOINT || proce
 const D1_TOKEN = (process.env.D1_REST_TOKEN || process.env.D1_SECRET || process.env.token || process.env.TOKEN || '').trim().replace(/^["']|["']$/g, '');
 
 let schemaPromise;
+let dbBinding = null;
+
+export function setDbBinding(db) {
+  dbBinding = db;
+}
 
 function assertConfig() {
   if (!D1_URL || !D1_TOKEN) throw new Error('D1_REST_URL and D1_REST_TOKEN are required');
 }
 
 export async function d1Query(query, params = []) {
+  if (dbBinding) {
+    const stmt = dbBinding.prepare(query);
+    const res = await stmt.bind(...params).all();
+    return res.results || [];
+  }
   assertConfig();
   const response = await fetch(`${D1_URL}/query`, {
     method: 'POST',
