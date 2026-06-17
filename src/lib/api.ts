@@ -92,4 +92,9 @@ export const api = {
     get: () => request<AiSetting>('/ai-settings'),
     update: (data: Partial<AiSetting>) => request<AiSetting>('/ai-settings', { method: 'PUT', body: JSON.stringify(data) }),
   },
+  chatHistory: {
+    get: () => request<{ messages: any[] }>('/chat-history'),
+    update: (messages: any[]) => request<{ messages: any[] }>('/chat-history', { method: 'PUT', body: JSON.stringify({ messages }) }),
+    clear: () => request<{ message: string }>('/chat-history', { method: 'DELETE' }),
+  },
 };

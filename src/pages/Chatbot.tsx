@@ -20,6 +20,7 @@ const providerOptions = [
 ];
 const defaultMessages: ChatMessage[] = [{ role: 'assistant', content: 'Ask me to find notes, summarize code, plan routines, or turn an idea into a bookmark/note/question.' }];
 const chatHistoryKey = 'bookmark-vault-chat-history-v1';
+const chatHistoryLimit = 50;
 
 type AiAction = {
   operation: 'create' | 'update' | 'delete' | 'delete_many' | 'delete_all';
@@ -102,32 +103,64 @@ function isWritingAction(text: string) {
   return /```ACTION_JSON/i.test(text) && !/```ACTION_JSON\s*[\s\S]*?```/i.test(text);
 }
 
-function sanitizeActionData(resource: AiAction['resource'], data: Record<string, any>) {
+function sanitizeActionData(resource: AiAction['resource'], data: Record<string, any>, operation?: AiAction['operation']) {
   const next = { ...data };
   if (resource === 'categories') {
-    const inferredScope =
-      normalizeCategoryScope(next.scope) ||
-      normalizeCategoryScope(next.section) ||
-      normalizeCategoryScope(next.target) ||
-      normalizeCategoryScope(next.resource) ||
-      normalizeCategoryScope(next.type);
-    next.scope = inferredScope || 'bookmark';
-    next.name = String(next.name || next.title || '').trim();
+    if (operation === 'create') {
+      const inferredScope =
+        normalizeCategoryScope(next.scope) ||
+        normalizeCategoryScope(next.section) ||
+        normalizeCategoryScope(next.target) ||
+        normalizeCategoryScope(next.resource) ||
+        normalizeCategoryScope(next.type);
+      next.scope = inferredScope || 'bookmark';
+      next.name = String(next.name || next.title || '').trim();
+    } else {
+      if (next.scope !== undefined) {
+        const inferredScope = normalizeCategoryScope(next.scope);
+        if (inferredScope) next.scope = inferredScope;
+      }
+      if (next.name !== undefined) {
+        next.name = String(next.name || next.title || '').trim();
+      }
+    }
     delete next.section;
     delete next.target;
     delete next.resource;
     delete next.type;
   }
   if (resource === 'routines') {
-    const type = String(next.type || '').toLowerCase();
-    next.type = type === 'class' ? 'class' : 'event';
-    if (typeof next.repeatWeekly !== 'boolean') next.repeatWeekly = next.type === 'class';
-    if (next.type === 'event' && !next.date && next.repeatWeekly) next.type = 'class';
-    if (!next.startTime) next.startTime = '09:00';
-    if (!next.endTime) next.endTime = '10:00';
+    if (operation === 'create') {
+      const type = String(next.type || '').toLowerCase();
+      next.type = type === 'class' ? 'class' : 'event';
+      if (typeof next.repeatWeekly !== 'boolean') next.repeatWeekly = next.type === 'class';
+      if (next.type === 'event' && !next.date && next.repeatWeekly) next.type = 'class';
+      if (!next.startTime) next.startTime = '09:00';
+      if (!next.endTime) next.endTime = '10:00';
+    } else {
+      if (next.type !== undefined) {
+        const type = String(next.type || '').toLowerCase();
+        next.type = type === 'class' ? 'class' : 'event';
+      }
+      if (next.repeatWeekly !== undefined && typeof next.repeatWeekly !== 'boolean') {
+        next.repeatWeekly = next.type === 'class';
+      }
+      if (next.startTime !== undefined && !next.startTime) {
+        next.startTime = '09:00';
+      }
+      if (next.endTime !== undefined && !next.endTime) {
+        next.endTime = '10:00';
+      }
+    }
   }
   if (resource === 'questions') {
-    if (!['easy', 'medium', 'hard'].includes(next.difficulty)) next.difficulty = 'medium';
+    if (next.difficulty !== undefined && !['easy', 'medium', 'hard'].includes(next.difficulty)) {
+      if (operation === 'create') {
+        next.difficulty = 'medium';
+      } else {
+        delete next.difficulty;
+      }
+    }
   }
   return next;
 }
@@ -224,14 +257,42 @@ export default function ChatbotPage() {
   useEffect(() => loadSettings(), [loadSettings]);
 
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(chatHistoryKey) || '[]') as ChatMessage[];
-      setMessages(saved.length ? saved.slice(-50) : defaultMessages);
-    } catch {
-      setMessages(defaultMessages);
-    } finally {
-      setHistoryReady(true);
-    }
+    let cancelled = false;
+    api.chatHistory.get()
+      .then(async (data) => {
+        if (cancelled) return;
+        const dbMessages = Array.isArray(data.messages) ? data.messages.slice(-chatHistoryLimit) as ChatMessage[] : [];
+        if (dbMessages.length > 0) {
+          setMessages(dbMessages);
+          return;
+        }
+
+        const localMessages = JSON.parse(localStorage.getItem(chatHistoryKey) || '[]') as ChatMessage[];
+        const migrated = Array.isArray(localMessages) ? localMessages.filter((message) => message.content?.trim()).slice(-chatHistoryLimit) : [];
+        if (migrated.length > 0) {
+          setMessages(migrated);
+          await api.chatHistory.update(migrated).catch(() => {});
+          localStorage.removeItem(chatHistoryKey);
+          return;
+        }
+
+        setMessages(defaultMessages);
+      })
+      .catch(() => {
+        try {
+          const saved = JSON.parse(localStorage.getItem(chatHistoryKey) || '[]') as ChatMessage[];
+          setMessages(saved.length ? saved.slice(-chatHistoryLimit) : defaultMessages);
+        } catch {
+          setMessages(defaultMessages);
+        }
+        toast.error('Failed to load chat history');
+      })
+      .finally(() => {
+        if (!cancelled) setHistoryReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -239,9 +300,9 @@ export default function ChatbotPage() {
     const t = setTimeout(() => {
       const saved = messages
         .filter((message) => message.content.trim())
-        .slice(-50)
+        .slice(-chatHistoryLimit)
         .map((message) => ({ role: message.role, content: message.content, files: message.files }));
-      localStorage.setItem(chatHistoryKey, JSON.stringify(saved));
+      api.chatHistory.update(saved).catch(() => toast.error('Failed to save chat history'));
     }, 350);
     return () => clearTimeout(t);
   }, [messages, historyReady]);
@@ -479,7 +540,7 @@ export default function ChatbotPage() {
       }
       for (const action of validation.valid) {
         const { operation, resource, id, data = {} } = action;
-        const cleanData = sanitizeActionData(resource, data);
+        const cleanData = sanitizeActionData(resource, data, operation);
         const actionId = id || String(cleanData.id || cleanData._id || '');
         const { id: _ignoredId, _id: _ignoredLegacyId, ...payload } = cleanData;
         const target = map[resource];
@@ -534,10 +595,16 @@ export default function ChatbotPage() {
   };
 
   const clearHistory = async () => {
-    localStorage.removeItem(chatHistoryKey);
-    setMessages([{ role: 'assistant', content: 'History cleared. Ask me anything.' }]);
-    setPendingActions([]);
-    setWritingAction(false);
+    try {
+      await api.chatHistory.clear();
+      localStorage.removeItem(chatHistoryKey);
+      setMessages([{ role: 'assistant', content: 'History cleared. Ask me anything.' }]);
+      setPendingActions([]);
+      setWritingAction(false);
+      toast.success('Chat history cleared');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to clear chat history');
+    }
   };
 
   return (
