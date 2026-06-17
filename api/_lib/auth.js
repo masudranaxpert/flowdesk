@@ -112,7 +112,7 @@ async function derivePassword(password, salt) {
     {
       name: 'PBKDF2',
       salt: encoder.encode(salt),
-      iterations: 120000,
+      iterations: 100000,
       hash: 'SHA-512',
     },
     keyMaterial,
