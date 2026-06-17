@@ -304,19 +304,19 @@ export default function NoteEditorPage() {
               <Eye className="h-4 w-4" /> Preview
             </Button>
             <span className="mx-1 h-6 w-px bg-border" />
-            <Button variant="ghost" size="icon" onClick={() => insert('## ', '', 'Heading')}>
+            <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => insert('## ', '', 'Heading')}>
               <Heading2 className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => insert('**', '**')}>
+            <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => insert('**', '**')}>
               <Bold className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => insert('*', '*')}>
+            <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => insert('*', '*')}>
               <Italic className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => insert('- ', '', 'list item')}>
+            <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => insert('- ', '', 'list item')}>
               <List className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => insert('```cpp\n', '\n```', 'code here')}>
+            <Button variant="ghost" size="icon" onMouseDown={(e) => e.preventDefault()} onClick={() => insert('```cpp\n', '\n```', 'code here')}>
               <Code2 className="h-4 w-4" />
             </Button>
             <span className="ml-auto hidden text-xs text-muted-foreground sm:inline">{categoryLabel(category, categories)}</span>
@@ -329,7 +329,7 @@ export default function NoteEditorPage() {
                   <Select value={selectedModelId || modelOptions[0]?.value || 'default'} onChange={setSelectedModelId} options={modelOptions} />
                 </FormField>
                 <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                  <Button variant="secondary" size="sm" disabled={aiActiveTask !== null} onClick={() => runNoteAi('summarize')}>
+                  <Button variant="secondary" size="sm" disabled={aiActiveTask !== null} onMouseDown={(e) => e.preventDefault()} onClick={() => runNoteAi('summarize')}>
                     {aiActiveTask === 'summarize' ? (
                       <>
                         <div className="mr-2 h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -341,7 +341,7 @@ export default function NoteEditorPage() {
                       </>
                     )}
                   </Button>
-                  <Button variant="secondary" size="sm" disabled={aiActiveTask !== null} onClick={() => runNoteAi('polish')}>
+                  <Button variant="secondary" size="sm" disabled={aiActiveTask !== null} onMouseDown={(e) => e.preventDefault()} onClick={() => runNoteAi('polish')}>
                     {aiActiveTask === 'polish' ? (
                       <>
                         <div className="mr-2 h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -356,16 +356,19 @@ export default function NoteEditorPage() {
                 </div>
               </div>
               {selectedText && (
-                <div className="flex items-center justify-between gap-3 rounded-xl bg-primary/10 border border-primary/20 p-2.5 text-xs">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                    <span className="text-muted-foreground font-medium shrink-0">Selected Text:</span>
-                    <span className="truncate font-mono text-primary">"{selectedText}"</span>
+                <div className="flex items-center justify-between gap-3 rounded-2xl bg-primary/8 border border-primary/15 p-3 text-xs shadow-sm backdrop-blur-sm animate-fade-in">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="relative flex h-2 w-2 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                    </span>
+                    <span className="text-muted-foreground font-semibold tracking-wide uppercase text-[10px]">Active Selection:</span>
+                    <span className="truncate font-mono font-medium text-primary bg-primary/8 px-2 py-0.5 rounded-lg border border-primary/10">"{selectedText}"</span>
                   </div>
                   <Button
                     type="button"
                     variant="ghost"
-                    className="h-6 px-2 text-[10px] text-muted-foreground hover:text-foreground shrink-0"
+                    className="h-7 px-3 text-[10px] font-semibold text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-xl transition shrink-0"
                     onClick={() => {
                       selectionRef.current = null;
                       setSelectedText('');
@@ -377,7 +380,7 @@ export default function NoteEditorPage() {
               )}
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Input value={customPrompt} onChange={(event) => setCustomPrompt(event.target.value)} placeholder="Ask AI to rewrite selected text your way..." disabled={aiActiveTask !== null} />
-                <Button disabled={aiActiveTask !== null} onClick={() => runNoteAi('custom')}>
+                <Button disabled={aiActiveTask !== null} onMouseDown={(e) => e.preventDefault()} onClick={() => runNoteAi('custom')}>
                   {aiActiveTask === 'custom' ? (
                     <>
                       <div className="mr-2 h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />

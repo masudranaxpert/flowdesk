@@ -159,6 +159,37 @@ export default function Dashboard() {
     return null;
   }, [todaySchedule]);
 
+  const heatmapData = useMemo(() => {
+    const todayObj = new Date();
+    const currentDay = todayObj.getDay();
+    const startDate = new Date(todayObj);
+    startDate.setDate(startDate.getDate() - (11 * 7 + currentDay));
+
+    const countsMap = new Map();
+    if (stats?.heatmap) {
+      stats.heatmap.forEach((item) => {
+        countsMap.set(item.date, item.count);
+      });
+    }
+
+    const grid = [];
+    for (let w = 0; w < 12; w++) {
+      const week = [];
+      for (let d = 0; d < 7; d++) {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + (w * 7 + d));
+        const dateStr = date.toISOString().slice(0, 10);
+        const isFuture = date > todayObj;
+        week.push({
+          date: dateStr,
+          count: isFuture ? -1 : (countsMap.get(dateStr) || 0),
+        });
+      }
+      grid.push(week);
+    }
+    return grid;
+  }, [stats]);
+
   return (
     <div className="space-y-5 animate-fade-in">
       <Card className="rounded-3xl border-primary/20 bg-card/95">
@@ -278,6 +309,62 @@ export default function Dashboard() {
           </Card>
         </div>
       </section>
+
+      <Card className="rounded-3xl border-primary/15 bg-card/95 overflow-hidden">
+        <CardContent className="p-4 sm:p-5">
+          <div className="flex flex-col space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-primary" />
+                <p className="text-sm font-semibold tracking-tight">Consistency Heatmap</p>
+              </div>
+              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <span>Less</span>
+                <div className="h-3 w-3 rounded-[3px] bg-muted/20 border border-muted-foreground/5" />
+                <div className="h-3 w-3 rounded-[3px] bg-primary/20 border border-primary/5" />
+                <div className="h-3 w-3 rounded-[3px] bg-primary/50 border border-primary/20" />
+                <div className="h-3 w-3 rounded-[3px] bg-primary border border-primary" />
+                <span>More</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-start overflow-x-auto pb-1 -mx-2 px-2 scrollbar-none">
+              <div className="grid grid-flow-col gap-[3px]">
+                {heatmapData.map((week, wIndex) => (
+                  <div key={wIndex} className="grid grid-rows-7 gap-[3px]">
+                    {week.map((day) => {
+                      if (day.count === -1) {
+                        return <div key={day.date} className="h-3 w-3 rounded-[2.5px] opacity-0" />;
+                      }
+                      let colorClass = 'bg-muted/20 border border-muted-foreground/5 hover:border-muted-foreground/25';
+                      if (day.count > 0 && day.count <= 2) {
+                        colorClass = 'bg-primary/25 border border-primary/10 hover:border-primary/30';
+                      } else if (day.count > 2 && day.count <= 5) {
+                        colorClass = 'bg-primary/55 border border-primary/30 hover:border-primary/50';
+                      } else if (day.count > 5) {
+                        colorClass = 'bg-primary border border-primary hover:brightness-110';
+                      }
+
+                      const formattedDate = new Intl.DateTimeFormat('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      }).format(new Date(day.date + 'T00:00:00'));
+
+                      return (
+                        <div
+                          key={day.date}
+                          className={`h-3 w-3 rounded-[2.5px] transition-all cursor-pointer ${colorClass}`}
+                          title={`${day.count} contribution${day.count === 1 ? '' : 's'} on ${formattedDate}`}
+                        />
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {sections.map((section, index) => {
