@@ -158,7 +158,7 @@ function buildWhere(resource, query, uid) {
     }
   }
   if (resource === 'routines') {
-    if (query.type && query.type !== 'all') add('type = ?', query.type);
+    if (query.type && query.type !== 'all') add('type = ?', String(query.type).trim().toLowerCase());
   }
   return { where: where.join(' AND '), params };
 }
@@ -187,13 +187,40 @@ function validateResourceData(resource, data, { partial = false } = {}) {
     if (next.category !== undefined) {
       next.category = slugify(String(next.category));
     }
+    if (next.tags !== undefined) {
+      if (Array.isArray(next.tags)) {
+        next.tags = next.tags.map((t) => String(t).trim()).filter(Boolean);
+      } else if (typeof next.tags === 'string') {
+        next.tags = next.tags.split(',').map((t) => t.trim()).filter(Boolean);
+      } else {
+        next.tags = [];
+      }
+    }
   }
   if (resource === 'categories') {
     if (!partial && !hasCategoryScope) next.scope = 'bookmark';
     if (next.scope !== undefined) next.scope = normalizeCategoryScope(next.scope);
     if (!partial) next.name = String(next.name || '').trim() || 'Untitled category';
   }
-  if (resource === 'questions' && next.difficulty !== undefined && !['easy', 'medium', 'hard'].includes(next.difficulty)) next.difficulty = 'medium';
+  if (resource === 'codes') {
+    if (next.language !== undefined) {
+      next.language = String(next.language).trim().toLowerCase();
+    }
+  }
+  if (resource === 'questions') {
+    if (next.difficulty !== undefined) {
+      next.difficulty = String(next.difficulty).trim().toLowerCase();
+      if (!['easy', 'medium', 'hard'].includes(next.difficulty)) {
+        next.difficulty = 'medium';
+      }
+    }
+    if (next.platform !== undefined) {
+      next.platform = String(next.platform).trim().toLowerCase();
+    }
+    if (next.language !== undefined) {
+      next.language = String(next.language).trim().toLowerCase();
+    }
+  }
   if (!partial && resource === 'bookmarks') {
     next.url = String(next.url || '').trim() || 'https://example.com';
     next.title = String(next.title || '').trim() || next.url;
@@ -204,8 +231,13 @@ function validateResourceData(resource, data, { partial = false } = {}) {
     next.code = String(next.code || '').trim() || '// Add code here';
   }
   if (!partial && resource === 'questions') next.title = String(next.title || '').trim() || 'Untitled question';
-  if (resource === 'routines' && next.type !== undefined && !['class', 'event'].includes(next.type)) next.type = 'event';
   if (resource === 'routines') {
+    if (next.type !== undefined) {
+      next.type = String(next.type).trim().toLowerCase();
+      if (!['class', 'event'].includes(next.type)) {
+        next.type = 'event';
+      }
+    }
     if (!partial) {
       next.title = String(next.title || next.subject || '').trim() || 'Untitled routine';
       next.startTime = String(next.startTime || '').trim() || '09:00';
@@ -223,7 +255,10 @@ function validateResourceData(resource, data, { partial = false } = {}) {
         next.endTime = '0' + next.endTime;
       }
     }
-    if (next.dayOfWeek !== undefined) next.dayOfWeek = Math.max(0, Math.min(6, Number(next.dayOfWeek ?? 0)));
+    if (next.dayOfWeek !== undefined) {
+      const val = Number(next.dayOfWeek);
+      next.dayOfWeek = isNaN(val) ? 0 : Math.max(0, Math.min(6, Math.floor(val)));
+    }
     if (next.repeatWeekly !== undefined) next.repeatWeekly = next.repeatWeekly !== false;
   }
   return next;
@@ -724,7 +759,7 @@ export default async function handler(req, res) {
       if (!user) return;
       const uid = userId(user);
       if (method === 'DELETE' && !itemId && resource === 'routines') {
-        if (query.type && query.type !== 'all') await d1Query('DELETE FROM routines WHERE userId = ? AND type = ?;', [uid, query.type]);
+        if (query.type && query.type !== 'all') await d1Query('DELETE FROM routines WHERE userId = ? AND type = ?;', [uid, String(query.type).trim().toLowerCase()]);
         else await d1Query('DELETE FROM routines WHERE userId = ?;', [uid]);
         return res.json({ message: 'Reset complete' });
       }
