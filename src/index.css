@@ -419,6 +419,7 @@ code {
   color: var(--color-muted-foreground);
   font-size: 1rem;
   line-height: 1.74;
+  overflow-wrap: anywhere;
 }
 
 .prose-dark h1, .prose-dark h2, .prose-dark h3, .prose-dark h4 {
