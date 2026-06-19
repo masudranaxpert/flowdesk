@@ -169,7 +169,7 @@ export default function NotebooksPage() {
 
       <PaginationControls page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} />
 
-      <Dialog open={!!viewNote} onOpenChange={v => !v && setViewNote(null)} title={viewNote?.title || ''} maxWidth="sm:max-w-2xl">
+      <Dialog open={!!viewNote} onOpenChange={v => !v && setViewNote(null)} title={viewNote?.title || ''} maxWidth="sm:max-w-4xl">
         {viewNote && (
           <div className="prose-dark note-reading max-w-none">
             <MarkdownView allowHtml>{viewNote.content}</MarkdownView>
