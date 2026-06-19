@@ -97,6 +97,7 @@ export const api = {
   },
   expenses: {
     list: (params?: Record<string, string>) => request<any>(`/expenses${qs(params)}`),
+    summary: (params?: Record<string, string>) => request<any>(`/expenses/summary${qs(params)}`),
     create: (data: Partial<Expense>) => request<Expense>('/expenses', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: Partial<Expense>) => request<Expense>(`/expenses/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: string) => request<void>(`/expenses/${id}`, { method: 'DELETE' }),

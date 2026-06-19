@@ -406,6 +406,8 @@ async function resolveShareByCode(code) {
 async function resolveShareByTypeAndId(type, itemId) {
   const resource = normalizeShareType(type);
   if (!resource || !itemId) return null;
+  const shareExists = (await d1Query('SELECT id FROM share_links WHERE type = ? AND itemId = ? LIMIT 1;', [resource, itemId]))[0];
+  if (!shareExists) return null;
   const item = await getResource(resource, itemId);
   if (!item) return null;
   return { code: '', type: publicShareType(resource), item };
@@ -431,6 +433,26 @@ function extractFileIdsFromText(value) {
   let match;
   while ((match = regex.exec(text)) !== null) ids.add(match[1]);
   return [...ids];
+}
+
+async function isFileShared(fileId) {
+  const notebooks = await d1Query(
+    `SELECT n.content FROM share_links s
+     JOIN notebooks n ON s.itemId = n.id
+     WHERE s.type = 'notebooks' AND n.content LIKE ?;`,
+    [`%/api/files/${fileId}%`]
+  );
+  if (notebooks.length > 0) return true;
+
+  const codes = await d1Query(
+    `SELECT c.attachments FROM share_links s
+     JOIN codes c ON s.itemId = c.id
+     WHERE s.type = 'codes' AND c.attachments LIKE ?;`,
+    [`%${fileId}%`]
+  );
+  if (codes.length > 0) return true;
+
+  return false;
 }
 
 async function deleteUploadedFile(uid, fileId) {
@@ -734,6 +756,14 @@ export default async function handler(req, res) {
       const row = (await d1Query('SELECT * FROM uploaded_files WHERE id = ? LIMIT 1;', [fileId]))[0];
       const bucket = getFileBucket();
       if (!row || !bucket) return res.status(404).json({ error: 'File not found' });
+      const header = req.headers.authorization || '';
+      const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+      const session = token ? await verifyToken(token) : null;
+      const currentUid = session?.id || null;
+      if (row.userId !== currentUid) {
+        const isShared = await isFileShared(fileId);
+        if (!isShared) return res.status(403).json({ error: 'Access denied' });
+      }
       const object = await bucket.get(row.objectKey);
       if (!object) return res.status(404).json({ error: 'File not found' });
       const body = await object.arrayBuffer();
@@ -1040,6 +1070,24 @@ export default async function handler(req, res) {
       if (!targetUrl) return res.status(400).json({ error: 'URL is required' });
       const meta = await getQuestionMetadata(targetUrl);
       return res.json(meta);
+    }
+
+    if (slug === 'expenses/summary' && method === 'GET') {
+      const user = await requireUser(req, res);
+      if (!user) return;
+      const uid = userId(user);
+      const month = /^\d{4}-\d{2}$/.test(String(query.month || '')) ? String(query.month).slice(0, 7) : new Date().toISOString().slice(0, 7);
+      const where = 'userId = ? AND substr(date, 1, 7) = ?';
+      const params = [uid, month];
+      const totalRows = await d1Query(`SELECT COALESCE(SUM(amount), 0) AS totalAmount, COUNT(*) AS totalCount FROM expenses WHERE ${where};`, params);
+      const categoryRows = await d1Query(`SELECT category, COALESCE(SUM(amount), 0) AS amount, COUNT(*) AS count FROM expenses WHERE ${where} GROUP BY category ORDER BY amount DESC;`, params);
+      const recentRows = await d1Query(`SELECT title, amount, category, date, method FROM expenses WHERE ${where} ORDER BY date DESC, createdAt DESC LIMIT 35;`, params);
+      return res.json({
+        totalAmount: Number(totalRows[0]?.totalAmount || 0),
+        totalCount: Number(totalRows[0]?.totalCount || 0),
+        categories: categoryRows.map((row) => ({ category: row.category, amount: Number(row.amount || 0), count: Number(row.count || 0) })),
+        recent: recentRows.map((row) => ({ ...row, amount: Number(row.amount || 0) })),
+      });
     }
 
     const parts = slug.split('/');
