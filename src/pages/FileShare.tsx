@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react';
-import { Copy, Download, FileArchive, FileText, Image as ImageIcon, Link2, Search, Trash2, UploadCloud } from 'lucide-react';
+import { Download, FileArchive, FileText, Image as ImageIcon, Link2, Search, Trash2, UploadCloud } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { EmptyState, PaginationControls, SearchInput, Spinner } from '../components/UI';
@@ -164,43 +164,46 @@ export default function FileSharePage() {
       {loading ? <Spinner /> : items.length === 0 ? (
         <EmptyState icon={<Search className="h-6 w-6 text-muted-foreground" />} title="No files yet" description="Upload a file and share it with a link." />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="space-y-2">
           {items.map((file) => {
             const Icon = fileIcon(file);
             const isImage = file.mimeType?.startsWith('image/');
             return (
-              <Card key={file.id} className="interactive-card overflow-hidden rounded-3xl">
-                <CardContent className="p-4">
-                  <a href={fileUrl(file)} target="_blank" rel="noreferrer" className="block">
-                    <div className="grid aspect-video place-items-center overflow-hidden rounded-2xl border border-border bg-muted/35">
+              <Card key={file.id} className="interactive-card overflow-hidden rounded-2xl">
+                <CardContent className="p-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <a href={fileUrl(file)} target="_blank" rel="noreferrer" className="flex min-w-0 flex-1 items-center gap-3">
+                      <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl border border-border bg-muted/35">
                       {isImage ? (
                         <img src={fileUrl(file)} alt={file.name} className="h-full w-full object-cover" />
                       ) : (
-                        <Icon className="h-10 w-10 text-primary" />
+                        <Icon className="h-6 w-6 text-primary" />
                       )}
-                    </div>
-                  </a>
-                  <div className="mt-3 flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold">{file.name}</p>
-                      <div className="mt-1 flex flex-wrap gap-1.5">
-                        <Badge variant="secondary" className="rounded-full">{bytes(file.size)}</Badge>
-                        <Badge variant="outline" className="rounded-full">{file.mimeType || 'file'}</Badge>
                       </div>
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold">{file.name}</p>
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                          <Badge variant="secondary" className="rounded-full">{bytes(file.size)}</Badge>
+                          <Badge variant="outline" className="max-w-full rounded-full">
+                            <span className="truncate">{file.mimeType || 'file'}</span>
+                          </Badge>
+                          {file.createdAt && <span className="text-xs text-muted-foreground">{new Date(file.createdAt).toLocaleDateString()}</span>}
+                        </div>
+                      </div>
+                    </a>
+                    <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
+                      <Button variant="outline" size="sm" onClick={() => copyLink(file)}>
+                        <Link2 className="h-4 w-4" /> Copy link
+                      </Button>
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={fileUrl(file)} download target="_blank" rel="noreferrer">
+                          <Download className="h-4 w-4" /> Open
+                        </a>
+                      </Button>
+                      <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => deleteFile(file)}>
+                        <Trash2 className="h-4 w-4" /> Delete
+                      </Button>
                     </div>
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <Button variant="outline" size="sm" onClick={() => copyLink(file)}>
-                      <Link2 className="h-4 w-4" /> Copy link
-                    </Button>
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={fileUrl(file)} download target="_blank" rel="noreferrer">
-                        <Download className="h-4 w-4" /> Open
-                      </a>
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => deleteFile(file)}>
-                      <Trash2 className="h-4 w-4" /> Delete
-                    </Button>
                   </div>
                 </CardContent>
               </Card>

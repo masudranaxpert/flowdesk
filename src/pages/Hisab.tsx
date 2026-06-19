@@ -4,7 +4,8 @@ import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { runAiChat, defaultAiSettings, type AiSettings } from '../lib/ai';
 import MarkdownView from '../components/MarkdownView';
-import { FormField, SearchInput, Spinner } from '../components/UI';
+import { FormField, PaginationControls, SearchInput, Spinner } from '../components/UI';
+import { Select } from '../components/Select';
 import type { Budget, Expense } from '../types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 
+const PAGE_SIZE = 10;
 const categories = ['food', 'transport', 'study', 'rent', 'shopping', 'health', 'entertainment', 'bills', 'other'];
 const methods = ['cash', 'bkash', 'nagad', 'card', 'bank', 'other'];
 
@@ -33,53 +35,91 @@ export default function HisabPage() {
   const [budgetAmount, setBudgetAmount] = useState('');
   const [budgetNotes, setBudgetNotes] = useState('');
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [expenseTotal, setExpenseTotal] = useState(0);
+  const [summary, setSummary] = useState<{
+    totalAmount: number;
+    totalCount: number;
+    categories: Array<{ category: string; amount: number; count: number }>;
+    recent: Array<Pick<Expense, 'title' | 'amount' | 'category' | 'date' | 'method'>>;
+  }>({ totalAmount: 0, totalCount: 0, categories: [], recent: [] });
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [savingBudget, setSavingBudget] = useState(false);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [aiPlan, setAiPlan] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [settings, setSettings] = useState<AiSettings>(defaultAiSettings);
+  const [selectedModelId, setSelectedModelId] = useState('');
+  const [aiInstruction, setAiInstruction] = useState('');
   const [form, setForm] = useState({ title: '', amount: '', category: 'food', date: today(), method: 'cash', notes: '' });
 
   useEffect(() => {
     api.aiSettings.get()
-      .then((value) => setSettings({ ...defaultAiSettings, ...value, models: value.models || [] }))
+      .then((value) => {
+        const next = { ...defaultAiSettings, ...value, models: value.models || [] };
+        setSettings(next);
+        setSelectedModelId(next.models.find((model) => model.active)?.id || '');
+      })
       .catch(() => setSettings(defaultAiSettings));
   }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search), 250);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [month, debouncedSearch]);
 
   const load = useCallback(() => {
     setLoading(true);
     Promise.all([
       api.budgets.list({ month, limit: '1' }),
-      api.expenses.list({ month, limit: '100' }),
+      api.expenses.list({ month, page: String(page), limit: String(PAGE_SIZE), search: debouncedSearch }),
+      api.expenses.summary({ month }),
     ])
-      .then(([budgetData, expenseData]) => {
+      .then(([budgetData, expenseData, summaryData]) => {
         const currentBudget = (budgetData.items || [])[0] || null;
         setBudget(currentBudget);
         setBudgetAmount(currentBudget ? String(currentBudget.amount) : '');
         setBudgetNotes(currentBudget?.notes || '');
         setExpenses(expenseData.items || []);
+        setExpenseTotal(Number(expenseData.total || 0));
+        setSummary({
+          totalAmount: Number(summaryData.totalAmount || 0),
+          totalCount: Number(summaryData.totalCount || 0),
+          categories: summaryData.categories || [],
+          recent: summaryData.recent || [],
+        });
       })
       .catch((error) => toast.error(error instanceof Error ? error.message : 'Failed to load hisab'))
       .finally(() => setLoading(false));
-  }, [month]);
+  }, [month, page, debouncedSearch]);
 
   useEffect(() => { load(); }, [load]);
 
-  const spent = useMemo(() => expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0), [expenses]);
+  const spent = summary.totalAmount;
   const limit = Number(budgetAmount || budget?.amount || 0);
   const remaining = limit - spent;
   const percent = limit > 0 ? Math.min(100, Math.round((spent / limit) * 100)) : 0;
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return expenses;
-    return expenses.filter((item) => [item.title, item.category, item.method, item.notes].some((value) => String(value || '').toLowerCase().includes(q)));
-  }, [expenses, search]);
   const categoryTotals = useMemo(() => {
-    const map = new Map<string, number>();
-    expenses.forEach((item) => map.set(item.category, (map.get(item.category) || 0) + Number(item.amount || 0)));
-    return [...map.entries()].sort((a, b) => b[1] - a[1]);
-  }, [expenses]);
+    return summary.categories.map((item) => [item.category, Number(item.amount || 0)] as [string, number]);
+  }, [summary.categories]);
+
+  const activeModelOptions = useMemo(() => {
+    const activeModels = (settings.models || []).filter((model) => model.active);
+    if (activeModels.length === 0) {
+      const fallbackModel = settings.provider === 'gemini' ? settings.geminiModel : settings.provider === 'openrouter' ? settings.openRouterModel : settings.openAiModel;
+      return [{ value: 'default', label: `${settings.provider} - ${fallbackModel || 'default model'}` }];
+    }
+    return activeModels.map((model) => ({ value: model.id, label: `${model.label || model.provider} - ${model.model}` }));
+  }, [settings]);
+
+  useEffect(() => {
+    if (!selectedModelId && activeModelOptions[0]) setSelectedModelId(activeModelOptions[0].value);
+  }, [activeModelOptions, selectedModelId]);
 
   const saveBudget = async () => {
     setSavingBudget(true);
@@ -101,6 +141,7 @@ export default function HisabPage() {
     try {
       await api.expenses.create({ ...form, amount: Number(form.amount) });
       setForm({ title: '', amount: '', category: form.category, date: form.date, method: form.method, notes: '' });
+      setPage(1);
       toast.success('Expense added');
       load();
     } catch (error) {
@@ -111,21 +152,23 @@ export default function HisabPage() {
   const deleteExpense = async (id: string) => {
     await api.expenses.delete(id);
     toast.success('Expense deleted');
-    load();
+    if (expenses.length === 1 && page > 1) setPage((current) => current - 1);
+    else load();
   };
 
   const aiBudgetPlan = async () => {
     setAiLoading(true);
     try {
-      const selected = settings.models?.find((model) => model.active);
+      const selected = settings.models?.find((model) => model.id === selectedModelId) || settings.models?.find((model) => model.active);
       const runnableSettings = selected
         ? { ...settings, models: (settings.models || []).map((model) => ({ ...model, active: model.id === selected.id })) }
         : settings;
+      const extra = aiInstruction.trim() ? `\nExtra user instruction: ${aiInstruction.trim()}` : '';
       const answer = await runAiChat(
         runnableSettings,
         [{
           role: 'user',
-          content: `Create a practical monthly spending plan.\nMonth: ${month}\nBudget: ${money(limit, budget?.currency || 'BDT')}\nSpent so far: ${money(spent, budget?.currency || 'BDT')}\nRemaining: ${money(remaining, budget?.currency || 'BDT')}\nCategory totals: ${JSON.stringify(Object.fromEntries(categoryTotals))}\nRecent expenses: ${JSON.stringify(expenses.slice(0, 25).map(({ title, amount, category, date, method }) => ({ title, amount, category, date, method })))}\nReturn concise markdown with: status, risk, recommended daily limit, what to cut, what is safe, next 7-day plan.`,
+          content: `Create a practical monthly spending plan.\nMonth: ${month}\nBudget: ${money(limit, budget?.currency || 'BDT')}\nSpent so far: ${money(spent, budget?.currency || 'BDT')}\nRemaining: ${money(remaining, budget?.currency || 'BDT')}\nCategory totals: ${JSON.stringify(Object.fromEntries(categoryTotals))}\nRecent expenses: ${JSON.stringify(summary.recent)}${extra}\nReturn concise markdown with: status, risk, recommended daily limit, what to cut, what is safe, next 7-day plan.`,
         }],
         'Personal budgeting assistant. Give practical spending advice only. Do not create app actions.',
         []
@@ -147,7 +190,7 @@ export default function HisabPage() {
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Money planner</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight">Hisab</h1>
-            <p className="mt-2 max-w-2xl text-muted-foreground">Track monthly budget, spending categories, and get an AI plan for smarter decisions.</p>
+            <p className="mt-2 max-w-2xl text-muted-foreground">Track monthly budget, spending categories, and create a practical AI plan.</p>
           </div>
           <div className="flex items-center gap-2 rounded-2xl border border-border bg-card/80 px-3 py-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -171,7 +214,7 @@ export default function HisabPage() {
           <CardContent className="p-5">
             <p className="text-sm text-muted-foreground">Spent</p>
             <p className="mt-2 text-3xl font-semibold">{money(spent, budget?.currency || 'BDT')}</p>
-            <p className="mt-3 text-sm text-muted-foreground">{expenses.length} expense{expenses.length === 1 ? '' : 's'} this month</p>
+            <p className="mt-3 text-sm text-muted-foreground">{summary.totalCount} expense{summary.totalCount === 1 ? '' : 's'} this month</p>
           </CardContent>
         </Card>
         <Card className="rounded-3xl">
@@ -183,57 +226,39 @@ export default function HisabPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-        <Card className="rounded-3xl">
-          <CardContent className="space-y-4 p-4 sm:p-5">
-            <div className="flex items-center gap-2">
-              <Wallet className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-semibold">Budget setup</h2>
-            </div>
-            <FormField label="Monthly amount">
-              <Input type="number" min="0" value={budgetAmount} onChange={(event) => setBudgetAmount(event.target.value)} placeholder="30000" />
+      <Card className="rounded-3xl">
+        <CardContent className="space-y-4 p-4 sm:p-5">
+          <div className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">Add expense</h2>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <FormField label="Title">
+              <Input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Lunch, bus, book..." />
+            </FormField>
+            <FormField label="Amount">
+              <Input type="number" min="0" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} placeholder="250" />
+            </FormField>
+            <FormField label="Category">
+              <select className="h-11 rounded-2xl border border-border bg-background px-3" value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}>
+                {categories.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </FormField>
+            <FormField label="Method">
+              <select className="h-11 rounded-2xl border border-border bg-background px-3" value={form.method} onChange={(event) => setForm({ ...form, method: event.target.value })}>
+                {methods.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </FormField>
+            <FormField label="Date">
+              <Input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} />
             </FormField>
             <FormField label="Notes">
-              <Textarea value={budgetNotes} onChange={(event) => setBudgetNotes(event.target.value)} placeholder="Goal, fixed cost, saving target..." />
+              <Input value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="Optional" />
             </FormField>
-            <Button className="w-full" disabled={savingBudget} onClick={saveBudget}>{savingBudget ? 'Saving...' : 'Save budget'}</Button>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-3xl">
-          <CardContent className="space-y-4 p-4 sm:p-5">
-            <div className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-semibold">Add expense</h2>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <FormField label="Title">
-                <Input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Lunch, bus, book..." />
-              </FormField>
-              <FormField label="Amount">
-                <Input type="number" min="0" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} placeholder="250" />
-              </FormField>
-              <FormField label="Category">
-                <select className="h-11 rounded-2xl border border-border bg-background px-3" value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}>
-                  {categories.map((item) => <option key={item} value={item}>{item}</option>)}
-                </select>
-              </FormField>
-              <FormField label="Method">
-                <select className="h-11 rounded-2xl border border-border bg-background px-3" value={form.method} onChange={(event) => setForm({ ...form, method: event.target.value })}>
-                  {methods.map((item) => <option key={item} value={item}>{item}</option>)}
-                </select>
-              </FormField>
-              <FormField label="Date">
-                <Input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} />
-              </FormField>
-              <FormField label="Notes">
-                <Input value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} placeholder="Optional" />
-              </FormField>
-            </div>
-            <Button onClick={addExpense}><Plus className="h-4 w-4" /> Add expense</Button>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+          <Button onClick={addExpense}><Plus className="h-4 w-4" /> Add expense</Button>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <Card className="rounded-3xl">
@@ -243,9 +268,9 @@ export default function HisabPage() {
               <div className="sm:w-72"><SearchInput value={search} onChange={setSearch} placeholder="Search expenses..." /></div>
             </div>
             <div className="space-y-2">
-              {filtered.length === 0 ? (
+              {expenses.length === 0 ? (
                 <p className="rounded-2xl border border-border bg-muted/25 p-5 text-center text-sm text-muted-foreground">No expense found.</p>
-              ) : filtered.map((item) => (
+              ) : expenses.map((item) => (
                 <div key={item._id} className="flex flex-col gap-3 rounded-2xl border border-border bg-muted/25 p-3 sm:flex-row sm:items-center">
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{item.title}</p>
@@ -264,6 +289,9 @@ export default function HisabPage() {
                 </div>
               ))}
             </div>
+            <div className="mt-4">
+              <PaginationControls page={page} total={expenseTotal} pageSize={PAGE_SIZE} onPageChange={setPage} />
+            </div>
           </CardContent>
         </Card>
 
@@ -274,7 +302,7 @@ export default function HisabPage() {
               <div className="mt-3 space-y-3">
                 {categoryTotals.length === 0 ? <p className="text-sm text-muted-foreground">No category data yet.</p> : categoryTotals.map(([name, value]) => (
                   <div key={name}>
-                    <div className="mb-1 flex justify-between text-sm">
+                    <div className="mb-1 flex justify-between gap-3 text-sm">
                       <span className="capitalize">{name}</span>
                       <span>{money(value, budget?.currency || 'BDT')}</span>
                     </div>
@@ -288,20 +316,44 @@ export default function HisabPage() {
           </Card>
 
           <Card className="rounded-3xl border-primary/25">
-            <CardContent className="p-4 sm:p-5">
-              <div className="flex items-center gap-2">
-                <Lightbulb className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-semibold">AI plan</h2>
+            <CardContent className="space-y-4 p-4 sm:p-5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Lightbulb className="h-5 w-5 text-primary" />
+                  <h2 className="text-lg font-semibold">AI plan</h2>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">Choose a model and add optional instruction for the plan.</p>
               </div>
-              <p className="mt-2 text-sm text-muted-foreground">Use your active AI model to create a practical spending plan from current hisab.</p>
-              <Button className="mt-4 w-full" disabled={aiLoading} onClick={aiBudgetPlan}>
+              <FormField label="AI model">
+                <Select value={selectedModelId || activeModelOptions[0]?.value || 'default'} onChange={setSelectedModelId} options={activeModelOptions} />
+              </FormField>
+              <FormField label="Extra instruction">
+                <Textarea value={aiInstruction} onChange={(event) => setAiInstruction(event.target.value)} placeholder="Example: make it strict, focus on saving, explain in Bangla..." />
+              </FormField>
+              <Button className="w-full" disabled={aiLoading} onClick={aiBudgetPlan}>
                 {aiLoading ? <><div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" /> Planning...</> : <><Bot className="h-4 w-4" /> Generate plan</>}
               </Button>
               {aiPlan && (
-                <div className="prose-dark note-reading mt-4 rounded-2xl border border-border bg-muted/20 p-3">
+                <div className="prose-dark note-reading rounded-2xl border border-border bg-muted/20 p-3">
                   <MarkdownView>{aiPlan}</MarkdownView>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-3xl">
+            <CardContent className="space-y-4 p-4 sm:p-5">
+              <div className="flex items-center gap-2">
+                <Wallet className="h-5 w-5 text-primary" />
+                <h2 className="text-lg font-semibold">Budget setup</h2>
+              </div>
+              <FormField label="Monthly amount">
+                <Input type="number" min="0" value={budgetAmount} onChange={(event) => setBudgetAmount(event.target.value)} placeholder="30000" />
+              </FormField>
+              <FormField label="Notes">
+                <Textarea value={budgetNotes} onChange={(event) => setBudgetNotes(event.target.value)} placeholder="Goal, fixed cost, saving target..." />
+              </FormField>
+              <Button className="w-full" disabled={savingBudget} onClick={saveBudget}>{savingBudget ? 'Saving...' : 'Save budget'}</Button>
             </CardContent>
           </Card>
         </div>
