@@ -1,17 +1,29 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Download, FileText, FileArchive, Image as ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CodeBlock from '../components/CodeBlock';
 import MarkdownView from '../components/MarkdownView';
 import { Spinner } from '../components/UI';
 import { normalizeUrl } from '../lib/utils';
-import type { Bookmark, CodeSnippet, Notebook, Question } from '../types';
+import type { Bookmark, CodeSnippet, Notebook, Question, UploadedFile } from '../types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
-type SharedItem = Bookmark | Notebook | CodeSnippet | Question;
+type SharedItem = Bookmark | Notebook | CodeSnippet | Question | UploadedFile;
+
+function bytes(size = 0) {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function fileIcon(mimeType = '', filename = '') {
+  if (mimeType.startsWith('image/')) return ImageIcon;
+  if (mimeType.includes('zip') || filename.match(/\.(zip|rar|7z)$/i)) return FileArchive;
+  return FileText;
+}
 
 export default function SharePage() {
   const { type, id, shareCode } = useParams();
@@ -64,7 +76,7 @@ export default function SharePage() {
     );
   }
 
-  const title = 'title' in item ? item.title : 'Shared item';
+  const title = 'title' in item ? item.title : 'name' in item ? item.name : 'Shared item';
 
   return (
     <div className="min-h-screen bg-background px-4 py-5 text-foreground sm:px-6">
@@ -85,7 +97,7 @@ export default function SharePage() {
 
             {displayType === 'bookmarks' && 'url' in item && (
               <div className="space-y-3">
-                {item.description && <p className="text-sm leading-6 text-muted-foreground">{item.description}</p>}
+                {'description' in item && item.description && <p className="text-sm leading-6 text-muted-foreground">{item.description}</p>}
                 <Button asChild>
                   <a href={normalizeUrl(item.url)} target="_blank" rel="noopener">
                     <ExternalLink className="h-4 w-4" />
@@ -127,6 +139,44 @@ export default function SharePage() {
                   </section>
                 )}
                 {item.code && <CodeBlock code={item.code} language={item.language} />}
+              </div>
+            )}
+
+            {displayType === 'files' && 'mimeType' in item && (
+              <div className="flex flex-col items-center justify-center p-6 text-center space-y-6">
+                <div className="grid h-24 w-24 place-items-center overflow-hidden rounded-3xl border border-border bg-muted/40 shadow-sm">
+                  {item.mimeType?.startsWith('image/') ? (
+                    <img src={item.url} alt={item.name} className="h-full w-full object-cover" />
+                  ) : (
+                    (() => {
+                      const Icon = fileIcon(item.mimeType, item.name);
+                      return <Icon className="h-10 w-10 text-primary animate-pulse" />;
+                    })()
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <h2 className="text-xl font-bold tracking-tight text-foreground">{item.name}</h2>
+                  <div className="flex justify-center gap-2">
+                    <Badge variant="secondary" className="rounded-full">{bytes(item.size)}</Badge>
+                    <Badge variant="outline" className="rounded-full">{item.mimeType || 'Unknown file type'}</Badge>
+                  </div>
+                  {item.createdAt && (
+                    <p className="text-xs text-muted-foreground">Uploaded on {new Date(item.createdAt).toLocaleDateString()}</p>
+                  )}
+                </div>
+
+                {item.mimeType?.startsWith('image/') && (
+                  <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-border bg-muted/20 p-2 shadow-inner">
+                    <img src={item.url} alt={item.name} className="max-h-96 w-full rounded-xl object-contain" />
+                  </div>
+                )}
+
+                <Button asChild size="lg" className="px-8 py-6 text-base font-semibold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-transform rounded-2xl">
+                  <a href={item.url} download target="_blank" rel="noopener noreferrer">
+                    <Download className="mr-2 h-5 w-5" /> Download File
+                  </a>
+                </Button>
               </div>
             )}
           </CardContent>

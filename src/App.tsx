@@ -80,6 +80,7 @@ export default function App() {
             <Route path="/codes/:shareCode" element={<SharePage />} />
             <Route path="/questions/:shareCode" element={<SharePage />} />
             <Route path="/bookmarks/:shareCode" element={<SharePage />} />
+            <Route path="/files/:shareCode" element={<SharePage />} />
             <Route path="*" element={<ProtectedApp />} />
           </Routes>
         </Suspense>
