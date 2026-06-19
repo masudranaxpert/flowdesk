@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { EmptyState, PaginationControls, SearchInput, Spinner } from '../components/UI';
 import type { UploadedFile } from '../types';
+import { copyShareUrl } from '../lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -86,8 +87,13 @@ export default function FileSharePage() {
   };
 
   const copyLink = async (file: UploadedFile) => {
-    await navigator.clipboard.writeText(absoluteFileUrl(file));
-    toast.success('Share link copied');
+    try {
+      await copyShareUrl('files', file.id);
+      toast.success('Share link copied');
+    } catch {
+      await navigator.clipboard.writeText(absoluteFileUrl(file));
+      toast.success('Share link copied');
+    }
   };
 
   const deleteFile = async (file: UploadedFile) => {

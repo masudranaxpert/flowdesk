@@ -20,6 +20,7 @@ const publicShareTypes = {
   codes: 'codes',
   questions: 'questions',
   bookmarks: 'bookmarks',
+  files: 'uploaded_files',
 };
 
 const resources = {
@@ -78,6 +79,13 @@ const resources = {
     defaults: { amount: 0, category: 'general', method: 'cash', notes: '' },
     search: ['title', 'category', 'method', 'notes'],
     sort: 'date DESC, createdAt DESC',
+  },
+  uploaded_files: {
+    table: 'uploaded_files',
+    columns: ['name', 'mimeType', 'size'],
+    defaults: { mimeType: 'application/octet-stream', size: 0 },
+    search: ['name', 'mimeType'],
+    sort: 'createdAt DESC',
   },
 };
 
@@ -367,7 +375,9 @@ function normalizeShareType(value) {
 }
 
 function publicShareType(resource) {
-  return resource === 'notebooks' ? 'notebooks' : resource;
+  if (resource === 'notebooks') return 'notebooks';
+  if (resource === 'uploaded_files') return 'files';
+  return resource;
 }
 
 function randomShareCode(length = 6) {
@@ -400,7 +410,8 @@ async function resolveShareByCode(code) {
   if (!row) return null;
   const item = await getResource(row.type, row.itemId);
   if (!item) return null;
-  return { code: row.code, type: publicShareType(row.type), item };
+  const returnedItem = row.type === 'uploaded_files' ? filePayload(item) : item;
+  return { code: row.code, type: publicShareType(row.type), item: returnedItem };
 }
 
 async function resolveShareByTypeAndId(type, itemId) {
@@ -410,7 +421,8 @@ async function resolveShareByTypeAndId(type, itemId) {
   if (!shareExists) return null;
   const item = await getResource(resource, itemId);
   if (!item) return null;
-  return { code: '', type: publicShareType(resource), item };
+  const returnedItem = resource === 'uploaded_files' ? filePayload(item) : item;
+  return { code: '', type: publicShareType(resource), item: returnedItem };
 }
 
 function filePayload(row) {
@@ -436,6 +448,9 @@ function extractFileIdsFromText(value) {
 }
 
 async function isFileShared(fileId) {
+  const directShare = (await d1Query('SELECT id FROM share_links WHERE type = ? AND itemId = ? LIMIT 1;', ['uploaded_files', fileId]))[0];
+  if (directShare) return true;
+
   const notebooks = await d1Query(
     `SELECT n.content FROM share_links s
      JOIN notebooks n ON s.itemId = n.id

@@ -153,11 +153,11 @@ export function fuzzyMatch(search: string, fields: unknown[]) {
   return dist / maxLen <= 0.35;
 }
 
-export function getShareUrl(type: 'notes' | 'codes' | 'questions' | 'bookmarks', id: string) {
+export function getShareUrl(type: 'notes' | 'codes' | 'questions' | 'bookmarks' | 'files', id: string) {
   return `${window.location.origin}/share/${type}/${id}`;
 }
 
-export async function copyShareUrl(type: 'notes' | 'codes' | 'questions' | 'bookmarks', id: string) {
+export async function copyShareUrl(type: 'notes' | 'codes' | 'questions' | 'bookmarks' | 'files', id: string) {
   let url = getShareUrl(type, id);
   try {
     const token = localStorage.getItem('auth-token');
