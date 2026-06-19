@@ -7,6 +7,7 @@ import {
   CalendarDays,
   Code2,
   Command,
+  Files,
   Tags,
   HelpCircle,
   LayoutDashboard,
@@ -20,6 +21,7 @@ import {
   X,
   User,
   Trash2,
+  WalletCards,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,18 +37,20 @@ const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', hint: 'Overview' },
   { to: '/chatbot', icon: Bot, label: 'Chatbot', hint: 'AI' },
   { to: '/routine', icon: CalendarDays, label: 'Routine', hint: 'Planner' },
+  { to: '/files', icon: Files, label: 'Files', hint: 'Share' },
+  { to: '/hisab', icon: WalletCards, label: 'Hisab', hint: 'Budget' },
   { to: '/bookmarks', icon: Bookmark, label: 'Bookmarks', hint: 'Links' },
   { to: '/notebooks', icon: BookOpen, label: 'Notebooks', hint: 'Notes' },
   { to: '/codes', icon: Code2, label: 'Code Book', hint: 'Snippets' },
-  { to: '/questions', icon: HelpCircle, label: 'Q&A', hint: 'Problems' },
+  { to: '/questions', icon: HelpCircle, label: 'Q&A', hint: 'Answers' },
   { to: '/categories', icon: Tags, label: 'Categories', hint: 'Organize' },
 ];
 
 const quickActions = [
   { to: '/chatbot', label: 'Ask AI', icon: Bot },
+  { to: '/files', label: 'Share file', icon: Files },
   { to: '/bookmarks', label: 'Save link', icon: Bookmark },
   { to: '/notebooks/new', label: 'Write note', icon: BookOpen },
-  { to: '/questions/new', label: 'Add question', icon: HelpCircle },
 ];
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
@@ -320,7 +324,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         </main>
 
         <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-5 rounded-2xl border border-border bg-card/90 p-1 shadow-2xl backdrop-blur-xl lg:hidden">
-          {navItems.filter((item) => ['/', '/chatbot', '/routine', '/bookmarks', '/notebooks'].includes(item.to)).map((item) => (
+          {navItems.filter((item) => ['/', '/chatbot', '/files', '/hisab', '/notebooks'].includes(item.to)).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

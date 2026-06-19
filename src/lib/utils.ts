@@ -158,7 +158,22 @@ export function getShareUrl(type: 'notes' | 'codes' | 'questions' | 'bookmarks',
 }
 
 export async function copyShareUrl(type: 'notes' | 'codes' | 'questions' | 'bookmarks', id: string) {
-  const url = getShareUrl(type, id);
+  let url = getShareUrl(type, id);
+  try {
+    const token = localStorage.getItem('auth-token');
+    const response = await fetch('/api/shares', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ type, id }),
+    });
+    if (response.ok) {
+      const data = await response.json();
+      const routeType = data.type === 'notebooks' ? 'notebooks' : data.type;
+      if (data.code && routeType) url = `${window.location.origin}/${routeType}/${data.code}`;
+    }
+  } catch {
+    url = getShareUrl(type, id);
+  }
   await navigator.clipboard.writeText(url);
   return url;
 }

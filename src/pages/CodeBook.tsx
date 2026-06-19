@@ -227,7 +227,8 @@ export default function CodeBookPage() {
     window.setTimeout(() => setUploadingFiles([]), 2200);
   };
 
-  const removeAttachment = (id: string) => {
+  const removeAttachment = async (id: string) => {
+    await api.files.delete(id).catch(() => {});
     setForm((prev) => ({ ...prev, attachments: prev.attachments.filter((item) => item.id !== id) }));
   };
 
@@ -288,7 +289,7 @@ export default function CodeBookPage() {
 
   return (
     <div className="animate-fade-in space-y-5">
-      <PageHeader title="Code Book" description="Keep templates, snippets, accepted code and reusable utilities ready." eyebrow="Snippet vault">
+      <PageHeader title="Code Book" description="Keep templates, snippets, notebooks and reusable utilities ready." eyebrow="Snippet vault">
         <Button onClick={openCreate}>
           <Plus className="h-4 w-4" /> Add Snippet
         </Button>

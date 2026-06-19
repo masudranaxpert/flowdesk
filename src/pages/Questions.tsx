@@ -176,9 +176,9 @@ export default function QuestionsPage() {
 
   return (
     <div className="animate-fade-in space-y-5">
-      <PageHeader title="Q&A" description="Save questions, links, explanations, final code and solved status in one place." eyebrow="Question tracker">
+      <PageHeader title="Q&A" description="Save questions, answers, links, explanations, code and completion status in one place." eyebrow="Answer tracker">
         <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" /> Add Question
+          <Plus className="h-4 w-4" /> Add Q&A
         </Button>
       </PageHeader>
 
@@ -197,9 +197,9 @@ export default function QuestionsPage() {
       {loading ? <Spinner /> : items.length === 0 ? (
         <EmptyState
           icon={<HelpCircle className="h-6 w-6 text-muted-foreground" />}
-          title="No questions yet"
+          title="No Q&A items yet"
           description="Add your first question and answer to get started"
-          action={<Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" /> Add Question</Button>}
+          action={<Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" /> Add Q&A</Button>}
         />
       ) : (
         <div className="space-y-3">

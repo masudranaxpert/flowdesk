@@ -90,6 +90,28 @@ export interface RoutineItem {
   updatedAt: string;
 }
 
+export interface Budget {
+  _id: string;
+  month: string;
+  amount: number;
+  currency: string;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Expense {
+  _id: string;
+  title: string;
+  amount: number;
+  category: string;
+  date: string;
+  method: string;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AiSetting {
   _id: string;
   singleton: string;
@@ -118,9 +140,11 @@ export interface AiModelConfig {
 
 export interface UploadedFile {
   id: string;
+  _id?: string;
   name: string;
   url: string;
   markdown: string;
   mimeType: string;
   size: number;
+  createdAt?: string;
 }

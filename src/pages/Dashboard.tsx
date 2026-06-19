@@ -28,7 +28,7 @@ const sections = [
   {
     key: 'bookmarks',
     label: 'Bookmarks',
-    title: 'Save useful CP links',
+    title: 'Save useful links',
     description: 'Research links, blogs, tools, tutorials and references in one clean library.',
     icon: Bookmark,
     to: '/bookmarks',
@@ -58,8 +58,8 @@ const sections = [
   {
     key: 'questions',
     label: 'Q&A',
-    title: 'Track solved problems',
-    description: 'Questions, explanations, links, code and solved status together.',
+    title: 'Track questions and answers',
+    description: 'Questions, explanations, links, code and completion status together.',
     icon: HelpCircle,
     to: '/questions',
     accent: 'text-chart-4',
@@ -281,7 +281,7 @@ export default function Dashboard() {
               <Button asChild>
                 <Link to="/questions/new">
                   <Plus className="h-4 w-4" />
-                  Add Question
+                  Add Answer
                 </Link>
               </Button>
               <Button variant="outline" asChild>
@@ -294,7 +294,7 @@ export default function Dashboard() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm text-muted-foreground">Solved progress</p>
+                  <p className="text-sm text-muted-foreground">Completion progress</p>
                   {!stats ? (
                     <div className="mt-1.5 h-8 w-20 animate-pulse rounded bg-foreground/20" />
                   ) : (
@@ -315,8 +315,8 @@ export default function Dashboard() {
                 <div className="mt-3.5 h-4 w-48 animate-pulse rounded bg-foreground/10" />
               ) : (
                 <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{stats.solved} solved</span>
-                  <span>{stats.questions} total questions</span>
+                  <span>{stats.solved} completed</span>
+                  <span>{stats.questions} total items</span>
                 </div>
               )}
             </CardContent>

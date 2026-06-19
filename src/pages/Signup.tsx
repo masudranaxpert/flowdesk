@@ -66,7 +66,7 @@ export default function Signup() {
             Build a cleaner study hub from day one.
           </h1>
           <p className="mt-4 max-w-lg text-base leading-7 text-muted-foreground">
-            Save questions, answers, bookmarks, notes and code snippets without jumping between different apps.
+            Save links, files, notes, answers, routines, budgets and code snippets without jumping between different apps.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -76,7 +76,7 @@ export default function Signup() {
           </div>
           <div className="rounded-2xl border border-border bg-muted/35 p-4">
             <HelpCircle className="h-5 w-5 text-primary" />
-            <p className="mt-3 text-sm font-medium">Problem tracker</p>
+            <p className="mt-3 text-sm font-medium">Answer tracker</p>
           </div>
         </div>
       </section>

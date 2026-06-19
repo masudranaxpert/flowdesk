@@ -14,6 +14,14 @@ const aiDefaults = {
   models: [],
 };
 
+const publicShareTypes = {
+  notes: 'notebooks',
+  notebooks: 'notebooks',
+  codes: 'codes',
+  questions: 'questions',
+  bookmarks: 'bookmarks',
+};
+
 const resources = {
   bookmarks: {
     table: 'bookmarks',
@@ -56,6 +64,20 @@ const resources = {
     defaults: { type: 'class', subject: '', teacher: '', room: '', dayOfWeek: 0, date: '', breakTime: '', repeatWeekly: true, notes: '' },
     search: ['title', 'subject', 'teacher', 'room'],
     sort: 'dayOfWeek ASC, date ASC, startTime ASC',
+  },
+  budgets: {
+    table: 'budgets',
+    columns: ['month', 'amount', 'currency', 'notes'],
+    defaults: { amount: 0, currency: 'BDT', notes: '' },
+    search: ['month', 'notes'],
+    sort: 'month DESC, updatedAt DESC',
+  },
+  expenses: {
+    table: 'expenses',
+    columns: ['title', 'amount', 'category', 'date', 'method', 'notes'],
+    defaults: { amount: 0, category: 'general', method: 'cash', notes: '' },
+    search: ['title', 'category', 'method', 'notes'],
+    sort: 'date DESC, createdAt DESC',
   },
 };
 
@@ -160,6 +182,15 @@ function buildWhere(resource, query, uid) {
   if (resource === 'routines') {
     if (query.type && query.type !== 'all') add('type = ?', String(query.type).trim().toLowerCase());
   }
+  if (resource === 'budgets') {
+    if (query.month && query.month !== 'all') add('month = ?', String(query.month).slice(0, 7));
+  }
+  if (resource === 'expenses') {
+    if (query.month && query.month !== 'all') {
+      add("substr(date, 1, 7) = ?", String(query.month).slice(0, 7));
+    }
+    if (query.category && query.category !== 'all') add('category = ?', String(query.category).trim().toLowerCase());
+  }
   return { where: where.join(' AND '), params };
 }
 
@@ -261,6 +292,28 @@ function validateResourceData(resource, data, { partial = false } = {}) {
     }
     if (next.repeatWeekly !== undefined) next.repeatWeekly = next.repeatWeekly !== false;
   }
+  if (resource === 'budgets') {
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    if (!partial || next.month !== undefined) {
+      const month = String(next.month || currentMonth).trim().slice(0, 7);
+      next.month = /^\d{4}-\d{2}$/.test(month) ? month : currentMonth;
+    }
+    if (next.amount !== undefined) next.amount = Math.max(0, Number(next.amount) || 0);
+    if (next.currency !== undefined) next.currency = String(next.currency || 'BDT').trim().toUpperCase().slice(0, 8) || 'BDT';
+    if (next.notes !== undefined) next.notes = String(next.notes || '').slice(0, 5000);
+  }
+  if (resource === 'expenses') {
+    const today = new Date().toISOString().slice(0, 10);
+    if (!partial) next.title = String(next.title || '').trim() || 'Expense';
+    if (next.amount !== undefined) next.amount = Math.max(0, Number(next.amount) || 0);
+    if (next.category !== undefined) next.category = String(next.category || 'general').trim().toLowerCase() || 'general';
+    if (next.date !== undefined || !partial) {
+      const date = String(next.date || today).trim().slice(0, 10);
+      next.date = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : today;
+    }
+    if (next.method !== undefined) next.method = String(next.method || 'cash').trim().toLowerCase() || 'cash';
+    if (next.notes !== undefined) next.notes = String(next.notes || '').slice(0, 5000);
+  }
   return next;
 }
 
@@ -309,6 +362,98 @@ function fileMarkdown(file) {
   return `[${file.name}](${url})`;
 }
 
+function normalizeShareType(value) {
+  return publicShareTypes[String(value || '').trim().toLowerCase()] || '';
+}
+
+function publicShareType(resource) {
+  return resource === 'notebooks' ? 'notebooks' : resource;
+}
+
+function randomShareCode(length = 6) {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  const bytes = new Uint8Array(length);
+  globalThis.crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join('');
+}
+
+async function ensureShareLink(uid, type, itemId) {
+  const resource = normalizeShareType(type);
+  if (!resource) throw new Error('Unsupported share type');
+  const item = await getResource(resource, itemId, uid);
+  if (!item) throw new Error('Item not found');
+  const existing = (await d1Query('SELECT * FROM share_links WHERE userId = ? AND type = ? AND itemId = ? LIMIT 1;', [uid, resource, itemId]))[0];
+  if (existing) return { code: existing.code, type: publicShareType(resource), itemId };
+  let code = randomShareCode();
+  for (let i = 0; i < 8; i += 1) {
+    const used = (await d1Query('SELECT id FROM share_links WHERE code = ? LIMIT 1;', [code]))[0];
+    if (!used) break;
+    code = randomShareCode();
+  }
+  const stamp = now();
+  await d1Query('INSERT INTO share_links (id, userId, code, type, itemId, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?);', [newId(), uid, code, resource, itemId, stamp, stamp]);
+  return { code, type: publicShareType(resource), itemId };
+}
+
+async function resolveShareByCode(code) {
+  const row = (await d1Query('SELECT * FROM share_links WHERE code = ? LIMIT 1;', [String(code || '').trim()]))[0];
+  if (!row) return null;
+  const item = await getResource(row.type, row.itemId);
+  if (!item) return null;
+  return { code: row.code, type: publicShareType(row.type), item };
+}
+
+async function resolveShareByTypeAndId(type, itemId) {
+  const resource = normalizeShareType(type);
+  if (!resource || !itemId) return null;
+  const item = await getResource(resource, itemId);
+  if (!item) return null;
+  return { code: '', type: publicShareType(resource), item };
+}
+
+function filePayload(row) {
+  return {
+    id: row.id,
+    _id: row.id,
+    name: row.name,
+    url: `/api/files/${row.id}`,
+    markdown: fileMarkdown(row),
+    mimeType: row.mimeType || 'application/octet-stream',
+    size: Number(row.size || 0),
+    createdAt: row.createdAt,
+  };
+}
+
+function extractFileIdsFromText(value) {
+  const ids = new Set();
+  const text = String(value || '');
+  const regex = /\/api\/files\/([a-zA-Z0-9_-]+)/g;
+  let match;
+  while ((match = regex.exec(text)) !== null) ids.add(match[1]);
+  return [...ids];
+}
+
+async function deleteUploadedFile(uid, fileId) {
+  const row = (await d1Query('SELECT * FROM uploaded_files WHERE id = ? AND userId = ? LIMIT 1;', [fileId, uid]))[0];
+  if (!row) return false;
+  const bucket = getFileBucket();
+  if (bucket && row.objectKey) await bucket.delete(row.objectKey).catch(() => {});
+  await d1Query('DELETE FROM uploaded_files WHERE id = ? AND userId = ?;', [fileId, uid]);
+  return true;
+}
+
+async function deleteUploadedFiles(uid, fileIds) {
+  const unique = [...new Set((fileIds || []).filter(Boolean))];
+  for (const fileId of unique) {
+    await deleteUploadedFile(uid, fileId);
+  }
+}
+
+async function deleteAllUserFiles(uid) {
+  const rows = await d1Query('SELECT id FROM uploaded_files WHERE userId = ?;', [uid]);
+  await deleteUploadedFiles(uid, rows.map((row) => row.id));
+}
+
 async function createResource(resource, body, uid) {
   const config = resources[resource];
   const created = now();
@@ -329,6 +474,7 @@ async function getResource(resource, id, uid = null) {
 
 async function updateResource(resource, id, body, uid) {
   const config = resources[resource];
+  const previous = ['notebooks', 'codes'].includes(resource) ? await getResource(resource, id, uid) : null;
   const data = validateResourceData(resource, body, { partial: true });
   const columns = config.columns.filter((column) => data[column] !== undefined);
   if (columns.length === 0) return getResource(resource, id, uid);
@@ -339,11 +485,29 @@ async function updateResource(resource, id, body, uid) {
     id,
     uid,
   ]);
+  if (resource === 'notebooks' && data.content !== undefined) {
+    const before = new Set(extractFileIdsFromText(previous?.content || ''));
+    const after = new Set(extractFileIdsFromText(data.content || ''));
+    await deleteUploadedFiles(uid, [...before].filter((fileId) => !after.has(fileId)));
+  }
+  if (resource === 'codes' && data.attachments !== undefined) {
+    const before = new Set(Array.isArray(previous?.attachments) ? previous.attachments.map((file) => file.id) : []);
+    const after = new Set(Array.isArray(data.attachments) ? data.attachments.map((file) => file.id) : []);
+    await deleteUploadedFiles(uid, [...before].filter((fileId) => !after.has(fileId)));
+  }
   return getResource(resource, id, uid);
 }
 
 async function deleteResource(resource, id, uid) {
   const config = resources[resource];
+  const existing = await getResource(resource, id, uid);
+  if (resource === 'notebooks' && existing?.content) {
+    await deleteUploadedFiles(uid, extractFileIdsFromText(existing.content));
+  }
+  if (resource === 'codes' && Array.isArray(existing?.attachments)) {
+    await deleteUploadedFiles(uid, existing.attachments.map((file) => file.id));
+  }
+  await d1Query('DELETE FROM share_links WHERE userId = ? AND type = ? AND itemId = ?;', [uid, resource, id]).catch(() => {});
   await d1Query(`DELETE FROM ${config.table} WHERE id = ? AND userId = ?;`, [id, uid]);
 }
 
@@ -538,8 +702,35 @@ export default async function handler(req, res) {
   const slug = url.pathname.replace(/^\/api\/?/, '').replace(/^\/+|\/+$/g, '');
 
   try {
+    if (slug === 'shares' && method === 'POST') {
+      const user = await requireUser(req, res);
+      if (!user) return;
+      try {
+        const link = await ensureShareLink(userId(user), req.body.type, String(req.body.id || req.body.itemId || ''));
+        return res.status(201).json(link);
+      } catch (error) {
+        return res.status(400).json({ error: error instanceof Error ? error.message : 'Could not create share link' });
+      }
+    }
+
+    if (slug.startsWith('share/')) {
+      const parts = slug.split('/');
+      const payload = parts.length === 2
+        ? await resolveShareByCode(parts[1])
+        : await resolveShareByTypeAndId(parts[1], parts[2]);
+      if (!payload) return res.status(404).json({ error: 'Shared item not found' });
+      return res.json(payload);
+    }
+
     if (slug.startsWith('files/')) {
       const fileId = slug.split('/')[1];
+      if (method === 'DELETE') {
+        const user = await requireUser(req, res);
+        if (!user) return;
+        const deleted = await deleteUploadedFile(userId(user), fileId);
+        if (!deleted) return res.status(404).json({ error: 'File not found' });
+        return res.json({ message: 'File deleted' });
+      }
       const row = (await d1Query('SELECT * FROM uploaded_files WHERE id = ? LIMIT 1;', [fileId]))[0];
       const bucket = getFileBucket();
       if (!row || !bucket) return res.status(404).json({ error: 'File not found' });
@@ -550,6 +741,24 @@ export default async function handler(req, res) {
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       res.setHeader('Content-Disposition', `inline; filename="${safeFileName(row.name)}"`);
       return res.end(new Uint8Array(body));
+    }
+
+    if (slug === 'files' && method === 'GET') {
+      const user = await requireUser(req, res);
+      if (!user) return;
+      const uid = userId(user);
+      const limit = Math.max(1, Math.min(Number(query.limit || 20), 100));
+      const page = Math.max(1, Number(query.page || 1));
+      const offset = (page - 1) * limit;
+      const where = ['userId = ?'];
+      const params = [uid];
+      if (query.search) {
+        where.push('(name LIKE ? OR mimeType LIKE ?)');
+        params.push(like(query.search), like(query.search));
+      }
+      const rows = await d1Query(`SELECT * FROM uploaded_files WHERE ${where.join(' AND ')} ORDER BY createdAt DESC LIMIT ? OFFSET ?;`, [...params, limit, offset]);
+      const totalRows = await d1Query(`SELECT COUNT(*) AS total FROM uploaded_files WHERE ${where.join(' AND ')};`, params);
+      return res.json({ items: rows.map(filePayload), total: Number(totalRows[0]?.total || 0) });
     }
 
     if (slug === 'files' && method === 'POST') {
@@ -577,7 +786,7 @@ export default async function handler(req, res) {
         customMetadata: { userId: uid, name },
       });
       await d1Query('INSERT INTO uploaded_files (id, userId, objectKey, name, mimeType, size, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?);', [rowId, uid, objectKey, name, mimeType, size, stamp]);
-      const payload = { id: rowId, name, url: `/api/files/${rowId}`, markdown: fileMarkdown({ id: rowId, name, mimeType }), mimeType, size };
+      const payload = filePayload({ id: rowId, name, mimeType, size, createdAt: stamp });
       return res.status(201).json(payload);
     }
 
@@ -693,7 +902,8 @@ export default async function handler(req, res) {
       const user = await requireUser(req, res);
       if (!user) return;
       const uid = user.id;
-      for (const table of ['bookmarks', 'notebooks', 'codes', 'questions', 'categories', 'routines', 'ai_settings', 'chat_history', 'uploaded_files']) {
+      await deleteAllUserFiles(uid);
+      for (const table of ['bookmarks', 'notebooks', 'codes', 'questions', 'categories', 'routines', 'ai_settings', 'chat_history', 'budgets', 'expenses', 'share_links', 'uploaded_files']) {
         await d1Query(`DELETE FROM ${table} WHERE userId = ?;`, [uid]);
       }
       await d1Query('DELETE FROM app_users WHERE id = ?;', [uid]);
@@ -766,14 +976,18 @@ export default async function handler(req, res) {
         (SELECT 'codes' AS type, id, title, language AS subtitle FROM codes WHERE userId = ? AND (title LIKE ? OR code LIKE ? OR tags LIKE ?) ORDER BY createdAt DESC LIMIT 5)
         UNION ALL
         (SELECT 'questions' AS type, id, title, platform AS subtitle FROM questions WHERE userId = ? AND (title LIKE ? OR tags LIKE ?) ORDER BY createdAt DESC LIMIT 5)
-      `, [uid, term, term, term, uid, term, term, term, uid, term, term, term, uid, term, term]);
+        UNION ALL
+        (SELECT 'files' AS type, id, name AS title, mimeType AS subtitle FROM uploaded_files WHERE userId = ? AND (name LIKE ? OR mimeType LIKE ?) ORDER BY createdAt DESC LIMIT 5)
+        UNION ALL
+        (SELECT 'expenses' AS type, id, title, category AS subtitle FROM expenses WHERE userId = ? AND (title LIKE ? OR category LIKE ? OR notes LIKE ?) ORDER BY date DESC LIMIT 5)
+      `, [uid, term, term, term, uid, term, term, term, uid, term, term, term, uid, term, term, uid, term, term, uid, term, term, term]);
       return res.json(
         rows.map((row) => ({
           id: row.id,
-          type: row.type === 'bookmarks' ? 'Bookmark' : row.type === 'notebooks' ? 'Note' : row.type === 'codes' ? 'Code' : 'Q&A',
+          type: row.type === 'bookmarks' ? 'Bookmark' : row.type === 'notebooks' ? 'Note' : row.type === 'codes' ? 'Code' : row.type === 'files' ? 'File' : row.type === 'expenses' ? 'Expense' : 'Q&A',
           title: row.title,
           subtitle: row.subtitle,
-          to: row.type === 'bookmarks' ? '/bookmarks' : row.type === 'notebooks' ? '/notebooks' : row.type === 'codes' ? '/codes' : '/questions',
+          to: row.type === 'bookmarks' ? '/bookmarks' : row.type === 'notebooks' ? '/notebooks' : row.type === 'codes' ? '/codes' : row.type === 'files' ? '/files' : row.type === 'expenses' ? '/hisab' : '/questions',
         }))
       );
     }

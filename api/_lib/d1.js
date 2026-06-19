@@ -180,6 +180,20 @@ export async function ensureSchema() {
         name TEXT NOT NULL, mimeType TEXT DEFAULT 'application/octet-stream', size INTEGER DEFAULT 0,
         createdAt TEXT NOT NULL
       );`),
+      d1Query(`CREATE TABLE IF NOT EXISTS budgets (
+        id TEXT PRIMARY KEY, userId TEXT NOT NULL, month TEXT NOT NULL, amount REAL DEFAULT 0,
+        currency TEXT DEFAULT 'BDT', notes TEXT DEFAULT '', createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL
+      );`),
+      d1Query(`CREATE TABLE IF NOT EXISTS expenses (
+        id TEXT PRIMARY KEY, userId TEXT NOT NULL, title TEXT NOT NULL, amount REAL DEFAULT 0,
+        category TEXT DEFAULT 'general', date TEXT NOT NULL, method TEXT DEFAULT 'cash',
+        notes TEXT DEFAULT '', createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL
+      );`),
+      d1Query(`CREATE TABLE IF NOT EXISTS share_links (
+        id TEXT PRIMARY KEY, userId TEXT NOT NULL, code TEXT NOT NULL UNIQUE,
+        type TEXT NOT NULL, itemId TEXT NOT NULL, createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL,
+        UNIQUE(userId, type, itemId)
+      );`),
     ]);
 
     await Promise.all([
@@ -189,6 +203,9 @@ export async function ensureSchema() {
       d1Query(`CREATE INDEX IF NOT EXISTS idx_questions_user_created ON questions(userId, createdAt);`),
       d1Query(`CREATE INDEX IF NOT EXISTS idx_routines_user_time ON routines(userId, dayOfWeek, date, startTime);`),
       d1Query(`CREATE INDEX IF NOT EXISTS idx_uploaded_files_user_created ON uploaded_files(userId, createdAt);`),
+      d1Query(`CREATE INDEX IF NOT EXISTS idx_budgets_user_month ON budgets(userId, month);`),
+      d1Query(`CREATE INDEX IF NOT EXISTS idx_expenses_user_date ON expenses(userId, date);`),
+      d1Query(`CREATE INDEX IF NOT EXISTS idx_share_links_code ON share_links(code);`),
     ]);
 
     await Promise.all([

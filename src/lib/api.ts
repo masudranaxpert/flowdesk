@@ -1,4 +1,4 @@
-import type { AiSetting, Bookmark, Category, CodeSnippet, Notebook, Question, RoutineItem, Stats, UploadedFile } from '../types';
+import type { AiSetting, Bookmark, Budget, Category, CodeSnippet, Expense, Notebook, Question, RoutineItem, Stats, UploadedFile } from '../types';
 
 const BASE = '/api';
 
@@ -89,6 +89,18 @@ export const api = {
     delete: (id: string) => request<void>(`/routines/${id}`, { method: 'DELETE' }),
     reset: (type = 'all') => request<void>(`/routines?type=${type}`, { method: 'DELETE' }),
   },
+  budgets: {
+    list: (params?: Record<string, string>) => request<any>(`/budgets${qs(params)}`),
+    create: (data: Partial<Budget>) => request<Budget>('/budgets', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<Budget>) => request<Budget>(`/budgets/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => request<void>(`/budgets/${id}`, { method: 'DELETE' }),
+  },
+  expenses: {
+    list: (params?: Record<string, string>) => request<any>(`/expenses${qs(params)}`),
+    create: (data: Partial<Expense>) => request<Expense>('/expenses', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<Expense>) => request<Expense>(`/expenses/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => request<void>(`/expenses/${id}`, { method: 'DELETE' }),
+  },
   aiSettings: {
     get: () => request<AiSetting>('/ai-settings'),
     update: (data: Partial<AiSetting>) => request<AiSetting>('/ai-settings', { method: 'PUT', body: JSON.stringify(data) }),
@@ -99,10 +111,12 @@ export const api = {
     clear: () => request<{ message: string }>('/chat-history', { method: 'DELETE' }),
   },
   files: {
+    list: (params?: Record<string, string>) => request<any>(`/files${qs(params)}`),
     upload: (file: File) => {
       const form = new FormData();
       form.append('file', file);
       return request<UploadedFile>('/files', { method: 'POST', body: form });
     },
+    delete: (id: string) => request<{ message: string }>(`/files/${id}`, { method: 'DELETE' }),
   },
 };
