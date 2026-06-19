@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Navigate, Routes, Route, Outlet } from 'react-router-dom';
 import { lazy, Suspense, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout';
@@ -30,22 +30,7 @@ function ProtectedApp() {
   return (
     <Layout>
       <Suspense fallback={<PageFallback />}>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/bookmarks" element={<BookmarksPage />} />
-          <Route path="/notebooks" element={<NotebooksPage />} />
-          <Route path="/notebooks/new" element={<NoteEditorPage />} />
-          <Route path="/notebooks/:id/edit" element={<NoteEditorPage />} />
-          <Route path="/codes" element={<CodeBookPage />} />
-          <Route path="/questions" element={<QuestionsPage />} />
-          <Route path="/questions/new" element={<QuestionEditorPage />} />
-          <Route path="/questions/:id/edit" element={<QuestionEditorPage />} />
-          <Route path="/categories" element={<CategoriesPage />} />
-          <Route path="/chatbot" element={<ChatbotPage />} />
-          <Route path="/routine" element={<RoutinePage />} />
-          <Route path="/files" element={<FileSharePage />} />
-          <Route path="/hisab" element={<HisabPage />} />
-        </Routes>
+        <Outlet />
       </Suspense>
     </Layout>
   );
@@ -72,16 +57,30 @@ export default function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/share/:type/:id" element={<SharePage />} />
             <Route path="/share/:shareCode" element={<SharePage />} />
-            <Route path="/notebooks/new" element={<ProtectedApp />} />
-            <Route path="/notebooks/:id/edit" element={<ProtectedApp />} />
-            <Route path="/questions/new" element={<ProtectedApp />} />
-            <Route path="/questions/:id/edit" element={<ProtectedApp />} />
+            
+            <Route element={<ProtectedApp />}>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/bookmarks" element={<BookmarksPage />} />
+              <Route path="/notebooks" element={<NotebooksPage />} />
+              <Route path="/notebooks/new" element={<NoteEditorPage />} />
+              <Route path="/notebooks/:id/edit" element={<NoteEditorPage />} />
+              <Route path="/codes" element={<CodeBookPage />} />
+              <Route path="/questions" element={<QuestionsPage />} />
+              <Route path="/questions/new" element={<QuestionEditorPage />} />
+              <Route path="/questions/:id/edit" element={<QuestionEditorPage />} />
+              <Route path="/categories" element={<CategoriesPage />} />
+              <Route path="/chatbot" element={<ChatbotPage />} />
+              <Route path="/routine" element={<RoutinePage />} />
+              <Route path="/files" element={<FileSharePage />} />
+              <Route path="/hisab" element={<HisabPage />} />
+            </Route>
+
             <Route path="/notebooks/:shareCode" element={<SharePage />} />
             <Route path="/codes/:shareCode" element={<SharePage />} />
             <Route path="/questions/:shareCode" element={<SharePage />} />
             <Route path="/bookmarks/:shareCode" element={<SharePage />} />
             <Route path="/files/:shareCode" element={<SharePage />} />
-            <Route path="*" element={<ProtectedApp />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
     </BrowserRouter>
