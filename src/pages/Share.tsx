@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { api } from '../lib/api';
 import CodeBlock from '../components/CodeBlock';
 import MarkdownView from '../components/MarkdownView';
 import { Spinner } from '../components/UI';
@@ -15,29 +14,42 @@ import { Badge } from '@/components/ui/badge';
 type SharedItem = Bookmark | Notebook | CodeSnippet | Question;
 
 export default function SharePage() {
-  const { type, id } = useParams();
+  const { type, id, shareCode } = useParams();
   const [item, setItem] = useState<SharedItem | null>(null);
+  const [resolvedType, setResolvedType] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!type || !id) return;
-    const loaders = {
-      notes: api.notebooks.get,
-      codes: api.codes.get,
-      questions: api.questions.get,
-      bookmarks: api.bookmarks.get,
-    } as const;
-    const load = loaders[type as keyof typeof loaders];
-    if (!load) {
-      setLoading(false);
-      return;
-    }
-    load(id).then(setItem).catch(() => toast.error('Shared item not found')).finally(() => setLoading(false));
-  }, [type, id]);
+    const load = async () => {
+      const endpoint = shareCode
+        ? `/api/share/${encodeURIComponent(shareCode)}`
+        : type && id
+          ? `/api/share/${encodeURIComponent(type)}/${encodeURIComponent(id)}`
+          : '';
+      if (!endpoint) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const response = await fetch(endpoint);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'Shared item not found');
+        setItem(data.item);
+        setResolvedType(data.type || type || '');
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Shared item not found');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [type, id, shareCode]);
 
   if (loading) return <Spinner />;
 
-  if (!item || !type) {
+  const displayType = resolvedType || type || '';
+
+  if (!item || !displayType) {
     return (
       <div className="mx-auto max-w-3xl p-4">
         <Card className="rounded-3xl">
@@ -67,11 +79,11 @@ export default function SharePage() {
         <Card className="rounded-3xl">
           <CardContent className="space-y-5 p-5 sm:p-7">
             <div>
-              <Badge variant="secondary" className="rounded-full">{type}</Badge>
+              <Badge variant="secondary" className="rounded-full">{displayType}</Badge>
               <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
             </div>
 
-            {type === 'bookmarks' && 'url' in item && (
+            {displayType === 'bookmarks' && 'url' in item && (
               <div className="space-y-3">
                 {item.description && <p className="text-sm leading-6 text-muted-foreground">{item.description}</p>}
                 <Button asChild>
@@ -83,20 +95,20 @@ export default function SharePage() {
               </div>
             )}
 
-            {type === 'notes' && 'content' in item && (
-              <div className="prose-dark max-w-none">
+            {(displayType === 'notes' || displayType === 'notebooks') && 'content' in item && (
+              <div className="prose-dark note-reading max-w-none">
                 <MarkdownView allowHtml>{item.content}</MarkdownView>
               </div>
             )}
 
-            {type === 'codes' && 'code' in item && 'language' in item && (
+            {displayType === 'codes' && 'code' in item && 'language' in item && (
               <>
                 {'description' in item && item.description && <p className="text-sm leading-6 text-muted-foreground">{item.description}</p>}
                 <CodeBlock code={item.code} language={item.language} />
               </>
             )}
 
-            {type === 'questions' && 'solution' in item && (
+            {displayType === 'questions' && 'solution' in item && (
               <div className="space-y-5">
                 {'problem' in item && item.problem && (
                   <section>

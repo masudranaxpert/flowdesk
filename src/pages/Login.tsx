@@ -64,7 +64,7 @@ export default function Login() {
                 <Sparkles className="h-5 w-5" />
               </div>
               <h2 className="text-2xl font-semibold tracking-tight">Welcome back</h2>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">Login to continue managing your CP workspace.</p>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">Login to continue managing your personal workspace.</p>
             </div>
 
             <form className="grid gap-4" onSubmit={submit}>

@@ -129,7 +129,7 @@ export default function QuestionEditorPage() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      <PageHeader title={editing ? 'Edit Question' : 'New Question'} eyebrow="Question editor" description="Save the problem link, notes, explanation and final code in one focused page.">
+      <PageHeader title={editing ? 'Edit Q&A' : 'New Q&A'} eyebrow="Answer editor" description="Save the link, notes, explanation and final answer in one focused page.">
         <Button variant="outline" asChild>
           <Link to="/questions"><ArrowLeft className="h-4 w-4" /> Back</Link>
         </Button>

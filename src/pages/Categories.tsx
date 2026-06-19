@@ -96,7 +96,7 @@ export default function CategoriesPage() {
       <PageHeader
         title="Categories"
         eyebrow="Organization"
-        description="Create your own categories for research, bookmarks, notes, code, and Q&A. They will appear in filters and forms."
+        description="Create your own categories for links, research, notes, code, and Q&A. They will appear in filters and forms."
       />
 
       <Card className="rounded-3xl">

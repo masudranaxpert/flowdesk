@@ -13,6 +13,8 @@ import NoteEditorPage from './pages/NoteEditor';
 import SharePage from './pages/Share';
 import ChatbotPage from './pages/Chatbot';
 import RoutinePage from './pages/Routine';
+import FileSharePage from './pages/FileShare';
+import HisabPage from './pages/Hisab';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
@@ -34,6 +36,8 @@ function ProtectedApp() {
         <Route path="/categories" element={<CategoriesPage />} />
         <Route path="/chatbot" element={<ChatbotPage />} />
         <Route path="/routine" element={<RoutinePage />} />
+        <Route path="/files" element={<FileSharePage />} />
+        <Route path="/hisab" element={<HisabPage />} />
       </Routes>
     </Layout>
   );
@@ -58,6 +62,15 @@ export default function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/share/:type/:id" element={<SharePage />} />
+          <Route path="/share/:shareCode" element={<SharePage />} />
+          <Route path="/notebooks/new" element={<ProtectedApp />} />
+          <Route path="/notebooks/:id/edit" element={<ProtectedApp />} />
+          <Route path="/questions/new" element={<ProtectedApp />} />
+          <Route path="/questions/:id/edit" element={<ProtectedApp />} />
+          <Route path="/notebooks/:shareCode" element={<SharePage />} />
+          <Route path="/codes/:shareCode" element={<SharePage />} />
+          <Route path="/questions/:shareCode" element={<SharePage />} />
+          <Route path="/bookmarks/:shareCode" element={<SharePage />} />
           <Route path="*" element={<ProtectedApp />} />
         </Routes>
     </BrowserRouter>
