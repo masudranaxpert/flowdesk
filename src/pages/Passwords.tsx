@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus, Trash2, Edit3, Globe, Key, Copy, RefreshCw, Eye, EyeOff, Search } from 'lucide-react';
+import { Plus, Trash2, Edit3, Globe, Key, Copy, RefreshCw, Eye, EyeOff, Search, Lock, User, Link2, Tag, FileText, ShieldCheck } from 'lucide-react';
 import { api } from '../lib/api';
 import { PageHeader, EmptyState, Spinner, SearchInput, ConfirmDialog, FormField, TagInput, PaginationControls } from '../components/UI';
 import { Select } from '../components/Select';
@@ -22,13 +22,28 @@ const clearCache = () => {
   for (const key in listCache) delete listCache[key];
 };
 
-function generatePassword(length = 16) {
+function generatePassword(length = 20) {
   const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+~`|}{[]:;?><,./-=";
   let pass = "";
   for (let i = 0, n = chars.length; i < length; ++i) {
     pass += chars.charAt(Math.floor(Math.random() * n));
   }
   return pass;
+}
+
+function getPasswordStrength(password: string): { score: number; label: string; color: string } {
+  if (!password) return { score: 0, label: '', color: '' };
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (password.length >= 14) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+  if (score <= 1) return { score, label: 'Weak', color: 'bg-red-500' };
+  if (score <= 2) return { score, label: 'Fair', color: 'bg-orange-400' };
+  if (score <= 3) return { score, label: 'Good', color: 'bg-yellow-400' };
+  if (score <= 4) return { score, label: 'Strong', color: 'bg-emerald-500' };
+  return { score, label: 'Very Strong', color: 'bg-emerald-400' };
 }
 
 export default function PasswordsPage() {
@@ -78,7 +93,7 @@ export default function PasswordsPage() {
       setTotal(res.total || 0);
       listCache[cacheKey] = { items: res.items || [], total: res.total || 0 };
       if (catRes.items) {
-        const cats = [fallbackCategory, ...catRes.items.filter((c: Category) => c.scope === 'all')];
+        const cats = [fallbackCategory, ...catRes.items.filter((c: Category) => c.scope === 'all' || c.scope === 'password' || c.scope === 'passwords')];
         setCategories(cats);
       }
     } catch (e: any) {
@@ -96,7 +111,7 @@ export default function PasswordsPage() {
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text).then(() => {
-      toast.success(`${label} copied to clipboard`);
+      toast.success(`${label} copied!`);
     }).catch(() => toast.error(`Failed to copy ${label}`));
   };
 
@@ -171,6 +186,7 @@ export default function PasswordsPage() {
   ], [categories]);
 
   const formCatOptions = useMemo(() => categories.map(c => ({ value: c.slug, label: c.name })), [categories]);
+  const strength = getPasswordStrength(form.password);
 
   return (
     <div className="space-y-6">
@@ -274,66 +290,137 @@ export default function PasswordsPage() {
         onConfirm={remove}
       />
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen} title={editing ? 'Edit Password' : 'Add Password'} description="">
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Title *">
-              <Input id="title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="e.g. Facebook, Gmail" autoFocus />
-            </FormField>
-            
-            <FormField label="URL (Optional)">
-              <Input id="url" value={form.url} onChange={e => setForm({ ...form, url: e.target.value })} placeholder="https://example.com" type="url" />
-            </FormField>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Username / Email">
-              <Input id="username" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} placeholder="username or email" />
-            </FormField>
-
-            <FormField label="Password *">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input 
-                    id="password" 
-                    value={form.password} 
-                    onChange={e => setForm({ ...form, password: e.target.value })} 
-                    placeholder="Enter or generate password" 
-                    type={formPasswordVisible ? 'text' : 'password'}
-                    className="pr-10"
-                  />
-                  <button 
-                    type="button" 
-                    onClick={() => setFormPasswordVisible(!formPasswordVisible)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    {formPasswordVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                <Button type="button" variant="outline" size="icon" onClick={() => { setForm({ ...form, password: generatePassword() }); setFormPasswordVisible(true); }} title="Generate Password">
-                  <RefreshCw className="w-4 h-4" />
-                </Button>
+      {/* ── Premium Add/Edit Dialog ── */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen} title="" description="" maxWidth="max-w-2xl">
+        <div className="-mt-2">
+          {/* gradient header */}
+          <div className="relative -mx-5 -mt-4 mb-6 overflow-hidden rounded-t-2xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent px-6 pb-5 pt-6 sm:-mx-6 sm:-mt-5">
+            <div className="pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full bg-primary/15 blur-2xl" />
+            <div className="flex items-center gap-4">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary/20 text-primary ring-1 ring-primary/30">
+                <Lock className="h-5 w-5" />
               </div>
-            </FormField>
+              <div>
+                <h2 className="text-xl font-semibold tracking-tight">{editing ? 'Edit Password' : 'Add New Password'}</h2>
+                <p className="text-sm text-muted-foreground">{editing ? 'Update your stored credentials' : 'Store credentials securely in your vault'}</p>
+              </div>
+              {editing && <div className="ml-auto flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary"><ShieldCheck className="h-3 w-3" /> Editing</div>}
+            </div>
           </div>
 
-          <FormField label="Description (Optional)">
-            <Textarea id="description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Security questions, notes, etc." rows={3} />
-          </FormField>
+          <div className="space-y-5">
+            {/* section: identity */}
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Identity</p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Title <span className="text-destructive">*</span></label>
+                  <div className="relative">
+                    <Key className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="e.g. Facebook, Gmail" className="pl-9" autoFocus />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground/80">URL <span className="text-muted-foreground font-normal text-xs">(optional)</span></label>
+                  <div className="relative">
+                    <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input value={form.url} onChange={e => setForm({ ...form, url: e.target.value })} placeholder="https://example.com" type="url" className="pl-9" />
+                  </div>
+                </div>
+              </div>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Category">
-              <Select value={form.category} onChange={val => setForm({ ...form, category: val })} options={formCatOptions} />
-            </FormField>
-            <FormField label="Tags">
-              <TagInput tags={form.tags} onChange={tags => setForm({ ...form, tags })} />
-            </FormField>
+            <div className="border-t border-border/50" />
+
+            {/* section: credentials */}
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Credentials</p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground/80">Username / Email</label>
+                  <div className="relative">
+                    <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} placeholder="username or email" className="pl-9" />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Password <span className="text-destructive">*</span></label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        value={form.password}
+                        onChange={e => setForm({ ...form, password: e.target.value })}
+                        placeholder="Enter or generate"
+                        type={formPasswordVisible ? 'text' : 'password'}
+                        className="pl-9 pr-10 font-mono"
+                      />
+                      <button type="button" onClick={() => setFormPasswordVisible(!formPasswordVisible)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground">
+                        {formPasswordVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    <Button type="button" variant="outline" size="icon" className="shrink-0 border-primary/25 text-primary hover:bg-primary/10 hover:text-primary" onClick={() => { setForm({ ...form, password: generatePassword() }); setFormPasswordVisible(true); }} title="Generate strong password">
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* password strength */}
+                  {form.password && (
+                    <div className="space-y-1 pt-0.5">
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map(n => (
+                          <div key={n} className={`h-1 flex-1 rounded-full transition-all duration-300 ${n <= strength.score ? strength.color : 'bg-muted/40'}`} />
+                        ))}
+                      </div>
+                      <p className={`text-[11px] font-medium ${strength.score <= 1 ? 'text-red-400' : strength.score <= 2 ? 'text-orange-400' : strength.score <= 3 ? 'text-yellow-400' : 'text-emerald-400'}`}>
+                        {strength.label}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-border/50" />
+
+            {/* section: details */}
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Details</p>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground/80">Notes <span className="text-muted-foreground font-normal text-xs">(optional)</span></label>
+                <div className="relative">
+                  <FileText className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Security questions, 2FA backup codes, notes…" rows={2} className="pl-9 resize-none" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <FormField label="Category">
+                  <Select value={form.category} onChange={val => setForm({ ...form, category: val })} options={formCatOptions} />
+                </FormField>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-1.5 text-sm font-medium text-foreground/80"><Tag className="h-3.5 w-3.5" /> Tags</label>
+                  <TagInput tags={form.tags} onChange={tags => setForm({ ...form, tags })} />
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-border">
-          <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button onClick={save}>Save Password</Button>
+          {/* footer */}
+          <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
+            <p className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground">
+              <ShieldCheck className="h-3.5 w-3.5 text-primary" />
+              Stored securely in your vault
+            </p>
+            <div className="flex w-full gap-3 sm:w-auto">
+              <Button variant="outline" className="flex-1 sm:flex-none" onClick={() => setDialogOpen(false)}>Cancel</Button>
+              <Button onClick={save} className="flex-1 gap-2 sm:flex-none">
+                <Lock className="h-4 w-4" />
+                {editing ? 'Update' : 'Save Password'}
+              </Button>
+            </div>
+          </div>
         </div>
       </Dialog>
     </div>

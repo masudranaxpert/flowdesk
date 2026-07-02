@@ -79,7 +79,7 @@ export interface Category {
   _id: string;
   name: string;
   slug: string;
-  scope: 'all' | 'bookmark' | 'bookmarks' | 'notebook' | 'notebooks' | 'code' | 'codes' | 'question' | 'questions';
+  scope: 'all' | 'bookmark' | 'bookmarks' | 'notebook' | 'notebooks' | 'code' | 'codes' | 'question' | 'questions' | 'password' | 'passwords';
   color: string;
   createdAt: string;
   updatedAt: string;
