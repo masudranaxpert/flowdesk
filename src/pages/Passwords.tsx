@@ -236,7 +236,7 @@ export default function PasswordsPage() {
   const openNew = () => { setEditing(null); setForm(emptyForm); setFormPasswordVisible(false); setDialogOpen(true); };
   const openEdit = (item: PasswordItem) => {
     setEditing(item);
-    setForm({ title: item.title, url: item.url || '', username: item.username || '', password: item.password || '', description: item.description || '', tags: item.tags || [], category: item.category?.toLowerCase() || 'general' });
+    setForm({ title: item.title, url: item.url || '', username: item.username || '', password: item.password || '', description: item.description || '', tags: item.tags || [], category: item.category?.toLowerCase() || '' });
     setFormPasswordVisible(false);
     setDialogOpen(true);
   };

@@ -139,7 +139,7 @@ export default function BookmarksPage() {
   };
   const openEdit = (b: BookmarkType) => { 
     setEditing(b); 
-    setForm({ url: b.url, title: b.title, description: b.description, tags: b.tags, category: b.category }); 
+    setForm({ url: b.url, title: b.title, description: b.description, tags: b.tags, category: b.category?.toLowerCase() || '' }); 
     setIsDuplicate(false);
     setDialogOpen(true); 
     loadAllUrls();
