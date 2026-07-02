@@ -354,13 +354,56 @@ function validateResourceData(resource, data, { partial = false } = {}) {
   return next;
 }
 
+function cleanChatAction(action) {
+  if (!action || typeof action !== 'object') return null;
+  const operation = String(action.operation || '').trim();
+  const resource = String(action.resource || '').trim();
+  if (!operation || !resource) return null;
+  return {
+    operation,
+    resource,
+    ...(action.id !== undefined ? { id: String(action.id).slice(0, 160) } : {}),
+    ...(Array.isArray(action.ids) ? { ids: action.ids.map((id) => String(id).slice(0, 160)).filter(Boolean).slice(0, 300) } : {}),
+    ...(action.data && typeof action.data === 'object' ? { data: action.data } : {}),
+  };
+}
+
+function cleanChatActionBatch(batch) {
+  if (!batch || typeof batch !== 'object') return null;
+  const status = ['pending', 'completed', 'cancelled', 'blocked'].includes(batch.status) ? batch.status : 'blocked';
+  const actions = (Array.isArray(batch.actions) ? batch.actions : []).map(cleanChatAction).filter(Boolean).slice(0, 300);
+  const rejected = (Array.isArray(batch.rejected) ? batch.rejected : [])
+    .map((issue) => {
+      if (!issue || typeof issue !== 'object') return null;
+      const action = cleanChatAction(issue.action);
+      if (!action) return null;
+      return { action, reason: String(issue.reason || '').slice(0, 1000) };
+    })
+    .filter(Boolean)
+    .slice(0, 300);
+  return {
+    id: String(batch.id || newId()).slice(0, 160),
+    status,
+    actions,
+    rejected,
+    createdAt: String(batch.createdAt || now()).slice(0, 80),
+  };
+}
+
 function cleanChatMessages(messages) {
   return (Array.isArray(messages) ? messages : [])
     .filter((message) => message && typeof message === 'object' && ['user', 'assistant'].includes(message.role))
-    .map((message) => ({
-      role: message.role,
-      content: String(message.content || '').slice(0, 20000),
-    }))
+    .map((message) => {
+      const next = {
+        role: message.role,
+        content: String(message.content || '').slice(0, 20000),
+      };
+      if (Array.isArray(message.actionBatches) && message.actionBatches.length > 0) {
+        const actionBatches = message.actionBatches.map(cleanChatActionBatch).filter(Boolean).slice(-4);
+        if (actionBatches.length > 0) next.actionBatches = actionBatches;
+      }
+      return next;
+    })
     .filter((message) => message.content.trim())
     .slice(-50);
 }
