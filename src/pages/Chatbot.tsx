@@ -70,7 +70,7 @@ type VaultContext = {
   passwords: any[];
 };
 
-const categoryScopes = ['all', 'bookmark', 'notebook', 'code', 'question'] as const;
+const categoryScopes = ['all', 'bookmark', 'notebook', 'code', 'question', 'password'] as const;
 
 function slugifyCategory(value: string) {
   return value.trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '') || 'category';
@@ -83,6 +83,7 @@ function normalizeCategoryScope(value: unknown) {
   if (['notebooks', 'notes', 'note', 'notebook-only'].includes(raw)) return 'notebook';
   if (['codes', 'codebook', 'snippet', 'snippets', 'code-only'].includes(raw)) return 'code';
   if (['questions', 'question', 'qa', 'q&a', 'cp', 'problem', 'problems'].includes(raw)) return 'question';
+  if (['passwords', 'password', 'secret', 'secrets', 'credential', 'credentials', 'password-only'].includes(raw)) return 'password';
   return '';
 }
 
