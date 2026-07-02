@@ -64,7 +64,15 @@ function statusFor(item: RoutineItem, currentTime: string) {
 }
 
 function timeLabel(item: RoutineItem) {
-  return `${item.startTime || '--:--'} - ${item.endTime || '--:--'}`;
+  const formatTime = (t: string) => {
+    if (!t) return '--:--';
+    const [h, m] = t.split(':');
+    const hours = parseInt(h, 10);
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const hour12 = hours % 12 || 12;
+    return `${hour12}:${m} ${ampm}`;
+  };
+  return `${formatTime(item.startTime)} - ${formatTime(item.endTime)}`;
 }
 
 function weekDateLabels(todayIndex: number) {
