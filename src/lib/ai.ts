@@ -34,6 +34,7 @@ export type ChatMessage = {
   role: 'user' | 'assistant';
   content: string;
   files?: AiFile[];
+  actionBatches?: any[];
 };
 
 export type AiChatOptions = {

@@ -337,9 +337,10 @@ export default function RoutinePage() {
         </Button>
       </PageHeader>
 
-      <div className="grid min-w-0 gap-4 xl:grid-cols-[24rem_minmax(0,1fr)]">
-        <Card className={`min-w-0 rounded-3xl border-primary/15 ${formOpen ? 'block' : 'hidden xl:block'}`}>
-          <CardContent className="space-y-4 p-4">
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[24rem_minmax(0,1fr)] xl:items-start">
+        <div className={`xl:sticky xl:top-6 ${formOpen ? 'block' : 'hidden xl:block'}`}>
+          <Card className="min-w-0 rounded-3xl border-primary/15">
+            <CardContent className="space-y-4 p-4">
             <div className="flex items-center gap-2">
               <CalendarDays className="h-4 w-4 text-primary" />
               <p className="text-sm font-semibold">Add class or event</p>
@@ -405,6 +406,7 @@ export default function RoutinePage() {
             </Button>
           </CardContent>
         </Card>
+        </div>
 
         <div className="min-w-0 space-y-4">
           {loading ? <Spinner /> : (

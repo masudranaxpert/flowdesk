@@ -25,10 +25,16 @@ function cleanHistoryMessages(messages: ChatMessage[]) {
   return messages
     .filter((message) => message.content.trim())
     .slice(-chatHistoryLimit)
-    .map((message) => ({
-      role: message.role === 'user' ? 'user' as const : 'assistant' as const,
-      content: message.content.slice(0, 20000),
-    }));
+    .map((message) => {
+      const next: ChatMessage = {
+        role: message.role === 'user' ? 'user' as const : 'assistant' as const,
+        content: message.content.slice(0, 20000),
+      };
+      if (Array.isArray(message.actionBatches) && message.actionBatches.length > 0) {
+        next.actionBatches = message.actionBatches.slice(-4);
+      }
+      return next;
+    });
 }
 
 type AiAction = {
@@ -249,6 +255,27 @@ function actionStatusMeta(status: ActionBatchStatus) {
   return { label: 'Pending approval', className: 'border-primary/25 bg-primary/10 text-primary', icon: ShieldAlert };
 }
 
+function normalizeActionBatch(value: any): ActionBatch | null {
+  if (!value || typeof value !== 'object') return null;
+  const status = ['pending', 'completed', 'cancelled', 'blocked'].includes(value.status) ? value.status as ActionBatchStatus : 'blocked';
+  return {
+    id: String(value.id || crypto.randomUUID()),
+    status,
+    actions: Array.isArray(value.actions) ? value.actions : [],
+    rejected: Array.isArray(value.rejected) ? value.rejected : [],
+    createdAt: String(value.createdAt || new Date().toISOString()),
+  };
+}
+
+function actionBatchesFromMessages(messages: ChatMessage[]) {
+  return messages
+    .flatMap((message) => Array.isArray(message.actionBatches) ? message.actionBatches : [])
+    .map(normalizeActionBatch)
+    .filter((batch): batch is ActionBatch => Boolean(batch))
+    .slice(-8)
+    .reverse();
+}
+
 function actionRisk(action: AiAction) {
   if (action.operation === 'delete_all') return 'High risk';
   if (action.operation === 'delete_many') return `${action.ids?.length || 0} deletes`;
@@ -436,6 +463,15 @@ export default function ChatbotPage() {
       .finally(() => setLoadingSettings(false));
   }, []);
 
+  const restoreActionBatches = useCallback((historyMessages: ChatMessage[]) => {
+    const batches = actionBatchesFromMessages(historyMessages);
+    setActionBatches(batches);
+    const pending = batches.find((batch) => batch.status === 'pending' && batch.actions.length > 0);
+    setPendingActions(pending?.actions || []);
+    setPendingActionBatchId(pending?.id || '');
+    setExpandedActionBatchId(pending?.id || '');
+  }, []);
+
   useEffect(() => loadSettings(), [loadSettings]);
 
   useEffect(() => {
@@ -446,6 +482,7 @@ export default function ChatbotPage() {
         const dbMessages = Array.isArray(data.messages) ? cleanHistoryMessages(data.messages as ChatMessage[]) : [];
         if (dbMessages.length > 0) {
           setMessages(dbMessages);
+          restoreActionBatches(dbMessages);
           return;
         }
 
@@ -453,19 +490,24 @@ export default function ChatbotPage() {
         const migrated = Array.isArray(localMessages) ? cleanHistoryMessages(localMessages) : [];
         if (migrated.length > 0) {
           setMessages(migrated);
+          restoreActionBatches(migrated);
           await api.chatHistory.update(migrated).catch(() => {});
           localStorage.removeItem(chatHistoryKey);
           return;
         }
 
         setMessages(defaultMessages);
+        restoreActionBatches([]);
       })
       .catch(() => {
         try {
           const saved = JSON.parse(localStorage.getItem(chatHistoryKey) || '[]') as ChatMessage[];
-          setMessages(saved.length ? cleanHistoryMessages(saved) : defaultMessages);
+          const cleaned = saved.length ? cleanHistoryMessages(saved) : defaultMessages;
+          setMessages(cleaned);
+          restoreActionBatches(cleaned);
         } catch {
           setMessages(defaultMessages);
+          restoreActionBatches([]);
         }
         toast.error('Failed to load chat history');
       })
@@ -475,7 +517,7 @@ export default function ChatbotPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [restoreActionBatches]);
 
   useEffect(() => {
     if (!historyReady) return;
@@ -505,16 +547,32 @@ export default function ChatbotPage() {
   const updateActionBatch = useCallback((id: string, patch: Partial<ActionBatch>) => {
     if (!id) return;
     setActionBatches((current) => current.map((batch) => batch.id === id ? { ...batch, ...patch } : batch));
+    setMessages((current) => current.map((message) => {
+      if (!Array.isArray(message.actionBatches) || message.actionBatches.length === 0) return message;
+      const nextBatches = message.actionBatches.map((batch: any) => batch?.id === id ? { ...batch, ...patch } : batch);
+      return { ...message, actionBatches: nextBatches };
+    }));
   }, []);
 
   const addActionBatch = useCallback((batch: Omit<ActionBatch, 'id' | 'createdAt'>) => {
-    const id = crypto.randomUUID();
+    const fullBatch: ActionBatch = { ...batch, id: crypto.randomUUID(), createdAt: new Date().toISOString() };
     setActionBatches((current) => [
-      { ...batch, id, createdAt: new Date().toISOString() },
+      fullBatch,
       ...current,
     ].slice(0, 8));
-    setExpandedActionBatchId(id);
-    return id;
+    setMessages((current) => {
+      const copy = [...current];
+      for (let index = copy.length - 1; index >= 0; index -= 1) {
+        if (copy[index]?.role === 'assistant') {
+          const existing = Array.isArray(copy[index].actionBatches) ? copy[index].actionBatches || [] : [];
+          copy[index] = { ...copy[index], actionBatches: [...existing, fullBatch].slice(-4) };
+          break;
+        }
+      }
+      return copy;
+    });
+    setExpandedActionBatchId(fullBatch.id);
+    return fullBatch.id;
   }, []);
 
   const cancelPendingActions = useCallback(() => {
@@ -710,7 +768,7 @@ export default function ChatbotPage() {
           setMessages((current) => {
             const copy = [...current];
             const lastIndex = copy.length - 1;
-            if (copy[lastIndex]?.role === 'assistant') copy[lastIndex] = { role: 'assistant', content: visible };
+            if (copy[lastIndex]?.role === 'assistant') copy[lastIndex] = { ...copy[lastIndex], role: 'assistant', content: visible };
             return copy;
           });
         },
@@ -743,7 +801,7 @@ export default function ChatbotPage() {
       setMessages((current) => {
         const copy = [...current];
         const lastIndex = copy.length - 1;
-        if (copy[lastIndex]?.role === 'assistant') copy[lastIndex] = { role: 'assistant', content: finalContent };
+        if (copy[lastIndex]?.role === 'assistant') copy[lastIndex] = { ...copy[lastIndex], role: 'assistant', content: finalContent };
         else copy.push({ role: 'assistant', content: finalContent });
         return copy;
       });
