@@ -175,7 +175,7 @@ export async function runAiChat(settings: AiSettings, messages: ChatMessage[], c
     const gemmaUploadedParts: Record<string, any> = {};
     if (isGemma) {
       for (const file of activeFiles) {
-        if (file.mimeType.startsWith('image/')) {
+        if (file.mimeType.startsWith('image/') || file.mimeType === 'application/pdf') {
           const blob = dataUrlToBlob(file.dataUrl);
           const uploadedFile = await ai.files.upload({
             file: blob,
@@ -193,7 +193,7 @@ export async function runAiChat(settings: AiSettings, messages: ChatMessage[], c
       if (i === history.length - 1 && msg.role === 'user') {
         const parts: any[] = [{ text: msg.content }];
         for (const file of activeFiles) {
-          if (file.mimeType.startsWith('image/')) {
+          if (file.mimeType.startsWith('image/') || file.mimeType === 'application/pdf') {
             if (isGemma && gemmaUploadedParts[file.dataUrl]) {
               parts.push(gemmaUploadedParts[file.dataUrl]);
             } else {
@@ -211,7 +211,7 @@ export async function runAiChat(settings: AiSettings, messages: ChatMessage[], c
     if (contents.length === 0) {
       const parts: any[] = [{ text: lastUser }];
       for (const file of activeFiles) {
-        if (file.mimeType.startsWith('image/')) {
+        if (file.mimeType.startsWith('image/') || file.mimeType === 'application/pdf') {
           if (isGemma && gemmaUploadedParts[file.dataUrl]) {
             parts.push(gemmaUploadedParts[file.dataUrl]);
           } else {
@@ -245,6 +245,7 @@ export async function runAiChat(settings: AiSettings, messages: ChatMessage[], c
   const content: any[] = [{ type: 'text', text: lastUser }];
   for (const file of activeFiles) {
     if (file.mimeType.startsWith('image/')) content.push({ type: 'image_url', image_url: { url: file.dataUrl } });
+    else if (file.mimeType === 'application/pdf') content.push({ type: 'text', text: `Attached file (${file.name}): [PDF files are only supported with Gemini provider. Please switch to Gemini.]` });
     else content.push({ type: 'text', text: `Attached file (${file.name}):\n${dataUrlToText(file.dataUrl).slice(0, 12000)}` });
   }
 

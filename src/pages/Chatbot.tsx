@@ -407,6 +407,20 @@ export default function ChatbotPage() {
     await api.aiSettings.update(next as any);
   };
 
+  const setPrimaryModel = async (id: string) => {
+    const models = [...(settings.models || [])];
+    const index = models.findIndex(m => m.id === id);
+    if (index > -1) {
+      const [model] = models.splice(index, 1);
+      model.active = true;
+      models.unshift(model);
+      const next = { ...settings, models };
+      setSettings(next);
+      await api.aiSettings.update(next as any);
+      toast.success('Set as primary model');
+    }
+  };
+
   const removeModel = async (id: string) => {
     const nextModels = (settings.models || []).filter((model) => model.id !== id);
     if (!nextModels.some((model) => model.active) && nextModels[0]) nextModels[0].active = true;
@@ -675,6 +689,7 @@ export default function ChatbotPage() {
                       <Badge variant={model.multimodal ? 'secondary' : 'outline'} className="rounded-full">{model.multimodal ? 'files on' : 'files off'}</Badge>
                       <Badge variant={model.active ? 'default' : 'outline'} className="rounded-full">{model.active ? 'Enabled' : 'Disabled'}</Badge>
                       <Button variant="outline" onClick={() => toggleModel(model.id)}>{model.active ? 'Deactivate' : 'Activate'}</Button>
+                      <Button variant="secondary" onClick={() => setPrimaryModel(model.id)}>Set Primary</Button>
                       <Button variant="destructive" onClick={() => removeModel(model.id)}>Remove</Button>
                     </div>
                   ))}
@@ -829,7 +844,7 @@ export default function ChatbotPage() {
                         ))}
                       </div>
                     )}
-                    <Textarea ref={textareaRef} value={input} onPaste={pasteFiles} onChange={(event) => setInput(event.target.value)} className="min-h-11 resize-none rounded-2xl border-0 bg-transparent px-3 shadow-none focus-visible:ring-0" placeholder="Send a message, drop files, or paste an image..." onKeyDown={(event) => {
+                    <Textarea ref={textareaRef} value={input} onPaste={pasteFiles} onChange={(event) => setInput(event.target.value)} className="min-h-11 max-h-56 overflow-y-auto resize-none rounded-2xl border-0 bg-transparent px-3 shadow-none focus-visible:ring-0" placeholder="Send a message, drop files, or paste an image..." onKeyDown={(event) => {
                       if (event.key === 'Enter' && event.ctrlKey && event.shiftKey) {
                         event.preventDefault();
                         insertNewLine(event.currentTarget);
