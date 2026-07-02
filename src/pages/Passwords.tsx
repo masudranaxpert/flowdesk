@@ -152,9 +152,11 @@ export default function PasswordsPage() {
 
   useEffect(() => {
     if (search === '') { setDebouncedSearch(''); return; }
-    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    const t = setTimeout(() => { setDebouncedSearch(search); setPage(1); }, 300);
     return () => clearTimeout(t);
   }, [search]);
+
+  useEffect(() => { setPage(1); }, [category]);
 
   const cacheKey = `${category}-${debouncedSearch}-${page}`;
   const cached = listCache[cacheKey] || { items: [], total: 0 };
@@ -173,12 +175,20 @@ export default function PasswordsPage() {
 
   // Authenticator state
   const [authItems, setAuthItems] = useState<AuthenticatorItem[]>([]);
+  const [authTotal, setAuthTotal] = useState(0);
   const [authLoading, setAuthLoading] = useState(true);
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [authEditing, setAuthEditing] = useState<AuthenticatorItem | null>(null);
   const [authForm, setAuthForm] = useState(emptyAuthForm);
   const [authDelId, setAuthDelId] = useState<string | null>(null);
   const [authSearch, setAuthSearch] = useState('');
+  const [debouncedAuthSearch, setDebouncedAuthSearch] = useState('');
+  const [authPage, setAuthPage] = useState(1);
+
+  useEffect(() => {
+    const t = setTimeout(() => { setDebouncedAuthSearch(authSearch); setAuthPage(1); }, 300);
+    return () => clearTimeout(t);
+  }, [authSearch]);
 
   const loadData = useCallback(async (isBg = false) => {
     if (!isBg) setLoading(true);
@@ -205,14 +215,15 @@ export default function PasswordsPage() {
   const loadAuthenticators = useCallback(async () => {
     setAuthLoading(true);
     try {
-      const res = await api.authenticators.list({ limit: '100' });
+      const res = await api.authenticators.list({ search: debouncedAuthSearch, page: String(authPage), limit: String(PAGE_SIZE) });
       setAuthItems(res.items || []);
+      setAuthTotal(res.total || 0);
     } catch (e: any) {
       toast.error('Failed to load authenticators');
     } finally {
       setAuthLoading(false);
     }
-  }, []);
+  }, [debouncedAuthSearch, authPage]);
 
   useEffect(() => { loadData(); }, [loadData]);
   useEffect(() => { loadAuthenticators(); }, [loadAuthenticators]);
@@ -277,10 +288,7 @@ export default function PasswordsPage() {
   const catOptions = useMemo(() => [{ value: 'all', label: 'All Categories' }, ...categories.map(c => ({ value: c.slug, label: c.name }))], [categories]);
   const formCatOptions = useMemo(() => categories.map(c => ({ value: c.slug, label: c.name })), [categories]);
   const strength = getPasswordStrength(form.password);
-
-  const filteredAuthItems = authItems.filter(a =>
-    !authSearch || a.name.toLowerCase().includes(authSearch.toLowerCase()) || (a.issuer || '').toLowerCase().includes(authSearch.toLowerCase()) || (a.account || '').toLowerCase().includes(authSearch.toLowerCase())
-  );
+  const filteredAuthItems = authItems;
 
   return (
     <div className="space-y-6">
@@ -328,7 +336,7 @@ export default function PasswordsPage() {
               {items.map(item => (
                 <Card key={item._id} className="overflow-hidden hover:shadow-md transition-shadow group">
                   <CardContent className="p-0">
-                    <div className="p-5 border-b border-border/50 bg-muted/20">
+                    <div className="p-5 border-b border-border/50">
                       <div className="flex justify-between items-start gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
@@ -409,7 +417,7 @@ export default function PasswordsPage() {
             />
           )}
           {!authLoading && filteredAuthItems.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-6">
               {filteredAuthItems.map(item => (
                 <TOTPCard
                   key={item._id}
@@ -420,6 +428,7 @@ export default function PasswordsPage() {
               ))}
             </div>
           )}
+          {authTotal > PAGE_SIZE && <PaginationControls page={authPage} total={authTotal} pageSize={PAGE_SIZE} onPageChange={setAuthPage} />}
         </>
       )}
 
