@@ -28,7 +28,7 @@ const resources = {
     table: 'bookmarks',
     columns: ['url', 'title', 'description', 'favicon', 'tags', 'category', 'isFavorite'],
     defaults: { description: '', favicon: '', tags: [], category: 'general', isFavorite: false },
-    search: ['title', 'url', 'tags'],
+    search: ['title', 'url', 'description', 'tags'],
     sort: 'createdAt DESC',
   },
   notebooks: {
@@ -49,14 +49,14 @@ const resources = {
     table: 'codes',
     columns: ['title', 'code', 'language', 'description', 'category', 'tags', 'attachments', 'isFavorite'],
     defaults: { language: 'cpp', description: '', category: 'general', tags: [], attachments: [], isFavorite: false },
-    search: ['title', 'code', 'tags', 'attachments'],
+    search: ['title', 'code', 'description', 'tags', 'attachments'],
     sort: 'createdAt DESC',
   },
   questions: {
     table: 'questions',
     columns: ['title', 'problem', 'solution', 'code', 'language', 'difficulty', 'platform', 'category', 'tags', 'isSolved', 'link'],
     defaults: { problem: '', solution: '', code: '', language: 'cpp', difficulty: 'medium', platform: 'codeforces', category: 'general', tags: [], isSolved: false, link: '' },
-    search: ['title', 'tags'],
+    search: ['title', 'problem', 'solution', 'code', 'link', 'tags'],
     sort: 'createdAt DESC',
   },
   categories: {
@@ -70,7 +70,7 @@ const resources = {
     table: 'routines',
     columns: ['type', 'title', 'subject', 'teacher', 'room', 'dayOfWeek', 'date', 'startTime', 'endTime', 'breakTime', 'repeatWeekly', 'notes'],
     defaults: { type: 'class', subject: '', teacher: '', room: '', dayOfWeek: 0, date: '', breakTime: '', repeatWeekly: true, notes: '' },
-    search: ['title', 'subject', 'teacher', 'room'],
+    search: ['title', 'subject', 'teacher', 'room', 'notes'],
     sort: 'dayOfWeek ASC, date ASC, startTime ASC',
   },
   budgets: {
@@ -161,6 +161,13 @@ function cleanValue(column, value) {
   return cleanJsonColumn(column, cleanBoolColumn(column, value));
 }
 
+const jsonSearchColumns = new Set(['tags', 'attachments']);
+
+function searchPredicate(column) {
+  if (!jsonSearchColumns.has(column)) return `${column} LIKE ?`;
+  return `(${column} LIKE ? OR EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(${column}) THEN ${column} ELSE '[]' END) WHERE json_each.value LIKE ?))`;
+}
+
 function buildWhere(resource, query, uid) {
   const config = resources[resource];
   const where = ['userId = ?'];
@@ -172,9 +179,12 @@ function buildWhere(resource, query, uid) {
 
   const searchTerm = query.search || query.q;
   if (searchTerm) {
-    const parts = config.search.map((column) => `${column} LIKE ?`);
+    const parts = config.search.map(searchPredicate);
     where.push(`(${parts.join(' OR ')})`);
-    params.push(...config.search.map(() => like(searchTerm)));
+    for (const column of config.search) {
+      params.push(like(searchTerm));
+      if (jsonSearchColumns.has(column)) params.push(like(searchTerm));
+    }
   }
   if (resource === 'bookmarks') {
     if (query.category && query.category !== 'all') add('category = ?', query.category);
@@ -1032,18 +1042,25 @@ export default async function handler(req, res) {
       const uid = userId(user);
       const term = like(q);
       const rows = await d1Query(`
-        (SELECT 'bookmarks' AS type, id, title, url AS subtitle FROM bookmarks WHERE userId = ? AND (title LIKE ? OR url LIKE ? OR tags LIKE ?) ORDER BY createdAt DESC LIMIT 5)
+        (SELECT 'bookmarks' AS type, id, title, url AS subtitle FROM bookmarks WHERE userId = ? AND (title LIKE ? OR url LIKE ? OR description LIKE ? OR tags LIKE ? OR EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(tags) THEN tags ELSE '[]' END) WHERE json_each.value LIKE ?)) ORDER BY createdAt DESC LIMIT 5)
         UNION ALL
-        (SELECT 'notebooks' AS type, id, title, category AS subtitle FROM notebooks WHERE userId = ? AND (title LIKE ? OR content LIKE ? OR tags LIKE ?) ORDER BY updatedAt DESC LIMIT 5)
+        (SELECT 'notebooks' AS type, id, title, category AS subtitle FROM notebooks WHERE userId = ? AND (title LIKE ? OR content LIKE ? OR tags LIKE ? OR EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(tags) THEN tags ELSE '[]' END) WHERE json_each.value LIKE ?)) ORDER BY updatedAt DESC LIMIT 5)
         UNION ALL
-        (SELECT 'codes' AS type, id, title, language AS subtitle FROM codes WHERE userId = ? AND (title LIKE ? OR code LIKE ? OR tags LIKE ?) ORDER BY createdAt DESC LIMIT 5)
+        (SELECT 'codes' AS type, id, title, language AS subtitle FROM codes WHERE userId = ? AND (title LIKE ? OR code LIKE ? OR description LIKE ? OR tags LIKE ? OR EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(tags) THEN tags ELSE '[]' END) WHERE json_each.value LIKE ?) OR attachments LIKE ? OR EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(attachments) THEN attachments ELSE '[]' END) WHERE json_each.value LIKE ?)) ORDER BY createdAt DESC LIMIT 5)
         UNION ALL
-        (SELECT 'questions' AS type, id, title, platform AS subtitle FROM questions WHERE userId = ? AND (title LIKE ? OR tags LIKE ?) ORDER BY createdAt DESC LIMIT 5)
+        (SELECT 'questions' AS type, id, title, platform AS subtitle FROM questions WHERE userId = ? AND (title LIKE ? OR problem LIKE ? OR solution LIKE ? OR code LIKE ? OR link LIKE ? OR tags LIKE ? OR EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(tags) THEN tags ELSE '[]' END) WHERE json_each.value LIKE ?)) ORDER BY createdAt DESC LIMIT 5)
         UNION ALL
         (SELECT 'files' AS type, id, name AS title, mimeType AS subtitle FROM uploaded_files WHERE userId = ? AND (name LIKE ? OR mimeType LIKE ?) ORDER BY createdAt DESC LIMIT 5)
         UNION ALL
         (SELECT 'expenses' AS type, id, title, category AS subtitle FROM expenses WHERE userId = ? AND (title LIKE ? OR category LIKE ? OR notes LIKE ?) ORDER BY date DESC LIMIT 5)
-      `, [uid, term, term, term, uid, term, term, term, uid, term, term, term, uid, term, term, uid, term, term, uid, term, term, term]);
+      `, [
+        uid, term, term, term, term, term,
+        uid, term, term, term, term,
+        uid, term, term, term, term, term, term, term,
+        uid, term, term, term, term, term, term, term,
+        uid, term, term,
+        uid, term, term, term,
+      ]);
       return res.json(
         rows.map((row) => ({
           id: row.id,
