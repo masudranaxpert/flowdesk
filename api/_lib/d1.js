@@ -140,6 +140,12 @@ export async function ensureSchema() {
         tags TEXT DEFAULT '[]', category TEXT DEFAULT 'general', isPinned INTEGER DEFAULT 0,
         createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL
       );`),
+      d1Query(`CREATE TABLE IF NOT EXISTS passwords (
+        id TEXT PRIMARY KEY, userId TEXT NOT NULL, title TEXT NOT NULL, url TEXT DEFAULT '',
+        username TEXT DEFAULT '', password TEXT DEFAULT '', description TEXT DEFAULT '',
+        tags TEXT DEFAULT '[]', category TEXT DEFAULT 'general',
+        createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL
+      );`),
       d1Query(`CREATE TABLE IF NOT EXISTS codes (
         id TEXT PRIMARY KEY, userId TEXT NOT NULL, title TEXT NOT NULL, code TEXT NOT NULL,
         language TEXT DEFAULT 'cpp', description TEXT DEFAULT '', category TEXT DEFAULT 'general',

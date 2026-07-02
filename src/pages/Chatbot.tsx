@@ -33,7 +33,7 @@ function cleanHistoryMessages(messages: ChatMessage[]) {
 
 type AiAction = {
   operation: 'create' | 'update' | 'delete' | 'delete_many' | 'delete_all';
-  resource: 'bookmarks' | 'notebooks' | 'codes' | 'questions' | 'routines' | 'categories';
+  resource: 'bookmarks' | 'notebooks' | 'codes' | 'questions' | 'routines' | 'categories' | 'passwords';
   id?: string;
   ids?: string[];
   data?: Record<string, any>;
@@ -46,6 +46,7 @@ type VaultContext = {
   questions: any[];
   routines: any[];
   categories: any[];
+  passwords: any[];
 };
 
 const categoryScopes = ['all', 'bookmark', 'notebook', 'code', 'question'] as const;
@@ -71,6 +72,7 @@ const emptyVaultContext: VaultContext = {
   questions: [],
   routines: [],
   categories: [],
+  passwords: [],
 };
 
 const resourceContextKey: Record<AiAction['resource'], keyof VaultContext> = {
@@ -80,6 +82,7 @@ const resourceContextKey: Record<AiAction['resource'], keyof VaultContext> = {
   questions: 'questions',
   routines: 'routines',
   categories: 'categories',
+  passwords: 'passwords',
 };
 
 function normalizeActions(value: unknown): AiAction[] {
@@ -337,7 +340,8 @@ export default function ChatbotPage() {
       api.questions.list(),
       api.routines.list(),
       api.categories.list(),
-    ]).then(([bookmarks, notes, codes, questions, routines, categories]) => {
+      api.passwords.list(),
+    ]).then(([bookmarks, notes, codes, questions, routines, categories, passwords]) => {
       const fullContext = {
         bookmarks: bookmarks.map((item: any) => ({ id: item._id, title: item.title, url: item.url, category: item.category, tags: item.tags })),
         notes: notes.map((item: any) => ({ id: item._id, title: item.title, category: item.category, preview: item.content?.slice?.(0, 500) || '' })),
@@ -345,6 +349,7 @@ export default function ChatbotPage() {
         questions: questions.map((item: any) => ({ id: item._id, title: item.title, platform: item.platform, category: item.category, solved: item.isSolved })),
         routines: routines.map((item: any) => ({ id: item._id, title: item.title, type: item.type, dayOfWeek: item.dayOfWeek, date: item.date, startTime: item.startTime, endTime: item.endTime, room: item.room, teacher: item.teacher })),
         categories: categories.map((item: any) => ({ id: item._id, name: item.name, slug: item.slug, scope: item.scope })),
+        passwords: passwords.items ? passwords.items.map((item: any) => ({ id: item._id, title: item.title, url: item.url, username: item.username, password: item.password, category: item.category })) : passwords.map((item: any) => ({ id: item._id, title: item.title, url: item.url, username: item.username, password: item.password, category: item.category })),
       };
       const promptContext = {
         bookmarks: fullContext.bookmarks.slice(0, 80),
@@ -353,6 +358,7 @@ export default function ChatbotPage() {
         questions: fullContext.questions.slice(0, 80),
         routines: fullContext.routines.slice(0, 120),
         categories: fullContext.categories.slice(0, 120),
+        passwords: fullContext.passwords.slice(0, 50),
         actionIndex: {
           bookmarks: fullContext.bookmarks.slice(0, 200).map(({ id, title }: any) => ({ id, title })),
           notebooks: fullContext.notes.slice(0, 200).map(({ id, title }: any) => ({ id, title })),
@@ -360,6 +366,7 @@ export default function ChatbotPage() {
           questions: fullContext.questions.slice(0, 200).map(({ id, title }: any) => ({ id, title })),
           routines: fullContext.routines.slice(0, 300).map(({ id, title, type }: any) => ({ id, title, type })),
           categories: fullContext.categories.slice(0, 200).map(({ id, name, slug, scope }: any) => ({ id, title: name, slug, scope })),
+          passwords: fullContext.passwords.slice(0, 100).map(({ id, title }: any) => ({ id, title })),
         },
       };
       setVaultContext(fullContext);
@@ -551,6 +558,7 @@ export default function ChatbotPage() {
       questions: api.questions,
       routines: api.routines,
       categories: api.categories,
+      passwords: api.passwords,
     };
     try {
       const validation = validateActions(pendingActions, vaultContext);
