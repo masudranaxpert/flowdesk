@@ -1,4 +1,4 @@
-import type { AiSetting, Bookmark, Budget, Category, CodeSnippet, Expense, Notebook, Question, RoutineItem, Stats, UploadedFile } from '../types';
+import type { AiSetting, Bookmark, Budget, Category, CodeSnippet, Expense, Notebook, PasswordItem, Question, RoutineItem, Stats, UploadedFile } from '../types';
 
 import { Capacitor } from '@capacitor/core';
 
@@ -50,6 +50,13 @@ export const api = {
     get: () => request<Stats>('/stats'),
   },
   search: (q: string) => request<any>(`/search?q=${encodeURIComponent(q)}`),
+  passwords: {
+    list: (params?: Record<string, string>) => request<any>(`/passwords${qs(params)}`),
+    get: (id: string) => request<PasswordItem>(`/passwords/${id}`),
+    create: (data: Partial<PasswordItem>) => request<PasswordItem>('/passwords', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<PasswordItem>) => request<PasswordItem>(`/passwords/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => request<void>(`/passwords/${id}`, { method: 'DELETE' }),
+  },
   bookmarks: {
     list: (params?: Record<string, string>) => request<any>(`/bookmarks${qs(params)}`),
     get: (id: string) => request<Bookmark>(`/bookmarks/${id}`),

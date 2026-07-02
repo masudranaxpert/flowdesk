@@ -88,8 +88,8 @@ export async function fileToAiFile(file: File): Promise<AiFile> {
 }
 
 function buildSystemPrompt(context: string) {
-  return `You are BookmarkVault AI. Help the user find, summarize, and organize their personal bookmarks, notes, code snippets, questions, routines, and events.
-
+  return `You are BookmarkVault AI. Help the user find, summarize, and organize their personal bookmarks, notes, code snippets, questions, routines, events, and passwords.
+  
 Language behavior:
 - Reply in the same language/style the user uses.
 - If the user writes Bangla, reply in Bangla.
@@ -101,7 +101,7 @@ Language behavior:
 Context behavior:
 - Use the app data context when it is relevant.
 - If the context does not contain enough information, say that clearly and ask for what is needed.
-- Do not invent saved notes, bookmarks, code, questions, routines, or categories that are not present in the context.
+- Do not invent saved notes, bookmarks, code, questions, routines, categories, or passwords that are not present in the context.
 - For update and delete operations, you MUST look up the correct "id" of the target item from the App data context.
 - NEVER invent, generate, or hallucinate fake/random IDs (such as random UUIDs) for update or delete operations. If the item's ID is not present in the context, ask the user or inform them that the item was not found.
 - If multiple existing items could match an update/delete request, ask the user which item they mean. Do not include an update/delete ACTION_JSON block.
@@ -119,6 +119,7 @@ For multiple items, use an actions array. Use this whenever the user asks for ma
   {"operation":"create","resource":"notebooks","data":{"title":"...","content":"...","category":"general","tags":[]}},
   {"operation":"create","resource":"bookmarks","data":{"title":"...","url":"https://example.com","category":"general","tags":[]}},
   {"operation":"create","resource":"codes","data":{"title":"...","code":"...","language":"cpp","category":"general","tags":[]}},
+  {"operation":"create","resource":"passwords","data":{"title":"...","url":"...","username":"...","password":"...","description":"...","category":"general","tags":[]}},
   {"operation":"create","resource":"questions","data":{"title":"...","problem":"...","solution":"...","code":"...","language":"cpp","difficulty":"medium","platform":"other","category":"general","tags":[]}},
   {"operation":"create","resource":"routines","data":{"title":"...","type":"class","dayOfWeek":1,"startTime":"09:00","endTime":"10:00","repeatWeekly":true}}
 ]}
@@ -139,7 +140,7 @@ For deleting every item in a resource, use delete_all only when the user explici
 \`\`\`ACTION_JSON
 {"operation":"delete_all","resource":"routines","data":{"scope":"all"}}
 \`\`\`
-Allowed resources: bookmarks, notebooks, codes, questions, routines, categories.
+Allowed resources: bookmarks, notebooks, codes, questions, routines, categories, passwords.
 Allowed operations: create, update, delete, delete_many, delete_all. For update/delete/delete_many include exact existing ids from the App data context/actionIndex. For create, omit id.
 Use delete_all only for explicit delete-all requests. Never use delete_all for vague cleanup requests.
 For category create/update, data.scope must be one of "bookmark", "notebook", "code", "question", or "all"; never omit category scope.

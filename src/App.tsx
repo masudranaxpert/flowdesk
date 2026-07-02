@@ -17,6 +17,7 @@ const ChatbotPage = lazy(() => import('./pages/Chatbot'));
 const RoutinePage = lazy(() => import('./pages/Routine'));
 const FileSharePage = lazy(() => import('./pages/FileShare'));
 const HisabPage = lazy(() => import('./pages/Hisab'));
+const PasswordsPage = lazy(() => import('./pages/Passwords'));
 const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
@@ -73,6 +74,7 @@ export default function App() {
               <Route path="/routine" element={<RoutinePage />} />
               <Route path="/files" element={<FileSharePage />} />
               <Route path="/hisab" element={<HisabPage />} />
+              <Route path="/passwords" element={<PasswordsPage />} />
             </Route>
 
             <Route path="/notebooks/:shareCode" element={<SharePage />} />

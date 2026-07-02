@@ -38,6 +38,13 @@ const resources = {
     search: ['title', 'content', 'tags'],
     sort: 'isPinned DESC, updatedAt DESC',
   },
+  passwords: {
+    table: 'passwords',
+    columns: ['title', 'url', 'username', 'password', 'description', 'category', 'tags'],
+    defaults: { url: '', username: '', password: '', description: '', category: 'general', tags: [] },
+    search: ['title', 'url', 'username', 'description', 'tags'],
+    sort: 'createdAt DESC',
+  },
   codes: {
     table: 'codes',
     columns: ['title', 'code', 'language', 'description', 'category', 'tags', 'attachments', 'isFavorite'],

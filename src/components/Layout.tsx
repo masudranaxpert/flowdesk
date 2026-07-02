@@ -22,6 +22,7 @@ import {
   User,
   Trash2,
   WalletCards,
+  Key,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +40,7 @@ const navItems = [
   { to: '/routine', icon: CalendarDays, label: 'Routine', hint: 'Planner' },
   { to: '/files', icon: Files, label: 'Files', hint: 'Share' },
   { to: '/hisab', icon: WalletCards, label: 'Hisab', hint: 'Budget' },
+  { to: '/passwords', icon: Key, label: 'Passwords', hint: 'Secrets' },
   { to: '/bookmarks', icon: Bookmark, label: 'Bookmarks', hint: 'Links' },
   { to: '/notebooks', icon: BookOpen, label: 'Notebooks', hint: 'Notes' },
   { to: '/codes', icon: Code2, label: 'Code Book', hint: 'Snippets' },

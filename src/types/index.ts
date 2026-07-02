@@ -11,6 +11,19 @@ export interface Bookmark {
   updatedAt: string;
 }
 
+export interface PasswordItem {
+  _id: string;
+  title: string;
+  url: string;
+  username: string;
+  password: string;
+  description: string;
+  category: string;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Notebook {
   _id: string;
   title: string;
