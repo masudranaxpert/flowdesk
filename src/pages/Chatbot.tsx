@@ -845,12 +845,13 @@ export default function ChatbotPage() {
                       </div>
                     )}
                     <Textarea ref={textareaRef} value={input} onPaste={pasteFiles} onChange={(event) => setInput(event.target.value)} className="min-h-11 max-h-56 overflow-y-auto resize-none rounded-2xl border-0 bg-transparent px-3 shadow-none focus-visible:ring-0" placeholder="Send a message, drop files, or paste an image..." onKeyDown={(event) => {
+                      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
                       if (event.key === 'Enter' && event.ctrlKey && event.shiftKey) {
                         event.preventDefault();
                         insertNewLine(event.currentTarget);
                         return;
                       }
-                      if (event.key === 'Enter' && !event.shiftKey) {
+                      if (event.key === 'Enter' && !event.shiftKey && !isMobile) {
                         event.preventDefault();
                         send();
                       }
