@@ -98,7 +98,7 @@ export default function QuestionEditorPage() {
         language: item.language,
         difficulty: item.difficulty,
         platform: item.platform,
-        category: item.category || 'general',
+        category: item.category?.toLowerCase() || '',
         tags: item.tags,
         link: item.link,
       }))

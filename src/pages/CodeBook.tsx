@@ -173,7 +173,7 @@ export default function CodeBookPage() {
   const openCreate = () => { setEditing(null); setForm(makeEmptyForm()); setDialogOpen(true); };
   const openEdit = (c: CodeSnippet) => {
     setEditing(c);
-    setForm({ title: c.title, code: c.code, language: c.language, description: c.description, category: c.category || 'general', tags: c.tags || [], attachments: c.attachments || [] });
+    setForm({ title: c.title, code: c.code, language: c.language, description: c.description, category: c.category?.toLowerCase() || '', tags: c.tags || [], attachments: c.attachments || [] });
     setDialogOpen(true);
   };
 
