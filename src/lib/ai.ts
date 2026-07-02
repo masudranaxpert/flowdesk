@@ -260,7 +260,7 @@ export async function runAiChat(settings: AiSettings, messages: ChatMessage[], c
     else content.push({ type: 'text', text: `Attached file (${file.name}):\n${dataUrlToText(file.dataUrl).slice(0, 12000)}` });
   }
 
-  const history = messages.slice(-11, -1);
+  const history = messages.slice(-10, -1);
   const formattedHistory = history.map((message) => ({ role: message.role, content: message.content }));
 
   const endpoint = isOpenRouter ? 'https://openrouter.ai/api/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions';
