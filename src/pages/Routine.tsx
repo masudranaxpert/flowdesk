@@ -10,6 +10,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { Capacitor } from '@capacitor/core';
+
 const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 function localDateString(date = new Date()) {
@@ -86,6 +89,50 @@ function weekDateLabels(todayIndex: number) {
   });
 }
 
+const getHashId = (id: string, suffix: number) => {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash << 5) - hash + id.charCodeAt(i);
+    hash = hash & hash;
+  }
+  return Math.abs(hash) + suffix;
+};
+
+const syncNotifications = async (items: RoutineItem[]) => {
+  if (!Capacitor.isNativePlatform()) return;
+  const pending = await LocalNotifications.getPending();
+  if (pending.notifications.length > 0) {
+    await LocalNotifications.cancel({ notifications: pending.notifications });
+  }
+  const notifications: any[] = [];
+  for (const item of items) {
+    if (!item._id) continue;
+    const [h, m] = (item.startTime || '09:00').split(':').map(Number);
+    let beforeH = h;
+    let beforeM = m - 10;
+    if (beforeM < 0) { beforeM += 60; beforeH -= 1; }
+    if (beforeH < 0) beforeH += 24;
+
+    const idMain = getHashId(item._id, 0);
+    const idBefore = getHashId(item._id, 1);
+
+    if (item.repeatWeekly) {
+      const weekday = item.dayOfWeek + 1;
+      notifications.push({ title: 'Class Reminder', body: `Your class ${item.title} starts now!`, id: idMain, schedule: { on: { weekday, hour: h, minute: m } } });
+      notifications.push({ title: 'Upcoming Class', body: `Your class ${item.title} starts in 10 minutes!`, id: idBefore, schedule: { on: { weekday, hour: beforeH, minute: beforeM } } });
+    } else if (item.date) {
+      const [year, month, day] = item.date.split('-').map(Number);
+      const mainDate = new Date(year, month - 1, day, h, m, 0);
+      const beforeDate = new Date(year, month - 1, day, beforeH, beforeM, 0);
+      if (mainDate.getTime() > Date.now()) notifications.push({ title: 'Event Reminder', body: `Your event ${item.title} starts now!`, id: idMain, schedule: { at: mainDate } });
+      if (beforeDate.getTime() > Date.now()) notifications.push({ title: 'Upcoming Event', body: `Your event ${item.title} starts in 10 minutes!`, id: idBefore, schedule: { at: beforeDate } });
+    }
+  }
+  if (notifications.length > 0) {
+    await LocalNotifications.schedule({ notifications });
+  }
+};
+
 export default function RoutinePage() {
   const [items, setItems] = useState<RoutineItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,10 +148,18 @@ export default function RoutinePage() {
 
   const load = useCallback(() => {
     setLoading(true);
-    api.routines.list().then(setItems).catch(() => toast.error('Failed to load routine')).finally(() => setLoading(false));
+    api.routines.list().then((data) => {
+      setItems(data);
+      syncNotifications(data);
+    }).catch(() => toast.error('Failed to load routine')).finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => load(), [load]);
+  useEffect(() => {
+    load();
+    if (Capacitor.isNativePlatform()) {
+      LocalNotifications.requestPermissions();
+    }
+  }, [load]);
 
   useEffect(() => {
     const t = setInterval(() => {
