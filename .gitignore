@@ -2,5 +2,5 @@ node_modules/
 dist/
 .env
 *.tsbuildinfo
-/android
+# /android
 google-services.json
