@@ -12,6 +12,27 @@
   scrollbar-color: oklch(0.64 0.04 255 / 0.5) transparent;
 }
 
+*::-webkit-scrollbar {
+  width: 0.65rem;
+  height: 0.65rem;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  min-height: 2.5rem;
+  border: 0.18rem solid transparent;
+  border-radius: 9999px;
+  background-clip: padding-box;
+  background-color: color-mix(in oklch, var(--color-muted-foreground) 38%, transparent);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in oklch, var(--color-muted-foreground) 58%, transparent);
+}
+
 html {
   background: var(--color-background);
   overflow-x: hidden;
@@ -90,6 +111,59 @@ body {
   border: 1px solid var(--color-border);
   padding: 0.45rem 0.6rem;
   text-align: left;
+}
+
+.chat-shell {
+  height: min(74vh, calc(100dvh - 13rem));
+  min-height: 34rem;
+}
+
+.chat-scroll {
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.chat-scroll-content {
+  padding-bottom: 1rem;
+}
+
+.chat-action-panel {
+  max-height: min(26rem, 48dvh);
+}
+
+.chat-action-panel-body {
+  max-height: min(18rem, 34dvh);
+}
+
+.chat-composer {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+@media (max-width: 640px) {
+  .assistant-message {
+    font-size: 0.95rem;
+    line-height: 1.65;
+  }
+
+  .chat-shell {
+    height: calc(100dvh - 9.5rem);
+    min-height: 30rem;
+  }
+
+  .chat-scroll-content {
+    padding-inline: 0.75rem;
+    padding-top: 1rem;
+    padding-bottom: 1.25rem;
+  }
+
+  .chat-action-panel {
+    max-height: min(22rem, 42dvh);
+  }
+
+  .chat-action-panel-body {
+    max-height: min(14rem, 28dvh);
+  }
 }
 
 input, textarea, select, button {
