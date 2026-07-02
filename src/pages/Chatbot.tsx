@@ -529,6 +529,26 @@ export default function ChatbotPage() {
   }, [messages, historyReady]);
 
   useEffect(() => {
+    if (!historyReady || actionBatches.length === 0) return;
+    setMessages((current) => {
+      const savedIds = new Set(
+        current.flatMap((message) => Array.isArray(message.actionBatches) ? message.actionBatches.map((batch: any) => String(batch?.id || '')) : [])
+      );
+      const missing = actionBatches.filter((batch) => !savedIds.has(batch.id));
+      if (missing.length === 0) return current;
+      const copy = [...current];
+      for (let index = copy.length - 1; index >= 0; index -= 1) {
+        if (copy[index]?.role === 'assistant') {
+          const existing = Array.isArray(copy[index].actionBatches) ? copy[index].actionBatches || [] : [];
+          copy[index] = { ...copy[index], actionBatches: [...existing, ...missing].slice(-4) };
+          return copy;
+        }
+      }
+      return current;
+    });
+  }, [actionBatches, historyReady]);
+
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, sending, pendingActions]);
 
