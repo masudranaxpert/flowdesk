@@ -397,10 +397,6 @@ export default function PasswordsPage() {
         <>
           <div className="flex flex-col sm:flex-row gap-4 mb-6 items-start sm:items-center">
             <SearchInput value={authSearch} onChange={setAuthSearch} placeholder="Search accounts..." />
-            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 px-3 py-2 rounded-lg border border-border/40 shrink-0">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>All codes generated offline · No server needed</span>
-            </div>
           </div>
 
           {authLoading && <Spinner />}
@@ -447,19 +443,16 @@ export default function PasswordsPage() {
 
       {/* ── Password Add/Edit Dialog ── */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen} title="" description="" maxWidth="max-w-2xl">
-        <div className="-mt-2">
-          <div className="relative -mx-5 -mt-4 mb-6 overflow-hidden rounded-t-2xl bg-gradient-to-br from-primary/20 via-primary/10 to-transparent px-6 pb-5 pt-6 sm:-mx-6 sm:-mt-5">
-            <div className="pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full bg-primary/15 blur-2xl" />
-            <div className="flex items-center gap-4">
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary/20 text-primary ring-1 ring-primary/30">
-                <Lock className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold tracking-tight">{editing ? 'Edit Password' : 'Add New Password'}</h2>
-                <p className="text-sm text-muted-foreground">{editing ? 'Update your stored credentials' : 'Store credentials securely in your vault'}</p>
-              </div>
-              {editing && <div className="ml-auto flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary"><ShieldCheck className="h-3 w-3" /> Editing</div>}
+        <div>
+          <div className="mb-6 flex items-center gap-4">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary/20 text-primary ring-1 ring-primary/30">
+              <Lock className="h-5 w-5" />
             </div>
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight">{editing ? 'Edit Password' : 'Add New Password'}</h2>
+              <p className="text-sm text-muted-foreground">{editing ? 'Update your stored credentials' : 'Store credentials securely in your vault'}</p>
+            </div>
+            {editing && <div className="ml-auto flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-xs font-medium text-primary"><ShieldCheck className="h-3 w-3" /> Editing</div>}
           </div>
           <div className="space-y-5">
             <div className="space-y-3">
@@ -484,7 +477,7 @@ export default function PasswordsPage() {
             <div className="border-t border-border/50" />
             <div className="space-y-3">
               <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Credentials</p>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground/80">Username / Email</label>
                   <div className="relative">
@@ -540,11 +533,11 @@ export default function PasswordsPage() {
               </div>
             </div>
           </div>
-          <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
-            <p className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground">
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-between border-t border-border pt-4 gap-4">
+            <p className="flex items-center gap-1 text-xs text-muted-foreground w-full sm:w-auto text-center sm:text-left justify-center sm:justify-start">
               <ShieldCheck className="h-3.5 w-3.5 text-primary" /> Stored securely in your vault
             </p>
-            <div className="flex w-full gap-3 sm:w-auto">
+            <div className="flex w-full gap-3 sm:w-auto shrink-0">
               <Button variant="outline" className="flex-1 sm:flex-none" onClick={() => setDialogOpen(false)}>Cancel</Button>
               <Button onClick={save} className="flex-1 gap-2 sm:flex-none">
                 <Lock className="h-4 w-4" /> {editing ? 'Update' : 'Save Password'}
@@ -556,17 +549,14 @@ export default function PasswordsPage() {
 
       {/* ── Authenticator Add/Edit Dialog ── */}
       <Dialog open={authDialogOpen} onOpenChange={setAuthDialogOpen} title="" description="" maxWidth="max-w-lg">
-        <div className="-mt-2">
-          <div className="relative -mx-5 -mt-4 mb-6 overflow-hidden rounded-t-2xl bg-gradient-to-br from-emerald-500/20 via-emerald-500/10 to-transparent px-6 pb-5 pt-6 sm:-mx-6 sm:-mt-5">
-            <div className="pointer-events-none absolute -right-6 -top-6 h-28 w-28 rounded-full bg-emerald-500/15 blur-2xl" />
-            <div className="flex items-center gap-4">
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30">
-                <Shield className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold tracking-tight">{authEditing ? 'Edit Authenticator' : 'Add 2FA Account'}</h2>
-                <p className="text-sm text-muted-foreground">Enter the secret key from your 2FA setup page</p>
-              </div>
+        <div>
+          <div className="mb-6 flex items-center gap-4">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/30">
+              <Shield className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight">{authEditing ? 'Edit Authenticator' : 'Add 2FA Account'}</h2>
+              <p className="text-sm text-muted-foreground">Enter the secret key from your 2FA setup page</p>
             </div>
           </div>
 
@@ -597,11 +587,6 @@ export default function PasswordsPage() {
                 <label className="text-sm font-medium text-foreground/80">Account Email <span className="text-muted-foreground font-normal text-xs">(optional)</span></label>
                 <Input value={authForm.account} onChange={e => setAuthForm({ ...authForm, account: e.target.value })} placeholder="user@gmail.com" />
               </div>
-            </div>
-
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-muted-foreground">
-              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-              <p>Codes are generated <strong className="text-emerald-400">100% offline</strong> on your device using the TOTP algorithm (RFC 6238). Your secret key never leaves your device.</p>
             </div>
           </div>
 
