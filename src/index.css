@@ -41,11 +41,7 @@ body {
   background-color: oklch(0.795 0.184 86.047 / 0.2);
 }
 
-.chat-user-message::selection,
-.chat-user-message *::selection {
-  background-color: oklch(0.21 0.006 285.885 / 0.38);
-  color: oklch(0.985 0 0);
-}
+
 
 .assistant-message {
   overflow-wrap: anywhere;
