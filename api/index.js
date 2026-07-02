@@ -170,10 +170,11 @@ function buildWhere(resource, query, uid) {
     params.push(value);
   };
 
-  if (query.search) {
+  const searchTerm = query.search || query.q;
+  if (searchTerm) {
     const parts = config.search.map((column) => `${column} LIKE ?`);
     where.push(`(${parts.join(' OR ')})`);
-    params.push(...config.search.map(() => like(query.search)));
+    params.push(...config.search.map(() => like(searchTerm)));
   }
   if (resource === 'bookmarks') {
     if (query.category && query.category !== 'all') add('category = ?', query.category);
@@ -193,6 +194,9 @@ function buildWhere(resource, query, uid) {
     if (query.category && query.category !== 'all') add('category = ?', query.category);
     if (query.solved === 'true') where.push('isSolved = 1');
     if (query.solved === 'false') where.push('isSolved = 0');
+  }
+  if (resource === 'passwords') {
+    if (query.category && query.category !== 'all') add('category = ?', query.category);
   }
   if (resource === 'categories') {
     if (query.scope && query.scope !== 'all') {

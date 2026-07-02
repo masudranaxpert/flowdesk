@@ -100,11 +100,11 @@ function TOTPCard({ item, onEdit, onDelete }: { item: AuthenticatorItem; onEdit:
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background rounded-md shadow-sm border border-border p-0.5">
-              <Button variant="ghost" size="icon" className="w-8 h-8 rounded-sm text-muted-foreground hover:text-primary" onClick={onEdit}>
+            <div className="flex items-center gap-1 rounded-md border border-border bg-background p-0.5 shadow-sm sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+              <Button variant="ghost" size="icon" className="w-8 h-8 rounded-sm text-muted-foreground hover:text-primary" onClick={onEdit} aria-label={`Edit ${item.name}`} title="Edit">
                 <Edit3 className="w-4 h-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="w-8 h-8 rounded-sm text-destructive hover:bg-destructive/10" onClick={onDelete}>
+              <Button variant="ghost" size="icon" className="w-8 h-8 rounded-sm text-destructive hover:bg-destructive/10" onClick={onDelete} aria-label={`Delete ${item.name}`} title="Delete">
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>
@@ -193,7 +193,7 @@ export default function PasswordsPage() {
   const loadData = useCallback(async (isBg = false) => {
     if (!isBg) setLoading(true);
     try {
-      const p = { page: String(page), limit: String(PAGE_SIZE), q: debouncedSearch, category: category === 'all' ? '' : category };
+      const p = { page: String(page), limit: String(PAGE_SIZE), search: debouncedSearch, category: category === 'all' ? '' : category };
       const [res, catRes] = await Promise.all([
         api.passwords.list(p),
         api.categories.list().catch(() => ({ items: [] }))
@@ -246,15 +246,36 @@ export default function PasswordsPage() {
     if (!form.title.trim() || !form.password.trim()) { toast.error('Title and Password are required'); return; }
     const data = { ...form, title: form.title.trim(), url: form.url.trim(), username: form.username.trim(), password: form.password, description: form.description.trim() };
     try {
-      if (editing) { await api.passwords.update(editing._id, data); toast.success('Password updated'); }
-      else { await api.passwords.create(data); toast.success('Password saved'); }
-      setDialogOpen(false); clearCache(); loadData(true);
+      if (editing) {
+        const updated = await api.passwords.update(editing._id, data);
+        setItems((current) => current.map((item) => item._id === editing._id ? updated : item));
+        toast.success('Password updated');
+      }
+      else {
+        const created = await api.passwords.create(data);
+        setItems((current) => page === 1 ? [created, ...current].slice(0, PAGE_SIZE) : current);
+        setTotal((value) => value + 1);
+        toast.success('Password saved');
+      }
+      setDialogOpen(false); setEditing(null); clearCache(); loadData(true);
     } catch (e: any) { toast.error(e.message || 'Error saving password'); }
   };
 
   const remove = async () => {
     if (!delId) return;
-    try { await api.passwords.delete(delId); toast.success('Password deleted'); clearCache(); loadData(true); }
+    try {
+      await api.passwords.delete(delId);
+      setItems((current) => current.filter((item) => item._id !== delId));
+      setTotal((value) => Math.max(0, value - 1));
+      setVisiblePasswords((current) => {
+        const next = { ...current };
+        delete next[delId];
+        return next;
+      });
+      toast.success('Password deleted');
+      clearCache();
+      loadData(true);
+    }
     catch (e: any) { toast.error(e.message || 'Error deleting password'); }
     finally { setDelId(null); }
   };
@@ -271,16 +292,32 @@ export default function PasswordsPage() {
     try {
       const cleaned = authForm.secret.trim().toUpperCase().replace(/\s/g, '');
       const data = { ...authForm, secret: cleaned };
-      if (authEditing) { await api.authenticators.update(authEditing._id, data); toast.success('Authenticator updated'); }
-      else { await api.authenticators.create(data); toast.success('Authenticator added'); }
+      if (authEditing) {
+        const updated = await api.authenticators.update(authEditing._id, data);
+        setAuthItems((current) => current.map((item) => item._id === authEditing._id ? updated : item));
+        toast.success('Authenticator updated');
+      }
+      else {
+        const created = await api.authenticators.create(data);
+        setAuthItems((current) => authPage === 1 ? [created, ...current].slice(0, PAGE_SIZE) : current);
+        setAuthTotal((value) => value + 1);
+        toast.success('Authenticator added');
+      }
       setAuthDialogOpen(false);
+      setAuthEditing(null);
       loadAuthenticators();
     } catch (e: any) { toast.error(e.message || 'Error saving authenticator'); }
   };
 
   const removeAuth = async () => {
     if (!authDelId) return;
-    try { await api.authenticators.delete(authDelId); toast.success('Authenticator removed'); loadAuthenticators(); }
+    try {
+      await api.authenticators.delete(authDelId);
+      setAuthItems((current) => current.filter((item) => item._id !== authDelId));
+      setAuthTotal((value) => Math.max(0, value - 1));
+      toast.success('Authenticator removed');
+      loadAuthenticators();
+    }
     catch (e: any) { toast.error(e.message || 'Error deleting authenticator'); }
     finally { setAuthDelId(null); }
   };
@@ -350,11 +387,11 @@ export default function PasswordsPage() {
                             </a>
                           )}
                         </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background rounded-md shadow-sm border border-border p-0.5">
-                          <Button variant="ghost" size="icon" className="w-8 h-8 rounded-sm text-muted-foreground hover:text-primary" onClick={() => openEdit(item)}>
+                        <div className="flex items-center gap-1 rounded-md border border-border bg-background p-0.5 shadow-sm sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+                          <Button variant="ghost" size="icon" className="w-8 h-8 rounded-sm text-muted-foreground hover:text-primary" onClick={() => openEdit(item)} aria-label={`Edit ${item.title}`} title="Edit">
                             <Edit3 className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="w-8 h-8 rounded-sm text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setDelId(item._id)}>
+                          <Button variant="ghost" size="icon" className="w-8 h-8 rounded-sm text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setDelId(item._id)} aria-label={`Delete ${item.title}`} title="Delete">
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
