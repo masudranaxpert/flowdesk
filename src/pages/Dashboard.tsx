@@ -206,69 +206,106 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      <Card className="rounded-3xl border-primary/20 bg-card/95">
-        <CardContent className="p-4 sm:p-5">
+      {/* ── Today's Routine Card ── */}
+      <div className="relative overflow-hidden rounded-3xl border border-primary/25 bg-card/95 shadow-lg shadow-primary/5">
+        {/* subtle gradient accent top-left */}
+        <div className="pointer-events-none absolute -left-8 -top-8 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
+        <div className="pointer-events-none absolute -right-8 bottom-0 h-32 w-32 rounded-full bg-primary/6 blur-2xl" />
+
+        <div className="relative p-4 sm:p-5">
+          {/* header row */}
           <button
             type="button"
-            onClick={() => setRoutineOpen((value) => !value)}
-            className="flex w-full cursor-pointer items-center gap-3 text-left"
+            onClick={() => setRoutineOpen((v) => !v)}
+            className="flex w-full cursor-pointer items-center gap-4 text-left"
           >
-            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary/12 text-primary">
-              <CalendarDays className="h-5 w-5" />
+            {/* icon */}
+            <div className="relative grid h-13 w-13 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-primary/30 to-primary/10 text-primary ring-1 ring-primary/20 shadow-inner">
+              <CalendarDays className="h-6 w-6" />
+              {activeRoutine?.type === 'ongoing' && (
+                <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-red-500 ring-2 ring-card">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                </span>
+              )}
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <span className="text-base font-semibold tracking-tight">Today&apos;s routine</span>
+
+            {/* text block */}
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-base font-semibold tracking-tight">Today's routine</span>
+
                 {activeRoutine && (
-                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-medium border ${
-                    activeRoutine.type === 'ongoing' 
-                      ? 'bg-destructive/12 text-destructive border-destructive/20 animate-pulse' 
-                      : 'bg-primary/12 text-primary border-primary/20'
-                  }`}>
-                    <span className="relative flex h-1.5 w-1.5 shrink-0">
-                      {activeRoutine.type === 'ongoing' && (
-                        <span className="absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping bg-destructive"></span>
-                      )}
-                      <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${activeRoutine.type === 'ongoing' ? 'bg-destructive' : 'bg-primary'}`}></span>
-                    </span>
-                    {activeRoutine.type === 'ongoing' 
-                      ? `Ongoing: ${activeRoutine.item.title} (${formatMinutes(activeRoutine.remaining!)} left)`
-                      : `Next: ${activeRoutine.item.title} (in ${formatMinutes(activeRoutine.countdown!)})`
-                    }
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tracking-wide ${
+                      activeRoutine.type === 'ongoing'
+                        ? 'border-red-500/30 bg-red-500/15 text-red-400'
+                        : 'border-primary/30 bg-primary/12 text-primary'
+                    }`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${activeRoutine.type === 'ongoing' ? 'bg-red-400 animate-pulse' : 'bg-primary'}`} />
+                    {activeRoutine.type === 'ongoing'
+                      ? `${activeRoutine.item.title} · ${formatMinutes(activeRoutine.remaining!)} left`
+                      : `Next: ${activeRoutine.item.title} in ${formatMinutes(activeRoutine.countdown!)}`}
                   </span>
                 )}
               </div>
-              <p className="text-sm text-muted-foreground">{todayLabel} - {todaySchedule.length} item{todaySchedule.length === 1 ? '' : 's'}</p>
+              <p className="text-sm text-muted-foreground">
+                {todayLabel}
+                <span className="mx-1.5 text-muted-foreground/40">·</span>
+                <span className="font-medium text-foreground/70">{todaySchedule.length} {todaySchedule.length === 1 ? 'item' : 'items'}</span>
+              </p>
             </div>
-            <ChevronDown className={`h-4 w-4 text-muted-foreground transition ${routineOpen ? 'rotate-180' : ''}`} />
+
+            <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${routineOpen ? 'rotate-180' : ''}`} />
           </button>
+
+          {/* expanded schedule */}
           {routineOpen && (
-            <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-4 space-y-2">
               {todaySchedule.length === 0 ? (
-                <div className="rounded-2xl border border-border bg-muted/30 p-3 text-sm text-muted-foreground">No class or event today.</div>
-              ) : todaySchedule.map((item) => (
-                <div key={item._id} className="rounded-2xl border border-border bg-muted/30 p-3">
-                  <div className="flex items-start gap-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-base font-semibold tracking-tight">{item.title}</p>
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/12 px-2.5 py-1 text-xs font-semibold text-primary">
-                          <Clock className="h-3.5 w-3.5" /> {item.startTime || '--:--'} - {item.endTime || '--:--'}
-                        </span>
-                        {item.room && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/15 px-2.5 py-1 text-xs font-semibold text-sky-300">
-                            <MapPin className="h-3.5 w-3.5" /> Room {item.room}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">
+                  No classes or events scheduled for today 🎉
                 </div>
-              ))}
+              ) : (
+                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                  {todaySchedule.map((item) => {
+                    const [h, m] = currentTimeStr.split(':').map(Number);
+                    const cur = h * 60 + m;
+                    const parse = (t: string) => { const [hh, mm] = t.split(':').map(Number); return hh * 60 + mm; };
+                    const isNow = cur >= parse(item.startTime) && cur <= parse(item.endTime);
+                    return (
+                      <div
+                        key={item._id}
+                        className={`relative overflow-hidden rounded-2xl border p-3.5 transition-all ${
+                          isNow
+                            ? 'border-red-500/30 bg-red-500/8 shadow-sm shadow-red-500/10'
+                            : 'border-border bg-muted/20 hover:bg-muted/35'
+                        }`}
+                      >
+                        {isNow && <div className="absolute left-0 top-0 h-full w-0.5 rounded-r bg-red-500" />}
+                        <p className={`truncate text-sm font-semibold ${isNow ? 'text-red-300' : ''}`}>{item.title}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                            <Clock className="h-3 w-3" /> {item.startTime} – {item.endTime}
+                          </span>
+                          {item.room && (
+                            <span className="inline-flex items-center gap-1 rounded-lg bg-sky-500/12 px-2 py-0.5 text-xs font-medium text-sky-400">
+                              <MapPin className="h-3 w-3" /> {item.room}
+                            </span>
+                          )}
+                          {isNow && (
+                            <span className="rounded-lg bg-red-500/20 px-2 py-0.5 text-xs font-semibold text-red-400">Live</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <section className="surface overflow-hidden rounded-3xl p-4 sm:p-5">
         <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-center">
