@@ -100,7 +100,7 @@ function TOTPCard({ item, onEdit, onDelete }: { item: AuthenticatorItem; onEdit:
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-1 rounded-md border border-border bg-background p-0.5 shadow-sm sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+            <div className="flex items-center gap-1 rounded-md border border-border bg-background/95 p-0.5 shadow-sm">
               <Button variant="ghost" size="icon" className="w-8 h-8 rounded-sm text-muted-foreground hover:text-primary" onClick={onEdit} aria-label={`Edit ${item.name}`} title="Edit">
                 <Edit3 className="w-4 h-4" />
               </Button>
@@ -360,7 +360,7 @@ export default function PasswordsPage() {
       {activeTab === 'passwords' && (
         <>
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <SearchInput value={search} onChange={setSearch} placeholder="Search passwords, URLs..." />
+            <SearchInput value={search} onChange={setSearch} placeholder="Search titles, URLs, descriptions, tags..." />
             <Select value={category} onChange={setCategory} options={catOptions} className="w-full sm:w-48" />
           </div>
 
@@ -387,7 +387,7 @@ export default function PasswordsPage() {
                             </a>
                           )}
                         </div>
-                        <div className="flex items-center gap-1 rounded-md border border-border bg-background p-0.5 shadow-sm sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+                        <div className="flex items-center gap-1 rounded-md border border-border bg-background/95 p-0.5 shadow-sm">
                           <Button variant="ghost" size="icon" className="w-8 h-8 rounded-sm text-muted-foreground hover:text-primary" onClick={() => openEdit(item)} aria-label={`Edit ${item.title}`} title="Edit">
                             <Edit3 className="w-4 h-4" />
                           </Button>
@@ -424,8 +424,11 @@ export default function PasswordsPage() {
                         </div>
                       </div>
                       {item.description && <p className="text-sm text-muted-foreground line-clamp-2 mt-2">{item.description}</p>}
-                      <div className="flex items-center gap-2 pt-2">
+                      <div className="flex flex-wrap items-center gap-2 pt-2">
                         <Badge variant="outline" className="text-xs">{categoryLabel(item.category, categories)}</Badge>
+                        {(item.tags || []).slice(0, 4).map(tag => (
+                          <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+                        ))}
                       </div>
                     </div>
                   </CardContent>
