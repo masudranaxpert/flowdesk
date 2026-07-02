@@ -1,5 +1,5 @@
 import { type ClipboardEvent, type DragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Bot, FileImage, ImageOff, MessageSquare, Paperclip, Save, Send, Settings, Sparkles, X } from 'lucide-react';
+import { Bot, CheckCircle2, ChevronDown, FileImage, ImageOff, MessageSquare, Paperclip, Save, Send, Settings, ShieldAlert, Sparkles, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { fileToAiFile, runAiChat, type AiFile, type AiModelConfig, type AiSettings, type ChatMessage, defaultAiSettings } from '../lib/ai';
@@ -32,11 +32,26 @@ function cleanHistoryMessages(messages: ChatMessage[]) {
 }
 
 type AiAction = {
-  operation: 'create' | 'update' | 'delete' | 'delete_many' | 'delete_all';
+  operation: 'create' | 'update' | 'update_many' | 'delete' | 'delete_many' | 'delete_all';
   resource: 'bookmarks' | 'notebooks' | 'codes' | 'questions' | 'routines' | 'categories' | 'passwords';
   id?: string;
   ids?: string[];
   data?: Record<string, any>;
+};
+
+type ActionBatchStatus = 'pending' | 'completed' | 'cancelled' | 'blocked';
+
+type ActionRejection = {
+  action: AiAction;
+  reason: string;
+};
+
+type ActionBatch = {
+  id: string;
+  status: ActionBatchStatus;
+  actions: AiAction[];
+  rejected: ActionRejection[];
+  createdAt: string;
 };
 
 type VaultContext = {
@@ -94,14 +109,18 @@ function normalizeActions(value: unknown): AiAction[] {
   return [];
 }
 
-function extractActions(text: string): AiAction[] {
-  const match = text.match(/```ACTION_JSON\s*([\s\S]*?)```/i);
-  if (!match) return [];
-  try {
-    return normalizeActions(JSON.parse(match[1]));
-  } catch {
-    return [];
+function extractActions(text: string) {
+  const matches = Array.from(text.matchAll(/```ACTION_JSON\s*([\s\S]*?)```/gi));
+  const actions: AiAction[] = [];
+  let malformed = 0;
+  for (const match of matches) {
+    try {
+      actions.push(...normalizeActions(JSON.parse(match[1])));
+    } catch {
+      malformed += 1;
+    }
   }
+  return { actions, malformed };
 }
 
 function hideActionBlock(text: string) {
@@ -177,13 +196,154 @@ function sanitizeActionData(resource: AiAction['resource'], data: Record<string,
   return next;
 }
 
+function normalizeComparable(value: unknown) {
+  return String(value ?? '').trim().toLowerCase();
+}
+
+function normalizeTime(value: unknown) {
+  const raw = String(value ?? '').trim();
+  if (/^\d:\d\d$/.test(raw)) return `0${raw}`;
+  return raw;
+}
+
+function compactRoutine(item: any) {
+  return {
+    id: item._id,
+    title: item.title,
+    subject: item.subject,
+    type: item.type,
+    dayOfWeek: item.dayOfWeek,
+    date: item.date,
+    startTime: item.startTime,
+    endTime: item.endTime,
+    room: item.room,
+    teacher: item.teacher,
+    repeatWeekly: item.repeatWeekly,
+  };
+}
+
+function actionLabel(action: AiAction) {
+  const data = action.data || {};
+  const target =
+    data.title ||
+    data.subject ||
+    data.name ||
+    data.url ||
+    action.id ||
+    action.ids?.join(', ') ||
+    action.resource;
+  return `${action.operation} ${action.resource}${target ? ` - ${String(target).slice(0, 90)}` : ''}`;
+}
+
+function actionStatusMeta(status: ActionBatchStatus) {
+  if (status === 'completed') return { label: 'Completed', className: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300', icon: CheckCircle2 };
+  if (status === 'cancelled') return { label: 'Cancelled', className: 'border-muted-foreground/20 bg-muted/50 text-muted-foreground', icon: X };
+  if (status === 'blocked') return { label: 'Blocked', className: 'border-destructive/25 bg-destructive/10 text-destructive', icon: ShieldAlert };
+  return { label: 'Pending approval', className: 'border-primary/25 bg-primary/10 text-primary', icon: ShieldAlert };
+}
+
+function actionRisk(action: AiAction) {
+  if (action.operation === 'delete_all') return 'High risk';
+  if (action.operation === 'delete_many') return `${action.ids?.length || 0} deletes`;
+  if (action.operation === 'delete') return 'Delete';
+  if (action.operation === 'update_many') return `${action.ids?.length || 0} updates`;
+  return action.operation === 'update' ? 'Update' : 'Create';
+}
+
+function hasDestructiveAction(actions: AiAction[]) {
+  return actions.some((action) => action.operation === 'delete' || action.operation === 'delete_many' || action.operation === 'delete_all');
+}
+
+function actionSummaries(actions: AiAction[]) {
+  const counts = new Map<string, number>();
+  for (const action of actions) {
+    const key = `${action.operation} ${action.resource}`;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  return Array.from(counts.entries()).map(([label, count]) => ({ label, count }));
+}
+
+function findVaultItem(action: AiAction, vault: VaultContext) {
+  const list = vault[resourceContextKey[action.resource]] || [];
+  const id = String(action.id || action.data?.id || action.data?._id || '').trim();
+  if (!id) return null;
+  return list.find((item) => String(item.id || item._id) === id) || null;
+}
+
+function displayValue(value: unknown) {
+  if (Array.isArray(value)) return value.join(', ');
+  if (typeof value === 'boolean') return value ? 'yes' : 'no';
+  if (value === undefined || value === null || value === '') return 'empty';
+  return String(value);
+}
+
+function actionDetails(action: AiAction, vault: VaultContext) {
+  if (action.operation === 'delete_all') return [`Will delete all ${action.resource}.`];
+  if (action.operation === 'delete_many') return [`Will delete ${action.ids?.length || 0} ${action.resource}.`];
+  if (action.operation === 'delete') return [`Will delete ID ${action.id}.`];
+  if (action.operation === 'update_many') {
+    const data = sanitizeActionData(action.resource, action.data || {}, action.operation);
+    const { id: _id, _id: _legacyId, ids: _ids, ...payload } = data;
+    const fields = Object.entries(payload)
+      .filter(([, value]) => value !== undefined)
+      .slice(0, 8)
+      .map(([key, value]) => `${key}: ${displayValue(value)}`);
+    return [`Will update ${action.ids?.length || 0} ${action.resource}.`, ...fields];
+  }
+
+  const data = sanitizeActionData(action.resource, action.data || {}, action.operation);
+  const { id: _id, _id: _legacyId, ...payload } = data;
+  const entries = Object.entries(payload).filter(([, value]) => value !== undefined);
+  if (action.operation === 'create') {
+    return entries.slice(0, 8).map(([key, value]) => `${key}: ${displayValue(value)}`);
+  }
+
+  const current = findVaultItem(action, vault);
+  if (!current) return entries.slice(0, 8).map(([key, value]) => `${key}: ${displayValue(value)}`);
+  const changes = entries
+    .filter(([key, value]) => displayValue(current[key]) !== displayValue(value))
+    .map(([key, value]) => `${key}: ${displayValue(current[key])} -> ${displayValue(value)}`);
+  return changes.length > 0 ? changes.slice(0, 10) : ['No visible field changes.'];
+}
+
+function resolveActionId(action: AiAction, list: any[]) {
+  const explicitId = String(action.id || action.data?.id || action.data?._id || '').trim();
+  if (explicitId) return explicitId;
+
+  const data = action.data || {};
+  let candidates = list;
+  const title = normalizeComparable(data.title || data.subject || data.name);
+  if (title) {
+    candidates = candidates.filter((item) => {
+      const itemTitle = normalizeComparable(item.title || item.subject || item.name);
+      const itemSubject = normalizeComparable(item.subject);
+      return itemTitle === title || itemSubject === title;
+    });
+  }
+
+  if (action.resource === 'routines') {
+    if (data.type !== undefined) candidates = candidates.filter((item) => normalizeComparable(item.type) === normalizeComparable(data.type));
+    if (data.dayOfWeek !== undefined) candidates = candidates.filter((item) => Number(item.dayOfWeek) === Number(data.dayOfWeek));
+    if (data.date !== undefined) candidates = candidates.filter((item) => normalizeComparable(item.date) === normalizeComparable(data.date));
+    if (data.startTime !== undefined) candidates = candidates.filter((item) => normalizeTime(item.startTime) === normalizeTime(data.startTime));
+    if (data.endTime !== undefined) candidates = candidates.filter((item) => normalizeTime(item.endTime) === normalizeTime(data.endTime));
+  }
+
+  if (candidates.length !== 1) return '';
+  return String(candidates[0].id || candidates[0]._id || '').trim();
+}
+
 function validateActions(actions: AiAction[], vault: VaultContext) {
   const valid: AiAction[] = [];
-  const rejected: AiAction[] = [];
+  const rejected: ActionRejection[] = [];
+
+  const reject = (action: AiAction, reason: string) => {
+    rejected.push({ action, reason });
+  };
 
   for (const action of actions) {
-    if (!['create', 'update', 'delete', 'delete_many', 'delete_all'].includes(action.operation) || !(action.resource in resourceContextKey)) {
-      rejected.push(action);
+    if (!['create', 'update', 'update_many', 'delete', 'delete_many', 'delete_all'].includes(action.operation) || !(action.resource in resourceContextKey)) {
+      reject(action, 'Unsupported operation or resource.');
       continue;
     }
 
@@ -194,34 +354,34 @@ function validateActions(actions: AiAction[], vault: VaultContext) {
 
     if (action.operation === 'delete_all') {
       if (action.data?.scope === 'all' || action.data?.confirm === 'all') valid.push(action);
-      else rejected.push(action);
+      else reject(action, 'delete_all requires explicit scope/confirm "all".');
       continue;
     }
 
-    if (action.operation === 'delete_many' || (action.operation === 'delete' && Array.isArray(action.ids))) {
+    if (action.operation === 'update_many' || action.operation === 'delete_many' || ((action.operation === 'update' || action.operation === 'delete') && Array.isArray(action.ids))) {
       const rawIds = action.ids || (Array.isArray(action.data?.ids) ? action.data.ids : []);
       const ids = Array.from(new Set(rawIds.map((id) => String(id).trim()).filter(Boolean)));
       const list = vault[resourceContextKey[action.resource]] || [];
       const existing = new Set(list.map((item) => String(item.id || item._id)));
       const validIds = ids.filter((id) => existing.has(id));
       if (validIds.length !== ids.length || validIds.length === 0) {
-        rejected.push(action);
+        reject(action, `Only ${validIds.length} of ${ids.length} target IDs exist in current data.`);
         continue;
       }
-      valid.push({ ...action, operation: 'delete_many', ids: validIds });
-      continue;
-    }
-
-    const actionId = String(action.id || action.data?.id || action.data?._id || '').trim();
-    if (!actionId) {
-      rejected.push(action);
+      valid.push({ ...action, operation: action.operation === 'delete' || action.operation === 'delete_many' ? 'delete_many' : 'update_many', ids: validIds });
       continue;
     }
 
     const list = vault[resourceContextKey[action.resource]] || [];
+    const actionId = resolveActionId(action, list);
+    if (!actionId) {
+      reject(action, 'Target ID was missing or ambiguous in current data.');
+      continue;
+    }
+
     const exists = list.some((item) => String(item.id || item._id) === actionId);
     if (!exists) {
-      rejected.push(action);
+      reject(action, `Target ID "${actionId}" was not found in current data.`);
       continue;
     }
 
@@ -242,6 +402,9 @@ export default function ChatbotPage() {
   const [sending, setSending] = useState(false);
   const [context, setContext] = useState('');
   const [pendingActions, setPendingActions] = useState<AiAction[]>([]);
+  const [pendingActionBatchId, setPendingActionBatchId] = useState('');
+  const [actionBatches, setActionBatches] = useState<ActionBatch[]>([]);
+  const [expandedActionBatchId, setExpandedActionBatchId] = useState('');
   const [selectedModelId, setSelectedModelId] = useState('');
   const [dragging, setDragging] = useState(false);
   const [writingAction, setWritingAction] = useState(false);
@@ -332,8 +495,29 @@ export default function ChatbotPage() {
     }
   }, []);
 
-  const refreshContext = useCallback(() => {
-    Promise.all([
+  const updateActionBatch = useCallback((id: string, patch: Partial<ActionBatch>) => {
+    if (!id) return;
+    setActionBatches((current) => current.map((batch) => batch.id === id ? { ...batch, ...patch } : batch));
+  }, []);
+
+  const addActionBatch = useCallback((batch: Omit<ActionBatch, 'id' | 'createdAt'>) => {
+    const id = crypto.randomUUID();
+    setActionBatches((current) => [
+      { ...batch, id, createdAt: new Date().toISOString() },
+      ...current,
+    ].slice(0, 8));
+    setExpandedActionBatchId(id);
+    return id;
+  }, []);
+
+  const cancelPendingActions = useCallback(() => {
+    if (pendingActionBatchId) updateActionBatch(pendingActionBatchId, { status: 'cancelled' });
+    setPendingActions([]);
+    setPendingActionBatchId('');
+  }, [pendingActionBatchId, updateActionBatch]);
+
+  const refreshContext = useCallback(async () => {
+    const [bookmarks, notes, codes, questions, routines, categories, passwords] = await Promise.all([
       api.bookmarks.list(),
       api.notebooks.list(),
       api.codes.list(),
@@ -341,41 +525,43 @@ export default function ChatbotPage() {
       api.routines.list(),
       api.categories.list(),
       api.passwords.list(),
-    ]).then(([bookmarks, notes, codes, questions, routines, categories, passwords]) => {
-      const fullContext = {
-        bookmarks: bookmarks.map((item: any) => ({ id: item._id, title: item.title, url: item.url, category: item.category, tags: item.tags })),
-        notes: notes.map((item: any) => ({ id: item._id, title: item.title, category: item.category, preview: item.content?.slice?.(0, 500) || '' })),
-        codes: codes.map((item: any) => ({ id: item._id, title: item.title, language: item.language, category: item.category, description: item.description })),
-        questions: questions.map((item: any) => ({ id: item._id, title: item.title, platform: item.platform, category: item.category, solved: item.isSolved })),
-        routines: routines.map((item: any) => ({ id: item._id, title: item.title, type: item.type, dayOfWeek: item.dayOfWeek, date: item.date, startTime: item.startTime, endTime: item.endTime, room: item.room, teacher: item.teacher })),
-        categories: categories.map((item: any) => ({ id: item._id, name: item.name, slug: item.slug, scope: item.scope })),
-        passwords: passwords.items ? passwords.items.map((item: any) => ({ id: item._id, title: item.title, url: item.url, username: item.username, password: item.password, category: item.category })) : passwords.map((item: any) => ({ id: item._id, title: item.title, url: item.url, username: item.username, password: item.password, category: item.category })),
-      };
-      const promptContext = {
-        bookmarks: fullContext.bookmarks.slice(0, 80),
-        notes: fullContext.notes.slice(0, 60),
-        codes: fullContext.codes.slice(0, 60),
-        questions: fullContext.questions.slice(0, 80),
-        routines: fullContext.routines.slice(0, 120),
-        categories: fullContext.categories.slice(0, 120),
-        passwords: fullContext.passwords.slice(0, 50),
-        actionIndex: {
-          bookmarks: fullContext.bookmarks.slice(0, 200).map(({ id, title }: any) => ({ id, title })),
-          notebooks: fullContext.notes.slice(0, 200).map(({ id, title }: any) => ({ id, title })),
-          codes: fullContext.codes.slice(0, 200).map(({ id, title }: any) => ({ id, title })),
-          questions: fullContext.questions.slice(0, 200).map(({ id, title }: any) => ({ id, title })),
-          routines: fullContext.routines.slice(0, 300).map(({ id, title, type }: any) => ({ id, title, type })),
-          categories: fullContext.categories.slice(0, 200).map(({ id, name, slug, scope }: any) => ({ id, title: name, slug, scope })),
-          passwords: fullContext.passwords.slice(0, 100).map(({ id, title }: any) => ({ id, title })),
-        },
-      };
-      setVaultContext(fullContext);
-      setContext(JSON.stringify(promptContext, null, 2));
-    }).catch(() => {});
+    ]);
+    const passwordItems = Array.isArray((passwords as any).items) ? (passwords as any).items : passwords;
+    const fullContext = {
+      bookmarks: bookmarks.map((item: any) => ({ id: item._id, title: item.title, url: item.url, category: item.category, tags: item.tags })),
+      notes: notes.map((item: any) => ({ id: item._id, title: item.title, category: item.category, preview: item.content?.slice?.(0, 500) || '' })),
+      codes: codes.map((item: any) => ({ id: item._id, title: item.title, language: item.language, category: item.category, description: item.description })),
+      questions: questions.map((item: any) => ({ id: item._id, title: item.title, platform: item.platform, category: item.category, solved: item.isSolved })),
+      routines: routines.map(compactRoutine),
+      categories: categories.map((item: any) => ({ id: item._id, name: item.name, slug: item.slug, scope: item.scope })),
+      passwords: passwordItems.map((item: any) => ({ id: item._id, title: item.title, url: item.url, username: item.username, password: item.password, category: item.category })),
+    };
+    const promptContext = {
+      bookmarks: fullContext.bookmarks.slice(0, 80),
+      notes: fullContext.notes.slice(0, 60),
+      codes: fullContext.codes.slice(0, 60),
+      questions: fullContext.questions.slice(0, 80),
+      routines: fullContext.routines.slice(0, 200),
+      categories: fullContext.categories.slice(0, 120),
+      passwords: fullContext.passwords.slice(0, 50),
+      actionIndex: {
+        bookmarks: fullContext.bookmarks.slice(0, 200).map(({ id, title }: any) => ({ id, title })),
+        notebooks: fullContext.notes.slice(0, 200).map(({ id, title }: any) => ({ id, title })),
+        codes: fullContext.codes.slice(0, 200).map(({ id, title }: any) => ({ id, title })),
+        questions: fullContext.questions.slice(0, 200).map(({ id, title }: any) => ({ id, title })),
+        routines: fullContext.routines.map(({ id, title, subject, type, dayOfWeek, date, startTime, endTime, room, teacher, repeatWeekly }: any) => ({ id, title, subject, type, dayOfWeek, date, startTime, endTime, room, teacher, repeatWeekly })),
+        categories: fullContext.categories.slice(0, 200).map(({ id, name, slug, scope }: any) => ({ id, title: name, slug, scope })),
+        passwords: fullContext.passwords.slice(0, 100).map(({ id, title }: any) => ({ id, title })),
+      },
+    };
+    const prompt = JSON.stringify(promptContext, null, 2);
+    setVaultContext(fullContext);
+    setContext(prompt);
+    return { vault: fullContext, context: prompt };
   }, []);
 
   useEffect(() => {
-    refreshContext();
+    refreshContext().catch(() => {});
   }, [refreshContext]);
 
   const enabledModels = useMemo(() => (settings.models || []).filter((model) => model.active), [settings.models]);
@@ -503,11 +689,12 @@ export default function ChatbotPage() {
     setMessages(next);
     setInput('');
     setFiles([]);
-    setPendingActions([]);
+    cancelPendingActions();
     setWritingAction(false);
     setSending(true);
     try {
-      const answer = await runAiChat(selectedRunSettings, [...messages, user], context, sentFiles, {
+      const freshContext = await refreshContext();
+      const answer = await runAiChat(selectedRunSettings, [...messages, user], freshContext.context, sentFiles, {
         onDelta: (delta) => {
           streamedAnswer += delta;
           const visible = hideActionBlock(streamedAnswer);
@@ -522,9 +709,25 @@ export default function ChatbotPage() {
         },
       });
       setWritingAction(false);
-      const actions = extractActions(answer);
-      const validation = validateActions(actions, vaultContext);
-      if (validation.valid.length > 0) setPendingActions(validation.valid);
+      const extracted = extractActions(answer);
+      const actions = extracted.actions;
+      const validation = validateActions(actions, freshContext.vault);
+      let batchId = '';
+      const malformedRejections: ActionRejection[] = Array.from({ length: extracted.malformed }, () => ({
+        action: { operation: 'create', resource: 'notebooks', data: { title: 'Malformed ACTION_JSON block' } },
+        reason: 'The model returned an action block that was not valid JSON, so it was not executed.',
+      }));
+      if (actions.length > 0 || malformedRejections.length > 0) {
+        batchId = addActionBatch({
+          status: validation.valid.length > 0 ? 'pending' : 'blocked',
+          actions: validation.valid,
+          rejected: [...validation.rejected, ...malformedRejections],
+        });
+      }
+      if (validation.valid.length > 0) {
+        setPendingActions(validation.valid);
+        setPendingActionBatchId(batchId);
+      }
       const finalContent = hideActionBlock(answer) || (
         validation.valid.length > 0
           ? `${validation.valid.length} action${validation.valid.length === 1 ? '' : 's'} ready. Please approve below.`
@@ -539,6 +742,9 @@ export default function ChatbotPage() {
       });
       if (validation.rejected.length > 0) {
         toast.error(`${validation.rejected.length} unsafe action${validation.rejected.length === 1 ? '' : 's'} blocked`);
+      }
+      if (extracted.malformed > 0) {
+        toast.error(`${extracted.malformed} malformed action block${extracted.malformed === 1 ? '' : 's'} blocked`);
       }
     } catch (error) {
       setWritingAction(false);
@@ -564,13 +770,15 @@ export default function ChatbotPage() {
       const validation = validateActions(pendingActions, vaultContext);
       if (validation.rejected.length > 0) {
         setPendingActions(validation.valid);
+        if (pendingActionBatchId) updateActionBatch(pendingActionBatchId, { status: validation.valid.length > 0 ? 'pending' : 'blocked', actions: validation.valid, rejected: validation.rejected });
+        if (validation.valid.length === 0) setPendingActionBatchId('');
         throw new Error(`${validation.rejected.length} unsafe action blocked because the target id was not found in your data`);
       }
       for (const action of validation.valid) {
         const { operation, resource, id, data = {} } = action;
         const cleanData = sanitizeActionData(resource, data, operation);
         const actionId = id || String(cleanData.id || cleanData._id || '');
-        const { id: _ignoredId, _id: _ignoredLegacyId, ...payload } = cleanData;
+        const { id: _ignoredId, _id: _ignoredLegacyId, ids: _ignoredIds, ...payload } = cleanData;
         const target = map[resource];
         if (!target) throw new Error(`Unsupported action: ${resource}`);
         if (operation === 'create') {
@@ -597,6 +805,9 @@ export default function ChatbotPage() {
         if (operation === 'delete_many') {
           for (const itemId of action.ids || []) await target.delete(itemId);
         }
+        if (operation === 'update_many') {
+          for (const itemId of action.ids || []) await target.update(itemId, payload);
+        }
         if (operation === 'update') {
           if (!actionId) throw new Error(`Update ${resource} needs id`);
           await target.update(actionId, payload);
@@ -607,8 +818,10 @@ export default function ChatbotPage() {
         }
       }
       setPendingActions([]);
+      if (pendingActionBatchId) updateActionBatch(pendingActionBatchId, { status: 'completed' });
+      setPendingActionBatchId('');
       toast.success(`${pendingActions.length} action${pendingActions.length === 1 ? '' : 's'} completed`);
-      refreshContext();
+      refreshContext().catch(() => {});
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Action failed');
     }
@@ -628,6 +841,9 @@ export default function ChatbotPage() {
       localStorage.removeItem(chatHistoryKey);
       setMessages([{ role: 'assistant', content: 'History cleared. Ask me anything.' }]);
       setPendingActions([]);
+      setPendingActionBatchId('');
+      setActionBatches([]);
+      setExpandedActionBatchId('');
       setWritingAction(false);
       toast.success('Chat history cleared');
     } catch (error) {
@@ -816,17 +1032,88 @@ export default function ChatbotPage() {
                       Drop image or file here
                     </div>
                   )}
-                  {pendingActions.length > 0 && (
-                    <div className="mb-3 rounded-2xl border border-primary/25 bg-primary/10 p-3">
-                      <p className="text-sm font-semibold">Tool call requested</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {pendingActions.length} action{pendingActions.length === 1 ? '' : 's'} waiting for approval
-                      </p>
-                      <pre className="mt-2 max-h-36 overflow-auto rounded-xl bg-background/70 p-2 text-xs">{JSON.stringify(pendingActions, null, 2)}</pre>
-                      <div className="mt-3 flex gap-2">
-                        <Button onClick={executeAction}>Approve</Button>
-                        <Button variant="outline" onClick={() => setPendingActions([])}>Cancel</Button>
-                      </div>
+                  {actionBatches.length > 0 && (
+                    <div className="mb-3 space-y-2">
+                      {actionBatches.map((batch) => {
+                        const meta = actionStatusMeta(batch.status);
+                        const StatusIcon = meta.icon;
+                        const totalActions = batch.actions.length + batch.rejected.length;
+                        const expanded = expandedActionBatchId === batch.id;
+                        return (
+                          <div key={batch.id} className={`rounded-2xl border p-3 ${meta.className}`}>
+                            <button
+                              type="button"
+                              className="flex w-full min-w-0 items-center gap-2 text-left"
+                              onClick={() => setExpandedActionBatchId(expanded ? '' : batch.id)}
+                            >
+                              <StatusIcon className="h-4 w-4 shrink-0" />
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-semibold">Tool actions - {meta.label}</p>
+                                <p className="truncate text-xs opacity-80">
+                                  {totalActions} action{totalActions === 1 ? '' : 's'}
+                                  {batch.rejected.length > 0 ? `, ${batch.rejected.length} unsafe blocked` : ''}
+                                </p>
+                              </div>
+                              <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                            </button>
+                            {expanded && (
+                              <div className="mt-3 space-y-3">
+                                {batch.actions.length > 0 && (
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {actionSummaries(batch.actions).map((summary) => (
+                                      <Badge key={summary.label} variant="secondary" className="rounded-full bg-background/70 text-foreground">
+                                        {summary.count} {summary.label}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
+                                {batch.actions.length > 0 && (
+                                  <div className="space-y-1.5">
+                                    {batch.actions.map((action, actionIndex) => (
+                                      <div key={`${batch.id}-valid-${actionIndex}`} className="rounded-xl bg-background/70 px-2 py-2 text-xs text-foreground">
+                                        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                                          <Badge variant="outline" className="h-5 rounded-full px-2 text-[10px]">{actionRisk(action)}</Badge>
+                                          <span className="min-w-0 flex-1 truncate font-semibold">{actionLabel(action)}</span>
+                                        </div>
+                                        <div className="mt-1.5 space-y-0.5 text-[11px] leading-4 text-muted-foreground">
+                                          {actionDetails(action, vaultContext).map((detail, detailIndex) => (
+                                            <p key={`${batch.id}-valid-${actionIndex}-detail-${detailIndex}`} className="truncate">{detail}</p>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                {batch.rejected.length > 0 && (
+                                  <div>
+                                    <p className="mb-1 text-xs font-semibold">Unsafe actions blocked</p>
+                                    <div className="space-y-1.5">
+                                      {batch.rejected.map((issue, issueIndex) => (
+                                        <div key={`${batch.id}-rejected-${issueIndex}`} className="rounded-xl bg-background/70 px-2 py-2 text-xs text-foreground">
+                                          <p className="font-semibold">{actionLabel(issue.action)}</p>
+                                          <p className="mt-1 text-[11px] text-muted-foreground">{issue.reason}</p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <pre className="mt-2 max-h-40 overflow-auto rounded-xl bg-background/70 p-2 text-xs text-foreground">{JSON.stringify(batch.rejected, null, 2)}</pre>
+                                  </div>
+                                )}
+                                {batch.actions.length > 0 && (
+                                  <pre className="max-h-40 overflow-auto rounded-xl bg-background/70 p-2 text-xs text-foreground">{JSON.stringify(batch.actions, null, 2)}</pre>
+                                )}
+                                {batch.status === 'pending' && pendingActionBatchId === batch.id && (
+                                  <div className="flex gap-2">
+                                    <Button onClick={executeAction}>
+                                      {hasDestructiveAction(batch.actions) ? 'Approve destructive action' : `Approve ${batch.actions.length} action${batch.actions.length === 1 ? '' : 's'}`}
+                                    </Button>
+                                    <Button variant="outline" onClick={cancelPendingActions}>Cancel</Button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                   <div className="rounded-3xl border border-border/70 bg-card/80 p-2 shadow-sm">

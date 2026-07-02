@@ -141,7 +141,16 @@ For deleting every item in a resource, use delete_all only when the user explici
 {"operation":"delete_all","resource":"routines","data":{"scope":"all"}}
 \`\`\`
 Allowed resources: bookmarks, notebooks, codes, questions, routines, categories, passwords.
-Allowed operations: create, update, delete, delete_many, delete_all. For update/delete/delete_many include exact existing ids from the App data context/actionIndex. For create, omit id.
+Allowed operations: create, update, update_many, delete, delete_many, delete_all. For update/update_many/delete/delete_many include exact existing ids from the App data context/actionIndex. For create, omit id.
+For bulk updates with the same payload, prefer one update_many action with exact ids and shared data:
+\`\`\`ACTION_JSON
+{"operation":"update_many","resource":"routines","ids":["existing-id-1","existing-id-2"],"data":{"room":"G1-00"}}
+\`\`\`
+For mixed bulk updates where each item needs different data, output 50+ update actions in the actions array when the user asked for many changes. Do not collapse mixed updates into one update action without ids.
+For routine updates, actionIndex.routines contains every available routine with id, title, subject, type, dayOfWeek, date, startTime, endTime, room, teacher, and repeatWeekly. Match routines using the PDF/user data plus title/subject and time/day/date, then include the exact id for each updated routine.
+If the user says to update all routines with the same title, include one update action for every matching existing routine id. If only some routines match the PDF rows, update only those exact matching ids.
+If a routine title appears many times and you cannot identify the exact existing ids from actionIndex, ask a clarifying question instead of producing ACTION_JSON.
+When an attached PDF or image contains routine data, use only rows you can read clearly. If room/day/time/title is uncertain, say which row is unclear and skip that action.
 Use delete_all only for explicit delete-all requests. Never use delete_all for vague cleanup requests.
 For category create/update, data.scope must be one of "bookmark", "notebook", "code", "question", or "all"; never omit category scope.
 Routine type must be only "class" or "event". Map meeting, personal, gym, reading, reminder, or task-like schedule items to "event" unless it is clearly a weekly class.
