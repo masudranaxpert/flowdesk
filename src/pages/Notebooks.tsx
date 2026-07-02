@@ -108,7 +108,7 @@ export default function NotebooksPage() {
 
       <div className="surface flex flex-col gap-3 rounded-3xl p-3 sm:flex-row">
         <div className="flex-1">
-          <SearchInput value={search} onChange={setSearch} placeholder="Search titles, notes, tags..." />
+          <SearchInput value={search} onChange={setSearch} placeholder="Search titles, notes, categories, tags..." />
         </div>
         <Select value={category} onChange={setCategory} options={categoryOptions} className="sm:w-40" />
       </div>

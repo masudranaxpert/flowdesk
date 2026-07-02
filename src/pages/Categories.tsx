@@ -98,7 +98,7 @@ export default function CategoriesPage() {
       <PageHeader
         title="Categories"
         eyebrow="Organization"
-        description="Create your own categories for links, research, notes, code, and Q&A. They will appear in filters and forms."
+        description="Create your own categories for links, research, notes, code, Q&A, and passwords. They will appear in filters and forms."
       />
 
       <Card className="rounded-3xl">
@@ -128,7 +128,7 @@ export default function CategoriesPage() {
         <EmptyState
           icon={<Tags className="h-6 w-6" />}
           title={debouncedSearch ? 'No matching categories' : 'No custom categories'}
-          description={debouncedSearch ? 'Try a different category name or slug.' : 'Create categories once and use them across bookmarks, notes, code snippets and questions.'}
+          description={debouncedSearch ? 'Try a different category name or slug.' : 'Create categories once and use them across bookmarks, notes, code snippets, questions, and passwords.'}
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

@@ -28,35 +28,35 @@ const resources = {
     table: 'bookmarks',
     columns: ['url', 'title', 'description', 'favicon', 'tags', 'category', 'isFavorite'],
     defaults: { description: '', favicon: '', tags: [], category: 'general', isFavorite: false },
-    search: ['title', 'url', 'description', 'tags'],
+    search: ['title', 'url', 'description', 'category', 'tags'],
     sort: 'createdAt DESC',
   },
   notebooks: {
     table: 'notebooks',
     columns: ['title', 'content', 'tags', 'category', 'isPinned'],
     defaults: { content: '', tags: [], category: 'general', isPinned: false },
-    search: ['title', 'content', 'tags'],
+    search: ['title', 'content', 'category', 'tags'],
     sort: 'isPinned DESC, updatedAt DESC',
   },
   passwords: {
     table: 'passwords',
     columns: ['title', 'url', 'username', 'password', 'description', 'category', 'tags'],
     defaults: { url: '', username: '', password: '', description: '', category: 'general', tags: [] },
-    search: ['title', 'url', 'username', 'description', 'tags'],
+    search: ['title', 'url', 'username', 'description', 'category', 'tags'],
     sort: 'createdAt DESC',
   },
   codes: {
     table: 'codes',
     columns: ['title', 'code', 'language', 'description', 'category', 'tags', 'attachments', 'isFavorite'],
     defaults: { language: 'cpp', description: '', category: 'general', tags: [], attachments: [], isFavorite: false },
-    search: ['title', 'code', 'description', 'tags', 'attachments'],
+    search: ['title', 'code', 'language', 'description', 'category', 'tags', 'attachments'],
     sort: 'createdAt DESC',
   },
   questions: {
     table: 'questions',
     columns: ['title', 'problem', 'solution', 'code', 'language', 'difficulty', 'platform', 'category', 'tags', 'isSolved', 'link'],
     defaults: { problem: '', solution: '', code: '', language: 'cpp', difficulty: 'medium', platform: 'codeforces', category: 'general', tags: [], isSolved: false, link: '' },
-    search: ['title', 'problem', 'solution', 'code', 'link', 'tags'],
+    search: ['title', 'problem', 'solution', 'code', 'language', 'difficulty', 'platform', 'category', 'link', 'tags'],
     sort: 'createdAt DESC',
   },
   categories: {
@@ -129,7 +129,7 @@ function slugify(value) {
 
 function normalizeCategoryScope(value) {
   const raw = String(value || '').trim().toLowerCase();
-  if (['all', 'bookmark', 'notebook', 'code', 'question'].includes(raw)) return raw;
+  if (['all', 'bookmark', 'notebook', 'code', 'question', 'password'].includes(raw)) return raw;
   if (['bookmarks', 'link', 'links'].includes(raw)) return 'bookmark';
   if (['notebooks', 'note', 'notes'].includes(raw)) return 'notebook';
   if (['codes', 'codebook', 'snippet', 'snippets'].includes(raw)) return 'code';
@@ -145,6 +145,7 @@ function categoryScopeAliases(scope) {
     notebook: ['notebook', 'notebooks', 'note', 'notes'],
     code: ['code', 'codes', 'codebook', 'snippet', 'snippets'],
     question: ['question', 'questions', 'qa', 'q&a', 'problem', 'problems'],
+    password: ['password', 'passwords', 'secret', 'secrets', 'credential', 'credentials'],
   };
   return aliases[canonical] || [canonical];
 }
@@ -1042,22 +1043,22 @@ export default async function handler(req, res) {
       const uid = userId(user);
       const term = like(q);
       const rows = await d1Query(`
-        (SELECT 'bookmarks' AS type, id, title, url AS subtitle FROM bookmarks WHERE userId = ? AND (title LIKE ? OR url LIKE ? OR description LIKE ? OR tags LIKE ? OR EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(tags) THEN tags ELSE '[]' END) WHERE json_each.value LIKE ?)) ORDER BY createdAt DESC LIMIT 5)
+        (SELECT 'bookmarks' AS type, id, title, url AS subtitle FROM bookmarks WHERE userId = ? AND (title LIKE ? OR url LIKE ? OR description LIKE ? OR category LIKE ? OR tags LIKE ? OR EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(tags) THEN tags ELSE '[]' END) WHERE json_each.value LIKE ?)) ORDER BY createdAt DESC LIMIT 5)
         UNION ALL
-        (SELECT 'notebooks' AS type, id, title, category AS subtitle FROM notebooks WHERE userId = ? AND (title LIKE ? OR content LIKE ? OR tags LIKE ? OR EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(tags) THEN tags ELSE '[]' END) WHERE json_each.value LIKE ?)) ORDER BY updatedAt DESC LIMIT 5)
+        (SELECT 'notebooks' AS type, id, title, category AS subtitle FROM notebooks WHERE userId = ? AND (title LIKE ? OR content LIKE ? OR category LIKE ? OR tags LIKE ? OR EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(tags) THEN tags ELSE '[]' END) WHERE json_each.value LIKE ?)) ORDER BY updatedAt DESC LIMIT 5)
         UNION ALL
-        (SELECT 'codes' AS type, id, title, language AS subtitle FROM codes WHERE userId = ? AND (title LIKE ? OR code LIKE ? OR description LIKE ? OR tags LIKE ? OR EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(tags) THEN tags ELSE '[]' END) WHERE json_each.value LIKE ?) OR attachments LIKE ? OR EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(attachments) THEN attachments ELSE '[]' END) WHERE json_each.value LIKE ?)) ORDER BY createdAt DESC LIMIT 5)
+        (SELECT 'codes' AS type, id, title, language AS subtitle FROM codes WHERE userId = ? AND (title LIKE ? OR code LIKE ? OR language LIKE ? OR description LIKE ? OR category LIKE ? OR tags LIKE ? OR EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(tags) THEN tags ELSE '[]' END) WHERE json_each.value LIKE ?) OR attachments LIKE ? OR EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(attachments) THEN attachments ELSE '[]' END) WHERE json_each.value LIKE ?)) ORDER BY createdAt DESC LIMIT 5)
         UNION ALL
-        (SELECT 'questions' AS type, id, title, platform AS subtitle FROM questions WHERE userId = ? AND (title LIKE ? OR problem LIKE ? OR solution LIKE ? OR code LIKE ? OR link LIKE ? OR tags LIKE ? OR EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(tags) THEN tags ELSE '[]' END) WHERE json_each.value LIKE ?)) ORDER BY createdAt DESC LIMIT 5)
+        (SELECT 'questions' AS type, id, title, platform AS subtitle FROM questions WHERE userId = ? AND (title LIKE ? OR problem LIKE ? OR solution LIKE ? OR code LIKE ? OR language LIKE ? OR difficulty LIKE ? OR platform LIKE ? OR category LIKE ? OR link LIKE ? OR tags LIKE ? OR EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(tags) THEN tags ELSE '[]' END) WHERE json_each.value LIKE ?)) ORDER BY createdAt DESC LIMIT 5)
         UNION ALL
         (SELECT 'files' AS type, id, name AS title, mimeType AS subtitle FROM uploaded_files WHERE userId = ? AND (name LIKE ? OR mimeType LIKE ?) ORDER BY createdAt DESC LIMIT 5)
         UNION ALL
         (SELECT 'expenses' AS type, id, title, category AS subtitle FROM expenses WHERE userId = ? AND (title LIKE ? OR category LIKE ? OR notes LIKE ?) ORDER BY date DESC LIMIT 5)
       `, [
+        uid, term, term, term, term, term, term,
         uid, term, term, term, term, term,
-        uid, term, term, term, term,
-        uid, term, term, term, term, term, term, term,
-        uid, term, term, term, term, term, term, term,
+        uid, term, term, term, term, term, term, term, term, term,
+        uid, term, term, term, term, term, term, term, term, term, term, term,
         uid, term, term,
         uid, term, term, term,
       ]);

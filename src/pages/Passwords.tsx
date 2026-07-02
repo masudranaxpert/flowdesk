@@ -196,15 +196,14 @@ export default function PasswordsPage() {
       const p = { page: String(page), limit: String(PAGE_SIZE), search: debouncedSearch, category: category === 'all' ? '' : category };
       const [res, catRes] = await Promise.all([
         api.passwords.list(p),
-        api.categories.list().catch(() => ({ items: [] }))
+        api.categories.list({ scope: 'password' }).catch(() => ({ items: [] }))
       ]);
       setItems(res.items || []);
       setTotal(res.total || 0);
       listCache[cacheKey] = { items: res.items || [], total: res.total || 0 };
-      if (catRes.items) {
-        const cats = [fallbackCategory, ...catRes.items.filter((c: Category) => c.scope === 'all' || c.scope === 'password' || c.scope === 'passwords')];
-        setCategories(cats);
-      }
+      const categoryItems = Array.isArray(catRes) ? catRes : (catRes.items || []);
+      const cats = categoryItems.filter((c: Category) => ['all', 'password', 'passwords'].includes(String(c.scope || '').toLowerCase()));
+      setCategories([fallbackCategory, ...cats]);
     } catch (e: any) {
       toast.error(e.message || 'Failed to load passwords');
     } finally {
@@ -360,7 +359,7 @@ export default function PasswordsPage() {
       {activeTab === 'passwords' && (
         <>
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <SearchInput value={search} onChange={setSearch} placeholder="Search titles, URLs, descriptions, tags..." />
+            <SearchInput value={search} onChange={setSearch} placeholder="Search titles, URLs, descriptions, categories, tags..." />
             <Select value={category} onChange={setCategory} options={catOptions} className="w-full sm:w-48" />
           </div>
 
