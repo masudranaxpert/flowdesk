@@ -235,6 +235,13 @@ function actionLabel(action: AiAction) {
   return `${action.operation} ${action.resource}${target ? ` - ${String(target).slice(0, 90)}` : ''}`;
 }
 
+function actionLabelWithContext(action: AiAction, vault: VaultContext) {
+  const current = findVaultItem(action, vault);
+  const title = current?.title || current?.subject || current?.name;
+  if (!title) return actionLabel(action);
+  return `${action.operation} ${action.resource} - ${String(title).slice(0, 90)}`;
+}
+
 function actionStatusMeta(status: ActionBatchStatus) {
   if (status === 'completed') return { label: 'Completed', className: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300', icon: CheckCircle2 };
   if (status === 'cancelled') return { label: 'Cancelled', className: 'border-muted-foreground/20 bg-muted/50 text-muted-foreground', icon: X };
@@ -1039,8 +1046,9 @@ export default function ChatbotPage() {
                         const StatusIcon = meta.icon;
                         const totalActions = batch.actions.length + batch.rejected.length;
                         const expanded = expandedActionBatchId === batch.id;
+                        const pending = batch.status === 'pending' && pendingActionBatchId === batch.id;
                         return (
-                          <div key={batch.id} className={`rounded-2xl border p-3 ${meta.className}`}>
+                          <div key={batch.id} className={`max-h-[46vh] overflow-hidden rounded-2xl border p-3 ${meta.className}`}>
                             <button
                               type="button"
                               className="flex w-full min-w-0 items-center gap-2 text-left"
@@ -1056,8 +1064,16 @@ export default function ChatbotPage() {
                               </div>
                               <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
                             </button>
+                            {pending && (
+                              <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                                <Button className="h-auto min-h-9 min-w-0 whitespace-normal py-2 text-xs sm:text-sm" onClick={executeAction}>
+                                  {hasDestructiveAction(batch.actions) ? 'Approve destructive action' : `Approve ${batch.actions.length}`}
+                                </Button>
+                                <Button variant="outline" className="h-auto min-h-9 min-w-0 whitespace-normal py-2 text-xs sm:text-sm" onClick={cancelPendingActions}>Cancel</Button>
+                              </div>
+                            )}
                             {expanded && (
-                              <div className="mt-3 space-y-3">
+                              <div className="mt-3 max-h-[34vh] space-y-3 overflow-y-auto pr-1">
                                 {batch.actions.length > 0 && (
                                   <div className="flex flex-wrap gap-1.5">
                                     {actionSummaries(batch.actions).map((summary) => (
@@ -1073,11 +1089,11 @@ export default function ChatbotPage() {
                                       <div key={`${batch.id}-valid-${actionIndex}`} className="rounded-xl bg-background/70 px-2 py-2 text-xs text-foreground">
                                         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                                           <Badge variant="outline" className="h-5 rounded-full px-2 text-[10px]">{actionRisk(action)}</Badge>
-                                          <span className="min-w-0 flex-1 truncate font-semibold">{actionLabel(action)}</span>
+                                          <span className="min-w-0 flex-1 break-words font-semibold">{actionLabelWithContext(action, vaultContext)}</span>
                                         </div>
                                         <div className="mt-1.5 space-y-0.5 text-[11px] leading-4 text-muted-foreground">
                                           {actionDetails(action, vaultContext).map((detail, detailIndex) => (
-                                            <p key={`${batch.id}-valid-${actionIndex}-detail-${detailIndex}`} className="truncate">{detail}</p>
+                                            <p key={`${batch.id}-valid-${actionIndex}-detail-${detailIndex}`} className="break-words">{detail}</p>
                                           ))}
                                         </div>
                                       </div>
@@ -1090,24 +1106,22 @@ export default function ChatbotPage() {
                                     <div className="space-y-1.5">
                                       {batch.rejected.map((issue, issueIndex) => (
                                         <div key={`${batch.id}-rejected-${issueIndex}`} className="rounded-xl bg-background/70 px-2 py-2 text-xs text-foreground">
-                                          <p className="font-semibold">{actionLabel(issue.action)}</p>
+                                          <p className="break-words font-semibold">{actionLabelWithContext(issue.action, vaultContext)}</p>
                                           <p className="mt-1 text-[11px] text-muted-foreground">{issue.reason}</p>
                                         </div>
                                       ))}
                                     </div>
-                                    <pre className="mt-2 max-h-40 overflow-auto rounded-xl bg-background/70 p-2 text-xs text-foreground">{JSON.stringify(batch.rejected, null, 2)}</pre>
+                                    <details className="mt-2 rounded-xl bg-background/70 p-2 text-xs text-foreground">
+                                      <summary className="cursor-pointer font-semibold">Raw blocked JSON</summary>
+                                      <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words">{JSON.stringify(batch.rejected, null, 2)}</pre>
+                                    </details>
                                   </div>
                                 )}
                                 {batch.actions.length > 0 && (
-                                  <pre className="max-h-40 overflow-auto rounded-xl bg-background/70 p-2 text-xs text-foreground">{JSON.stringify(batch.actions, null, 2)}</pre>
-                                )}
-                                {batch.status === 'pending' && pendingActionBatchId === batch.id && (
-                                  <div className="flex gap-2">
-                                    <Button onClick={executeAction}>
-                                      {hasDestructiveAction(batch.actions) ? 'Approve destructive action' : `Approve ${batch.actions.length} action${batch.actions.length === 1 ? '' : 's'}`}
-                                    </Button>
-                                    <Button variant="outline" onClick={cancelPendingActions}>Cancel</Button>
-                                  </div>
+                                  <details className="rounded-xl bg-background/70 p-2 text-xs text-foreground">
+                                    <summary className="cursor-pointer font-semibold">Raw action JSON</summary>
+                                    <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words">{JSON.stringify(batch.actions, null, 2)}</pre>
+                                  </details>
                                 )}
                               </div>
                             )}
