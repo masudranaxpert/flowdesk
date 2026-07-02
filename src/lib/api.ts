@@ -1,4 +1,4 @@
-import type { AiSetting, Bookmark, Budget, Category, CodeSnippet, Expense, Notebook, PasswordItem, Question, RoutineItem, Stats, UploadedFile } from '../types';
+import type { AiSetting, AuthenticatorItem, Bookmark, Budget, Category, CodeSnippet, Expense, Notebook, PasswordItem, Question, RoutineItem, Stats, UploadedFile } from '../types';
 
 import { Capacitor } from '@capacitor/core';
 
@@ -56,6 +56,12 @@ export const api = {
     create: (data: Partial<PasswordItem>) => request<PasswordItem>('/passwords', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: Partial<PasswordItem>) => request<PasswordItem>(`/passwords/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: string) => request<void>(`/passwords/${id}`, { method: 'DELETE' }),
+  },
+  authenticators: {
+    list: (params?: Record<string, string>) => request<any>(`/authenticators${qs(params)}`),
+    create: (data: Partial<AuthenticatorItem>) => request<AuthenticatorItem>('/authenticators', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<AuthenticatorItem>) => request<AuthenticatorItem>(`/authenticators/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => request<void>(`/authenticators/${id}`, { method: 'DELETE' }),
   },
   bookmarks: {
     list: (params?: Record<string, string>) => request<any>(`/bookmarks${qs(params)}`),

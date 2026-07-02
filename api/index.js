@@ -94,6 +94,13 @@ const resources = {
     search: ['name', 'mimeType'],
     sort: 'createdAt DESC',
   },
+  authenticators: {
+    table: 'authenticators',
+    columns: ['name', 'secret', 'issuer', 'account', 'digits', 'period'],
+    defaults: { issuer: '', account: '', digits: 6, period: 30 },
+    search: ['name', 'issuer', 'account'],
+    sort: 'name ASC',
+  },
 };
 
 function userId(user) {
