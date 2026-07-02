@@ -164,9 +164,20 @@ export default function RoutinePage() {
 
   useEffect(() => {
     load();
-    if (Capacitor.isNativePlatform()) {
-      LocalNotifications.requestPermissions();
-    }
+    const initNotifications = async () => {
+      await LocalNotifications.requestPermissions();
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const status = await LocalNotifications.checkExactNotificationSetting();
+          if (status.exact_alarm !== 'granted') {
+            await LocalNotifications.changeExactNotificationSetting();
+          }
+        } catch (e) {
+          console.error('Error checking exact alarm permission:', e);
+        }
+      }
+    };
+    initNotifications();
   }, [load]);
 
   useEffect(() => {
