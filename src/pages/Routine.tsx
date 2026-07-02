@@ -118,14 +118,22 @@ const syncNotifications = async (items: RoutineItem[]) => {
 
     if (item.repeatWeekly) {
       const weekday = item.dayOfWeek + 1;
-      notifications.push({ title: 'Class Reminder', body: `Your class ${item.title} starts now!`, id: idMain, schedule: { on: { weekday, hour: h, minute: m } } });
-      notifications.push({ title: 'Upcoming Class', body: `Your class ${item.title} starts in 10 minutes!`, id: idBefore, schedule: { on: { weekday, hour: beforeH, minute: beforeM } } });
+      const roomStr = item.room ? ` • 🏫 Room: ${item.room}` : '';
+      notifications.push({ title: '📚 Class Starting', body: `${item.title} starts now!${roomStr}`, id: idMain, schedule: { on: { weekday, hour: h, minute: m }, allowWhileIdle: true } });
+      notifications.push({ title: '⏳ Upcoming Class', body: `${item.title} starts in 10 minutes!${roomStr}`, id: idBefore, schedule: { on: { weekday, hour: beforeH, minute: beforeM }, allowWhileIdle: true } });
     } else if (item.date) {
       const [year, month, day] = item.date.split('-').map(Number);
       const mainDate = new Date(year, month - 1, day, h, m, 0);
       const beforeDate = new Date(year, month - 1, day, beforeH, beforeM, 0);
-      if (mainDate.getTime() > Date.now()) notifications.push({ title: 'Event Reminder', body: `Your event ${item.title} starts now!`, id: idMain, schedule: { at: mainDate } });
-      if (beforeDate.getTime() > Date.now()) notifications.push({ title: 'Upcoming Event', body: `Your event ${item.title} starts in 10 minutes!`, id: idBefore, schedule: { at: beforeDate } });
+      const dayBeforeDate = new Date(mainDate.getTime() - 24 * 60 * 60 * 1000);
+      const locStr = item.room ? ` • 📍 Loc: ${item.room}` : '';
+      
+      if (mainDate.getTime() > Date.now()) notifications.push({ title: '🎉 Event Starting', body: `${item.title} is starting now!${locStr}`, id: idMain, schedule: { at: mainDate, allowWhileIdle: true } });
+      if (beforeDate.getTime() > Date.now()) notifications.push({ title: '⏳ Upcoming Event', body: `${item.title} starts in 10 minutes!${locStr}`, id: idBefore, schedule: { at: beforeDate, allowWhileIdle: true } });
+      if (dayBeforeDate.getTime() > Date.now()) {
+        const idDayBefore = getHashId(item._id, 2);
+        notifications.push({ title: '📅 Tomorrow: Event', body: `${item.title} is scheduled for tomorrow at ${item.startTime}!${locStr}`, id: idDayBefore, schedule: { at: dayBeforeDate, allowWhileIdle: true } });
+      }
     }
   }
   if (notifications.length > 0) {
