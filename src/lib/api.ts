@@ -2,9 +2,9 @@ import type { AiSetting, Bookmark, Budget, Category, CodeSnippet, Expense, Noteb
 
 import { Capacitor } from '@capacitor/core';
 
-// For local development on Android, you might need your PC's IP address (e.g. http://192.168.x.x:8000/api)
+// For local development on Android, you might need your PC's IP address (e.g. http://192.168.x.x:5173/api)
 // For production, use your live domain (e.g. https://masud-rana.me/api)
-const BASE = Capacitor.isNativePlatform() ? 'http://127.0.0.1:8000/api' : '/api';
+const BASE = Capacitor.isNativePlatform() ? 'https://masud-rana.me/api' : '/api';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem('auth-token');
