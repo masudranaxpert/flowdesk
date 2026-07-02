@@ -15,6 +15,7 @@ const scopeOptions = [
   { value: 'notebook', label: 'Notebooks only' },
   { value: 'code', label: 'Code Book only' },
   { value: 'question', label: 'Q&A only' },
+  { value: 'password', label: 'Passwords only' },
   { value: 'all', label: 'All Sections' },
 ];
 const PAGE_SIZE = 12;
@@ -30,6 +31,7 @@ function scopeLabel(scope: Category['scope']) {
   if (['notebooks', 'note', 'notes'].includes(raw)) return 'notebook';
   if (['codes', 'codebook', 'snippet', 'snippets'].includes(raw)) return 'code';
   if (['questions', 'qa', 'q&a', 'problem', 'problems'].includes(raw)) return 'question';
+  if (['passwords', 'password', 'secret', 'secrets', 'credential', 'credentials'].includes(raw)) return 'password';
   return raw || 'bookmark';
 }
 
