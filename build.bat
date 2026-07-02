@@ -37,11 +37,21 @@ echo [6] Generating App Icons and Splash Screens...
 call npx @capacitor/assets generate --android
 
 echo.
+echo [7] Building Android APK...
+:: This compiles the Android project and generates the APK
+cd android
+call gradlew.bat assembleDebug
+cd ..
+
+echo.
+echo [8] Copying APK to root directory...
+copy /Y "android\app\build\outputs\apk\debug\app-debug.apk" "Bookmark.apk"
+
+echo.
 echo ==================================================
 echo SETUP COMPLETE!
-echo You can now run the app on your phone using:
+echo Bookmark.apk is now in your project root!
+echo You can also run the app on your phone via USB using:
 echo npx cap run android
-echo Or open it in Android Studio using:
-echo npx cap open android
 echo ==================================================
 pause
