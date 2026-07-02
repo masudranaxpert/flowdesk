@@ -192,7 +192,7 @@ export default function BookmarksPage() {
 
       <div className="surface flex flex-col gap-3 rounded-3xl p-3 sm:flex-row">
         <div className="flex-1">
-          <SearchInput value={search} onChange={setSearch} placeholder="Search titles, URLs, descriptions, tags..." />
+          <SearchInput value={search} onChange={setSearch} placeholder="Search titles, URLs, descriptions, categories, tags..." />
         </div>
         <Select value={favorite} onChange={setFavorite} options={favoriteOptions} className="sm:w-44" />
       </div>

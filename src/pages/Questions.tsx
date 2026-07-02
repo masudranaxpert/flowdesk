@@ -184,7 +184,7 @@ export default function QuestionsPage() {
 
       <div className="surface flex flex-col items-stretch gap-3 rounded-3xl p-3 sm:flex-row">
         <div className="flex-1 min-w-0">
-          <SearchInput value={search} onChange={setSearch} placeholder="Search questions, solutions, code, tags..." />
+          <SearchInput value={search} onChange={setSearch} placeholder="Search questions, solutions, code, categories, tags..." />
         </div>
         <div className="flex gap-2 flex-wrap sm:flex-nowrap">
           <Select value={difficulty} onChange={setDifficulty} options={difficultyOptions} className="w-full sm:w-32" />
