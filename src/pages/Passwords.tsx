@@ -4,7 +4,7 @@ import { api } from '../lib/api';
 import { PageHeader, EmptyState, Spinner, SearchInput, ConfirmDialog, FormField, TagInput, PaginationControls } from '../components/UI';
 import { Select } from '../components/Select';
 import Dialog from '../components/Dialog';
-import { formatDate, categoryLabel, copyToClipboard } from '../lib/utils';
+import { formatDate, categoryLabel } from '../lib/utils';
 import type { PasswordItem, Category } from '../types';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
@@ -95,8 +95,9 @@ export default function PasswordsPage() {
   };
 
   const handleCopy = (text: string, label: string) => {
-    copyToClipboard(text);
-    toast.success(`${label} copied to clipboard`);
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success(`${label} copied to clipboard`);
+    }).catch(() => toast.error(`Failed to copy ${label}`));
   };
 
   const openNew = () => {
@@ -175,10 +176,10 @@ export default function PasswordsPage() {
     <div className="space-y-6">
       <PageHeader 
         title="Password Manager" 
-        icon={Key} 
         description="Securely manage and group your passwords"
-        action={<Button onClick={openNew}><Plus className="w-4 h-4 mr-2" /> Add Password</Button>}
-      />
+      >
+        <Button onClick={openNew}><Plus className="w-4 h-4 mr-2" /> Add Password</Button>
+      </PageHeader>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <SearchInput value={search} onChange={setSearch} placeholder="Search passwords, URLs..." />
@@ -188,7 +189,7 @@ export default function PasswordsPage() {
       {loading && <Spinner />}
       
       {!loading && items.length === 0 && (
-        <EmptyState icon={Key} title="No passwords found" description="Add your first password to get started." action={<Button onClick={openNew}>Add Password</Button>} />
+        <EmptyState icon={<Key className="h-7 w-7" />} title="No passwords found" description="Add your first password to get started." action={<Button onClick={openNew}>Add Password</Button>} />
       )}
 
       {!loading && items.length > 0 && (
@@ -263,36 +264,34 @@ export default function PasswordsPage() {
         </div>
       )}
 
-      {total > PAGE_SIZE && <PaginationControls page={page} total={total} pageSize={PAGE_SIZE} setPage={setPage} />}
+      {total > PAGE_SIZE && <PaginationControls page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} />}
 
       <ConfirmDialog
-        isOpen={!!delId}
+        open={!!delId}
+        onOpenChange={(v: boolean) => { if (!v) setDelId(null); }}
         title="Delete Password"
         description="Are you sure you want to delete this password? This action cannot be undone."
         onConfirm={remove}
-        onCancel={() => setDelId(null)}
-        confirmText="Delete"
-        variant="danger"
       />
 
-      <Dialog isOpen={dialogOpen} onClose={() => setDialogOpen(false)} title={editing ? 'Edit Password' : 'Add Password'} size="lg">
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen} title={editing ? 'Edit Password' : 'Add Password'} description="">
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Title *" id="title">
+            <FormField label="Title *">
               <Input id="title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="e.g. Facebook, Gmail" autoFocus />
             </FormField>
             
-            <FormField label="URL (Optional)" id="url">
+            <FormField label="URL (Optional)">
               <Input id="url" value={form.url} onChange={e => setForm({ ...form, url: e.target.value })} placeholder="https://example.com" type="url" />
             </FormField>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Username / Email" id="username">
+            <FormField label="Username / Email">
               <Input id="username" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} placeholder="username or email" />
             </FormField>
 
-            <FormField label="Password *" id="password">
+            <FormField label="Password *">
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Input 
@@ -318,15 +317,15 @@ export default function PasswordsPage() {
             </FormField>
           </div>
 
-          <FormField label="Description (Optional)" id="description">
+          <FormField label="Description (Optional)">
             <Textarea id="description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Security questions, notes, etc." rows={3} />
           </FormField>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Category" id="category">
-              <Select id="category" value={form.category} onChange={val => setForm({ ...form, category: val })} options={formCatOptions} />
+            <FormField label="Category">
+              <Select value={form.category} onChange={val => setForm({ ...form, category: val })} options={formCatOptions} />
             </FormField>
-            <FormField label="Tags" id="tags">
+            <FormField label="Tags">
               <TagInput tags={form.tags} onChange={tags => setForm({ ...form, tags })} />
             </FormField>
           </div>
