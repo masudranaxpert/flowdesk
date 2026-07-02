@@ -40,6 +40,7 @@ echo.
 echo [7] Building Android APK...
 :: This compiles the Android project and generates the APK
 cd android
+set JAVA_HOME=C:\Program Files\Microsoft\jdk-21.0.10.7-hotspot
 call gradlew.bat assembleDebug
 cd ..
 

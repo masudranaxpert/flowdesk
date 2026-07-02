@@ -24,6 +24,18 @@ export interface PasswordItem {
   updatedAt: string;
 }
 
+export interface AuthenticatorItem {
+  _id: string;
+  name: string;
+  secret: string;
+  issuer: string;
+  account: string;
+  digits: number;
+  period: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Notebook {
   _id: string;
   title: string;

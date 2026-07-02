@@ -200,6 +200,11 @@ export async function ensureSchema() {
         type TEXT NOT NULL, itemId TEXT NOT NULL, createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL,
         UNIQUE(userId, type, itemId)
       );`),
+      d1Query(`CREATE TABLE IF NOT EXISTS authenticators (
+        id TEXT PRIMARY KEY, userId TEXT NOT NULL, name TEXT NOT NULL, secret TEXT NOT NULL,
+        issuer TEXT DEFAULT '', account TEXT DEFAULT '', digits INTEGER DEFAULT 6, period INTEGER DEFAULT 30,
+        createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL
+      );`),
     ]);
 
     await Promise.all([
