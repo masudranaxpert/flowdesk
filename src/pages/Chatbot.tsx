@@ -442,6 +442,7 @@ export default function ChatbotPage() {
   const [selectedModelId, setSelectedModelId] = useState('');
   const [dragging, setDragging] = useState(false);
   const [writingAction, setWritingAction] = useState(false);
+  const [executing, setExecuting] = useState(false);
   const [vaultContext, setVaultContext] = useState<VaultContext>(emptyVaultContext);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -664,11 +665,6 @@ export default function ChatbotPage() {
     if (selectedModelId && enabledModels.length > 0 && !enabledModels.some((model) => model.id === selectedModelId)) setSelectedModelId(enabledModels[0].id);
   }, [enabledModels, selectedModelId]);
 
-  const saveSettings = async () => {
-    await api.aiSettings.update(settings as any);
-    toast.success('AI settings saved to D1');
-  };
-
   const addModel = async () => {
     if (!draftModel.label.trim() || !draftModel.apiKey.trim() || !draftModel.model.trim()) return toast.error('Label, API key and model are required');
     const nextModel = { ...draftModel, id: crypto.randomUUID(), active: (settings.models || []).length === 0 };
@@ -718,6 +714,7 @@ export default function ChatbotPage() {
     });
     if (incoming.length === 0) return;
     if (!selectedModel?.multimodal) return toast.error('Selected model file/image support inactive');
+    if (incoming.length > 5) toast.error('Maximum 5 files can be attached at once');
     const converted = await Promise.all(incoming.slice(0, 5).map(fileToAiFile));
     setFiles((current) => {
       const next = [...current, ...converted].slice(0, 5);
@@ -842,6 +839,7 @@ export default function ChatbotPage() {
 
   const executeAction = async () => {
     if (pendingActions.length === 0) return;
+    setExecuting(true);
     const map: Record<string, any> = {
       bookmarks: api.bookmarks,
       notebooks: api.notebooks,
@@ -909,6 +907,8 @@ export default function ChatbotPage() {
       refreshContext().catch(() => {});
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Action failed');
+    } finally {
+      setExecuting(false);
     }
   };
 
@@ -1035,8 +1035,8 @@ export default function ChatbotPage() {
                   <Select
                     value={selectedModel?.id || ''}
                     onChange={setSelectedModelId}
-                    options={enabledModels.map((model) => ({ value: model.id, label: model.label || model.model }))}
-                    placeholder="Select active model"
+                    options={enabledModels.length > 0 ? enabledModels.map((model) => ({ value: model.id, label: model.label || model.model })) : []}
+                    placeholder={enabledModels.length > 0 ? "Select active model" : "No models configured"}
                   />
                 </div>
               </div>
@@ -1133,10 +1133,10 @@ export default function ChatbotPage() {
                                 </button>
                                 {pending && (
                                   <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                                    <Button className="h-auto min-h-9 min-w-0 whitespace-normal py-2 text-xs sm:text-sm" onClick={executeAction}>
+                                    <Button className="h-auto min-h-9 min-w-0 whitespace-normal py-2 text-xs sm:text-sm" aria-label="Approve actions" onClick={executeAction} disabled={executing}>
                                       {hasDestructiveAction(batch.actions) ? 'Approve destructive action' : `Approve ${batch.actions.length}`}
                                     </Button>
-                                    <Button variant="outline" className="h-auto min-h-9 min-w-0 whitespace-normal py-2 text-xs sm:text-sm" onClick={cancelPendingActions}>Cancel</Button>
+                                    <Button variant="outline" className="h-auto min-h-9 min-w-0 whitespace-normal py-2 text-xs sm:text-sm" aria-label="Cancel actions" onClick={cancelPendingActions} disabled={executing}>Cancel</Button>
                                   </div>
                                 )}
                                 {expanded && (
@@ -1280,7 +1280,7 @@ export default function ChatbotPage() {
               <Button variant="outline" className="w-full justify-start" onClick={clearHistory}>Clear chat history</Button>
               <Button variant="outline" className="w-full justify-start" onClick={() => setInput('Find my related bookmarks, notes, code and questions about: ')}>Find in my data</Button>
               <Button variant="outline" className="w-full justify-start" onClick={() => setInput('Create a routine/event plan from this text: ')}>Draft routine/event</Button>
-              <p className="text-xs leading-5 text-muted-foreground">Model profiles are saved in D1. Recent chat stays on this browser.</p>
+              <p className="text-xs leading-5 text-muted-foreground">Chat history synced to cloud. Model keys are saved in D1.</p>
             </CardContent>
           </Card>
         </div>
