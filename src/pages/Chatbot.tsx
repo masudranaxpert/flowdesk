@@ -940,7 +940,7 @@ export default function ChatbotPage() {
             onDragLeave={() => setDragging(false)}
             onDrop={dropFiles}
           >
-            <CardContent className="flex h-[calc(100vh-13rem)] lg:h-[74vh] min-h-[26rem] lg:min-h-[34rem] flex-col p-0">
+            <CardContent className="chat-shell flex min-h-[26rem] flex-col p-0">
               <div className="flex flex-col gap-2 border-b border-border/70 bg-card/50 p-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 items-center gap-2">
                   <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground">
@@ -963,8 +963,8 @@ export default function ChatbotPage() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto">
-                <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-3 py-5 sm:px-5">
+              <div className="chat-scroll min-h-0 flex-1 overflow-y-auto">
+                <div className="chat-scroll-content mx-auto flex min-h-full w-full max-w-3xl flex-col px-3 py-5 sm:px-5">
                   {messages.length <= 1 && (
                     <div className="mb-6 mt-auto text-center">
                       <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-primary/12 text-primary">
@@ -1027,107 +1027,109 @@ export default function ChatbotPage() {
                         )}
                       </div>
                     ))}
+                    {actionBatches.length > 0 && (
+                      <div className="flex justify-center">
+                        <div className="w-full max-w-[92%] space-y-2 sm:max-w-[82%]">
+                          {actionBatches.map((batch) => {
+                            const meta = actionStatusMeta(batch.status);
+                            const StatusIcon = meta.icon;
+                            const totalActions = batch.actions.length + batch.rejected.length;
+                            const expanded = expandedActionBatchId === batch.id;
+                            const pending = batch.status === 'pending' && pendingActionBatchId === batch.id;
+                            return (
+                              <div key={batch.id} className={`chat-action-panel overflow-hidden rounded-2xl border p-3 shadow-sm ${meta.className}`}>
+                                <button
+                                  type="button"
+                                  className="flex w-full min-w-0 items-center gap-2 text-left"
+                                  onClick={() => setExpandedActionBatchId(expanded ? '' : batch.id)}
+                                >
+                                  <StatusIcon className="h-4 w-4 shrink-0" />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="truncate text-sm font-semibold">Tool actions - {meta.label}</p>
+                                    <p className="truncate text-xs opacity-80">
+                                      {totalActions} action{totalActions === 1 ? '' : 's'}
+                                      {batch.rejected.length > 0 ? `, ${batch.rejected.length} unsafe blocked` : ''}
+                                    </p>
+                                  </div>
+                                  <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                                </button>
+                                {pending && (
+                                  <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                                    <Button className="h-auto min-h-9 min-w-0 whitespace-normal py-2 text-xs sm:text-sm" onClick={executeAction}>
+                                      {hasDestructiveAction(batch.actions) ? 'Approve destructive action' : `Approve ${batch.actions.length}`}
+                                    </Button>
+                                    <Button variant="outline" className="h-auto min-h-9 min-w-0 whitespace-normal py-2 text-xs sm:text-sm" onClick={cancelPendingActions}>Cancel</Button>
+                                  </div>
+                                )}
+                                {expanded && (
+                                  <div className="chat-action-panel-body chat-scroll mt-3 space-y-3 overflow-y-auto pr-1">
+                                    {batch.actions.length > 0 && (
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {actionSummaries(batch.actions).map((summary) => (
+                                          <Badge key={summary.label} variant="secondary" className="rounded-full bg-background/70 text-foreground">
+                                            {summary.count} {summary.label}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    )}
+                                    {batch.actions.length > 0 && (
+                                      <div className="space-y-1.5">
+                                        {batch.actions.map((action, actionIndex) => (
+                                          <div key={`${batch.id}-valid-${actionIndex}`} className="rounded-xl bg-background/70 px-2 py-2 text-xs text-foreground">
+                                            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                                              <Badge variant="outline" className="h-5 rounded-full px-2 text-[10px]">{actionRisk(action)}</Badge>
+                                              <span className="min-w-0 flex-1 break-words font-semibold">{actionLabelWithContext(action, vaultContext)}</span>
+                                            </div>
+                                            <div className="mt-1.5 space-y-0.5 text-[11px] leading-4 text-muted-foreground">
+                                              {actionDetails(action, vaultContext).map((detail, detailIndex) => (
+                                                <p key={`${batch.id}-valid-${actionIndex}-detail-${detailIndex}`} className="break-words">{detail}</p>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                    {batch.rejected.length > 0 && (
+                                      <div>
+                                        <p className="mb-1 text-xs font-semibold">Unsafe actions blocked</p>
+                                        <div className="space-y-1.5">
+                                          {batch.rejected.map((issue, issueIndex) => (
+                                            <div key={`${batch.id}-rejected-${issueIndex}`} className="rounded-xl bg-background/70 px-2 py-2 text-xs text-foreground">
+                                              <p className="break-words font-semibold">{actionLabelWithContext(issue.action, vaultContext)}</p>
+                                              <p className="mt-1 text-[11px] text-muted-foreground">{issue.reason}</p>
+                                            </div>
+                                          ))}
+                                        </div>
+                                        <details className="mt-2 rounded-xl bg-background/70 p-2 text-xs text-foreground">
+                                          <summary className="cursor-pointer font-semibold">Raw blocked JSON</summary>
+                                          <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words">{JSON.stringify(batch.rejected, null, 2)}</pre>
+                                        </details>
+                                      </div>
+                                    )}
+                                    {batch.actions.length > 0 && (
+                                      <details className="rounded-xl bg-background/70 p-2 text-xs text-foreground">
+                                        <summary className="cursor-pointer font-semibold">Raw action JSON</summary>
+                                        <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words">{JSON.stringify(batch.actions, null, 2)}</pre>
+                                      </details>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                     <div ref={bottomRef} />
                   </div>
                 </div>
               </div>
 
-              <div className="border-t border-border/70 bg-background/95 p-3">
+              <div className="chat-composer border-t border-border/70 bg-background/95 px-3 pt-3">
                 <div className="mx-auto w-full max-w-3xl">
                   {dragging && (
                     <div className="mb-3 rounded-2xl border border-dashed border-primary/50 bg-primary/10 p-4 text-center text-sm font-medium text-primary">
                       Drop image or file here
-                    </div>
-                  )}
-                  {actionBatches.length > 0 && (
-                    <div className="mb-3 space-y-2">
-                      {actionBatches.map((batch) => {
-                        const meta = actionStatusMeta(batch.status);
-                        const StatusIcon = meta.icon;
-                        const totalActions = batch.actions.length + batch.rejected.length;
-                        const expanded = expandedActionBatchId === batch.id;
-                        const pending = batch.status === 'pending' && pendingActionBatchId === batch.id;
-                        return (
-                          <div key={batch.id} className={`max-h-[46vh] overflow-hidden rounded-2xl border p-3 ${meta.className}`}>
-                            <button
-                              type="button"
-                              className="flex w-full min-w-0 items-center gap-2 text-left"
-                              onClick={() => setExpandedActionBatchId(expanded ? '' : batch.id)}
-                            >
-                              <StatusIcon className="h-4 w-4 shrink-0" />
-                              <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm font-semibold">Tool actions - {meta.label}</p>
-                                <p className="truncate text-xs opacity-80">
-                                  {totalActions} action{totalActions === 1 ? '' : 's'}
-                                  {batch.rejected.length > 0 ? `, ${batch.rejected.length} unsafe blocked` : ''}
-                                </p>
-                              </div>
-                              <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
-                            </button>
-                            {pending && (
-                              <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                                <Button className="h-auto min-h-9 min-w-0 whitespace-normal py-2 text-xs sm:text-sm" onClick={executeAction}>
-                                  {hasDestructiveAction(batch.actions) ? 'Approve destructive action' : `Approve ${batch.actions.length}`}
-                                </Button>
-                                <Button variant="outline" className="h-auto min-h-9 min-w-0 whitespace-normal py-2 text-xs sm:text-sm" onClick={cancelPendingActions}>Cancel</Button>
-                              </div>
-                            )}
-                            {expanded && (
-                              <div className="mt-3 max-h-[34vh] space-y-3 overflow-y-auto pr-1">
-                                {batch.actions.length > 0 && (
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {actionSummaries(batch.actions).map((summary) => (
-                                      <Badge key={summary.label} variant="secondary" className="rounded-full bg-background/70 text-foreground">
-                                        {summary.count} {summary.label}
-                                      </Badge>
-                                    ))}
-                                  </div>
-                                )}
-                                {batch.actions.length > 0 && (
-                                  <div className="space-y-1.5">
-                                    {batch.actions.map((action, actionIndex) => (
-                                      <div key={`${batch.id}-valid-${actionIndex}`} className="rounded-xl bg-background/70 px-2 py-2 text-xs text-foreground">
-                                        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                                          <Badge variant="outline" className="h-5 rounded-full px-2 text-[10px]">{actionRisk(action)}</Badge>
-                                          <span className="min-w-0 flex-1 break-words font-semibold">{actionLabelWithContext(action, vaultContext)}</span>
-                                        </div>
-                                        <div className="mt-1.5 space-y-0.5 text-[11px] leading-4 text-muted-foreground">
-                                          {actionDetails(action, vaultContext).map((detail, detailIndex) => (
-                                            <p key={`${batch.id}-valid-${actionIndex}-detail-${detailIndex}`} className="break-words">{detail}</p>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                                {batch.rejected.length > 0 && (
-                                  <div>
-                                    <p className="mb-1 text-xs font-semibold">Unsafe actions blocked</p>
-                                    <div className="space-y-1.5">
-                                      {batch.rejected.map((issue, issueIndex) => (
-                                        <div key={`${batch.id}-rejected-${issueIndex}`} className="rounded-xl bg-background/70 px-2 py-2 text-xs text-foreground">
-                                          <p className="break-words font-semibold">{actionLabelWithContext(issue.action, vaultContext)}</p>
-                                          <p className="mt-1 text-[11px] text-muted-foreground">{issue.reason}</p>
-                                        </div>
-                                      ))}
-                                    </div>
-                                    <details className="mt-2 rounded-xl bg-background/70 p-2 text-xs text-foreground">
-                                      <summary className="cursor-pointer font-semibold">Raw blocked JSON</summary>
-                                      <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words">{JSON.stringify(batch.rejected, null, 2)}</pre>
-                                    </details>
-                                  </div>
-                                )}
-                                {batch.actions.length > 0 && (
-                                  <details className="rounded-xl bg-background/70 p-2 text-xs text-foreground">
-                                    <summary className="cursor-pointer font-semibold">Raw action JSON</summary>
-                                    <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words">{JSON.stringify(batch.actions, null, 2)}</pre>
-                                  </details>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
                     </div>
                   )}
                   <div className="rounded-3xl border border-border/70 bg-card/80 p-2 shadow-sm">
@@ -1153,7 +1155,7 @@ export default function ChatbotPage() {
                         ))}
                       </div>
                     )}
-                    <Textarea ref={textareaRef} value={input} onPaste={pasteFiles} onChange={(event) => setInput(event.target.value)} className="min-h-11 max-h-56 overflow-y-auto resize-none rounded-2xl border-0 bg-transparent px-3 shadow-none focus-visible:ring-0" placeholder="Send a message, drop files, or paste an image..." onKeyDown={(event) => {
+                    <Textarea ref={textareaRef} value={input} onPaste={pasteFiles} onChange={(event) => setInput(event.target.value)} className="chat-scroll min-h-11 max-h-36 overflow-y-auto resize-none rounded-2xl border-0 bg-transparent px-3 shadow-none focus-visible:ring-0 sm:max-h-56" placeholder="Send a message, drop files, or paste an image..." onKeyDown={(event) => {
                       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
                       if (event.key === 'Enter' && event.ctrlKey && event.shiftKey) {
                         event.preventDefault();
