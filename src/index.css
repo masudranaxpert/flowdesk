@@ -640,6 +640,55 @@ pre {
   font-style: italic;
 }
 
+.doc-callout {
+  margin: 1.5rem 0;
+  padding: 1rem 1.25rem;
+  border-left: 3px solid;
+  border-radius: 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.doc-callout p:first-child {
+  margin-top: 0;
+}
+
+.doc-callout p:last-child {
+  margin-bottom: 0;
+}
+
+.doc-callout .doc-callout-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.5rem;
+}
+
+.doc-callout .doc-callout-label::before {
+  content: '';
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: currentColor;
+  opacity: 0.8;
+}
+
+.doc-callout code {
+  background: rgb(0 0 0 / 0.2);
+  border-radius: 0.3rem;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.82rem;
+}
+
+.doc-callout pre {
+  margin: 0.75rem 0;
+}
+
 code {
   font-size: 0.8125rem;
 }

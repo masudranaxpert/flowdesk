@@ -1,4 +1,4 @@
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -7,6 +7,7 @@ import rehypeRaw from 'rehype-raw';
 type MarkdownViewProps = {
   children: string;
   allowHtml?: boolean;
+  components?: Components;
 };
 
 const katexOptions = {
@@ -40,12 +41,13 @@ function normalizeMathDelimiters(markdown: string) {
   }).join('');
 }
 
-export default function MarkdownView({ children, allowHtml = false }: MarkdownViewProps) {
+export default function MarkdownView({ children, allowHtml = false, components }: MarkdownViewProps) {
   const normalized = normalizeMathDelimiters(children);
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm, remarkMath]}
       rehypePlugins={allowHtml ? [rehypeRaw, [rehypeKatex, katexOptions]] : [[rehypeKatex, katexOptions]]}
+      components={components}
     >
       {normalized}
     </ReactMarkdown>
