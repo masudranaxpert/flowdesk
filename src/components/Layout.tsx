@@ -11,6 +11,7 @@ import {
   Tags,
   HelpCircle,
   LayoutDashboard,
+  ListTree,
   Menu,
   Moon,
   PanelLeftClose,
@@ -44,6 +45,7 @@ const navItems = [
   { to: '/bookmarks', icon: Bookmark, label: 'Bookmarks', hint: 'Links' },
   { to: '/notebooks', icon: BookOpen, label: 'Notebooks', hint: 'Notes' },
   { to: '/codes', icon: Code2, label: 'Code Book', hint: 'Snippets' },
+  { to: '/docs', icon: ListTree, label: 'Docs', hint: 'Learn' },
   { to: '/questions', icon: HelpCircle, label: 'Q&A', hint: 'Answers' },
   { to: '/categories', icon: Tags, label: 'Categories', hint: 'Organize' },
 ];
