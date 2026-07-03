@@ -34,36 +34,102 @@ function stripLeadingH1(markdown: string) {
   return markdown.replace(/^\s*#[^#\n].*(?:\n|$)/, '').trimStart();
 }
 
-const mathReplacements: Array<[RegExp, string]> = [
+// ── Unicode → LaTeX conversion ──────────────────────────────────────────────
+
+const superMap: Record<string, string> = {
+  '\u2070': '0', '\u00b9': '1', '\u00b2': '2', '\u00b3': '3',
+  '\u2074': '4', '\u2075': '5', '\u2076': '6', '\u2077': '7',
+  '\u2078': '8', '\u2079': '9',
+  '\u207a': '+', '\u207b': '-',
+  '\u207f': 'n', '\u2071': 'i',
+  '\u1d43': 'a', '\u1d47': 'b', '\u1d9c': 'c', '\u1d48': 'd',
+  '\u1d49': 'e', '\u1da0': 'f', '\u1d4d': 'g', '\u02b0': 'h',
+  '\u1d62': 'i', '\u02b2': 'j', '\u1d4f': 'k', '\u02e1': 'l',
+  '\u1d50': 'm', '\u1d52': 'o', '\u1d56': 'p', '\u02b3': 'r',
+  '\u02e2': 's', '\u1d57': 't', '\u1d58': 'u', '\u1d5b': 'v',
+  '\u02b7': 'w', '\u02e3': 'x', '\u02b8': 'y', '\u1d6b': 'z',
+  '\u1d40': '\\mathrm{T}',
+};
+
+const subMap: Record<string, string> = {
+  '\u2080': '0', '\u2081': '1', '\u2082': '2', '\u2083': '3',
+  '\u2084': '4', '\u2085': '5', '\u2086': '6', '\u2087': '7',
+  '\u2088': '8', '\u2089': '9',
+  '\u208a': '+', '\u208b': '-',
+  '\u1d62': 'i', '\u2099': 'n', '\u2096': 'k', '\u2c7c': 'j',
+  '\u2090': 'a', '\u2091': 'e', '\u2092': 'o', '\u2093': 'x',
+  '\u2095': 'h', '\u2097': 'k', '\u2098': 'm', '\u209a': 'p',
+  '\u209b': 's', '\u209c': 't', '\u2096\u2096': 'kk',
+};
+
+const greekMap: Record<string, string> = {
+  '\u03b1': '\\alpha', '\u03b2': '\\beta', '\u03b3': '\\gamma', '\u03b4': '\\delta',
+  '\u03b5': '\\varepsilon', '\u03b6': '\\zeta', '\u03b7': '\\eta', '\u03b8': '\\theta',
+  '\u03b9': '\\iota', '\u03ba': '\\kappa', '\u03bb': '\\lambda', '\u03bc': '\\mu',
+  '\u03bd': '\\nu', '\u03be': '\\xi', '\u03c0': '\\pi', '\u03c1': '\\rho',
+  '\u03c3': '\\sigma', '\u03c4': '\\tau', '\u03c5': '\\upsilon', '\u03c6': '\\phi',
+  '\u03c7': '\\chi', '\u03c8': '\\psi', '\u03c9': '\\omega',
+  '\u0393': '\\Gamma', '\u0394': '\\Delta', '\u0398': '\\Theta', '\u039b': '\\Lambda',
+  '\u039e': '\\Xi', '\u03a0': '\\Pi', '\u03a3': '\\Sigma', '\u03a6': '\\Phi',
+  '\u03a8': '\\Psi', '\u03a9': '\\Omega',
+};
+
+const operatorMap: Record<string, string> = {
+  '\u220f': '\\prod', '\u222b': '\\int', '\u2202': '\\partial',
+  '\u2207': '\\nabla', '\u221e': '\\infty',
+  '\u2265': '\\geq', '\u2264': '\\leq', '\u2260': '\\neq', '\u2248': '\\approx',
+  '\u00b1': '\\pm', '\u00d7': '\\times', '\u00f7': '\\div', '\u00b7': '\\cdot',
+  '\u2192': '\\to', '\u2208': '\\in', '\u2209': '\\notin', '\u221d': '\\propto',
+  '\u222a': '\\cup', '\u2229': '\\cap', '\u2211': '\\sum',
+};
+
+const specialMap: Array<[RegExp, string]> = [
   [/\u221a\(([^)]+)\)/g, '\\sqrt{$1}'],
   [/\u221a([a-zA-Z])/g, '\\sqrt{$1}'],
   [/\u0177/g, '\\hat{y}'],
   [/x\u0304/g, '\\bar{x}'],
   [/y\u0304/g, '\\bar{y}'],
-  [/\u03b1/g, '\\alpha'], [/\u03b2/g, '\\beta'], [/\u03b3/g, '\\gamma'], [/\u03b4/g, '\\delta'],
-  [/\u03b5/g, '\\varepsilon'], [/\u03b6/g, '\\zeta'], [/\u03b7/g, '\\eta'], [/\u03b8/g, '\\theta'],
-  [/\u03b9/g, '\\iota'], [/\u03ba/g, '\\kappa'], [/\u03bb/g, '\\lambda'], [/\u03bc/g, '\\mu'],
-  [/\u03bd/g, '\\nu'], [/\u03be/g, '\\xi'], [/\u03c0/g, '\\pi'],
-  [/\u03c1/g, '\\rho'], [/\u03c3/g, '\\sigma'], [/\u03c4/g, '\\tau'], [/\u03c5/g, '\\upsilon'],
-  [/\u03c6/g, '\\phi'], [/\u03c7/g, '\\chi'], [/\u03c8/g, '\\psi'], [/\u03c9/g, '\\omega'],
-  [/\u0394/g, '\\Delta'], [/\u03a3/g, '\\Sigma'], [/\u03a0/g, '\\Pi'], [/\u03a9/g, '\\Omega'],
-  [/\u220f/g, '\\prod'], [/\u222b/g, '\\int'], [/\u2202/g, '\\partial'],
-  [/\u2207/g, '\\nabla'], [/\u221e/g, '\\infty'],
-  [/\u2265/g, '\\geq'], [/\u2264/g, '\\leq'], [/\u2260/g, '\\neq'], [/\u2248/g, '\\approx'],
-  [/\u00b1/g, '\\pm'], [/\u00d7/g, '\\times'], [/\u00f7/g, '\\div'], [/\u00b7/g, '\\cdot'],
-  [/\u2192/g, '\\to'], [/\u2208/g, '\\in'], [/\u2209/g, '\\notin'], [/\u221d/g, '\\propto'],
-  [/\u00b2/g, '^2'], [/\u00b3/g, '^3'], [/\u2074/g, '^4'], [/\u2075/g, '^5'], [/\u207f/g, '^n'],
-  [/\u1d62/g, '_i'], [/\u2080/g, '_0'], [/\u2081/g, '_1'], [/\u2082/g, '_2'],
-  [/\u2083/g, '_3'], [/\u2099/g, '_n'], [/\u2096/g, '_k'], [/\u2c7c/g, '_j'],
 ];
 
-const mathSymbolTest = /[\u0177\u0304\u03b1-\u03c9\u0391-\u03a9\u220f\u222b\u2202\u2207\u221e\u2265\u2264\u2260\u2248\u00b1\u00d7\u00f7\u00b7\u2192\u2208\u2209\u221d\u221a\u00b2\u00b3\u2074\u2075\u207f\u1d62\u2080-\u2083\u2099\u2096\u2c7c]/;
+const superCharClass = Object.keys(superMap).join('');
+const subCharClass = Object.keys(subMap)
+  .filter(k => k.length === 1)
+  .map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  .join('');
+
+const superRegex = new RegExp(`[${superCharClass}]+`, 'g');
+const subRegex = new RegExp(`[${subCharClass}]+`, 'g');
+
+const allMathChars = [
+  ...Object.keys(superMap),
+  ...Object.keys(subMap).filter(k => k.length === 1),
+  ...Object.keys(greekMap),
+  ...Object.keys(operatorMap),
+  '\u0177', '\u0304', '\u221a',
+].join('').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const mathSymbolTest = new RegExp(`[${allMathChars}]`);
 
 function toLatex(text: string): string {
   let result = text;
-  for (const [pattern, replacement] of mathReplacements) {
+
+  for (const [pattern, replacement] of specialMap) {
     result = result.replace(pattern, replacement);
   }
+
+  result = result.replace(superRegex, (match) =>
+    `^{${[...match].map(c => superMap[c] || c).join('')}}`);
+
+  result = result.replace(subRegex, (match) =>
+    `_{${[...match].map(c => subMap[c] || c).join('')}}`);
+
+  for (const [char, latex] of Object.entries(greekMap)) {
+    result = result.replaceAll(char, latex);
+  }
+  for (const [char, latex] of Object.entries(operatorMap)) {
+    result = result.replaceAll(char, latex);
+  }
+
   return result;
 }
 
@@ -77,6 +143,8 @@ function transformUnicodeMath(markdown: string): string {
     });
   }).join('');
 }
+
+// ── Component ────────────────────────────────────────────────────────────────
 
 const docComponents: Components = {
   pre: ({ children }) => <>{children}</>,

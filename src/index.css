@@ -789,6 +789,23 @@ pre {
   line-height: 1;
 }
 
+.doc-content .katex {
+  font-size: 1.08em;
+  color: color-mix(in oklch, var(--color-primary) 85%, var(--color-text));
+}
+
+.doc-content .katex-display {
+  margin: 1.25rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem 0;
+}
+
+.doc-content .katex-display > .katex {
+  font-size: 1.15em;
+  color: var(--color-text);
+}
+
 .doc-content .code-window {
   margin-top: 1.5rem;
   margin-bottom: 2rem;
