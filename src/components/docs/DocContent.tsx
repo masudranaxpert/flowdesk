@@ -70,7 +70,7 @@ const greekMap: Record<string, string> = {
   '\u03c3': '\\sigma', '\u03c4': '\\tau', '\u03c5': '\\upsilon', '\u03c6': '\\phi',
   '\u03c7': '\\chi', '\u03c8': '\\psi', '\u03c9': '\\omega',
   '\u0393': '\\Gamma', '\u0394': '\\Delta', '\u0398': '\\Theta', '\u039b': '\\Lambda',
-  '\u039e': '\\Xi', '\u03a0': '\\Pi', '\u03a3': '\\Sigma', '\u03a6': '\\Phi',
+  '\u039e': '\\Xi', '\u03a0': '\\Pi', '\u03a6': '\\Phi',
   '\u03a8': '\\Psi', '\u03a9': '\\Omega',
 };
 
@@ -80,7 +80,7 @@ const operatorMap: Record<string, string> = {
   '\u2265': '\\geq', '\u2264': '\\leq', '\u2260': '\\neq', '\u2248': '\\approx',
   '\u00b1': '\\pm', '\u00d7': '\\times', '\u00f7': '\\div', '\u00b7': '\\cdot',
   '\u2192': '\\to', '\u2208': '\\in', '\u2209': '\\notin', '\u221d': '\\propto',
-  '\u222a': '\\cup', '\u2229': '\\cap', '\u2211': '\\sum',
+  '\u222a': '\\cup', '\u2229': '\\cap', '\u2211': '\\sum', '\u03a3': '\\sum',
 };
 
 const specialMap: Array<[RegExp, string]> = [
@@ -129,6 +129,20 @@ function toLatex(text: string): string {
   for (const [char, latex] of Object.entries(operatorMap)) {
     result = result.replaceAll(char, latex);
   }
+
+  // Post-processing: fix spacing after LaTeX commands
+  result = result.replace(/\\cdot([a-zA-Z])/g, '\\cdot $1');
+  result = result.replace(/\\partial([a-zA-Z])/g, '\\partial $1');
+  result = result.replace(/\\nabla([a-zA-Z])/g, '\\nabla $1');
+
+  // Function names
+  result = result.replace(/(?<![a-zA-Z\\])(log|exp|ln|max|min)\(/g, '\\$1(');
+
+  // Multi-letter uppercase acronyms (BCE, MSE, MAE, etc.)
+  result = result.replace(/([A-Z]{2,})/g, '\\text{$1}');
+
+  // ASCII ^ with multi-char exponent: ^epoch → ^{epoch} (skip ^{ ^ digit ^\)
+  result = result.replace(/\^([a-zA-Z]{2,})(?![\d{])/g, '^{$1}');
 
   return result;
 }
