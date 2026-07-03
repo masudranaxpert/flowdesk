@@ -50,7 +50,7 @@ const docComponents: Components = {
     if (text.includes('\n')) {
       return <CodeBlock code={text} language="plaintext" />;
     }
-    return <code className="rounded bg-muted px-1.5 py-0.5 text-sm text-primary">{children}</code>;
+    return <code>{children}</code>;
   },
 };
 
