@@ -189,8 +189,10 @@ export default function Docs() {
 
   return (
     <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary/10 via-card/40 to-card p-7 sm:p-9">
-        <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-primary/15 blur-3xl" />
+      <section className="relative rounded-3xl border border-border bg-gradient-to-br from-primary/10 via-card/40 to-card p-7 sm:p-9">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-3xl">
+          <div className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-primary/15 blur-3xl" />
+        </div>
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div className="max-w-2xl space-y-3">
             <Badge variant="secondary" className="rounded-full">
@@ -221,7 +223,7 @@ export default function Docs() {
             )}
 
             {isSearching && searchOpen && (
-              <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-[60vh] overflow-y-auto rounded-2xl border border-border bg-popover/95 p-2 shadow-2xl backdrop-blur-xl">
+              <div className="absolute left-0 right-0 top-full z-[100] mt-2 max-h-[60vh] overflow-y-auto rounded-2xl border border-border bg-popover shadow-2xl backdrop-blur-xl p-2">
                 {searchResults.length > 0 ? (
                   <div className="space-y-1">
                     {searchResults.map((result, i) => (
