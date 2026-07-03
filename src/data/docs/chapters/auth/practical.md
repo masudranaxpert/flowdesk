@@ -212,43 +212,22 @@ app.post("/logout", (req, res) => {
 
 Password reset একটা sensitive flow। যদি ভুল বানানো হয়, attacker যে কারো account নিয়ে নিতে পারে।
 
-```text
-User                    Server                    Email Service
- │                        │                            │
- │ forgot password email  │                            │
- │───────────────────────→│                            │
- │                        │                            │
- │                        │  generate reset token      │
- │                        │  save hash in DB (expiry)  │
- │                        │                            │
- │                        │  send email with link      │
- │                        │───────────────────────────→│
- │                        │                            │
- │                        │   email delivered          │
- │                        │←───────────────────────────│
- │   "check your email"   │                            │
- │←───────────────────────│                            │
- │                        │                            │
- │  click link:           │                            │
- │  /reset?token=xxx      │                            │
- │───────────────────────→│                            │
- │                        │                            │
- │                        │  verify token + check expiry│
- │                        │  allow new password        │
- │                        │                            │
- │   "enter new password" │                            │
- │←───────────────────────│                            │
- │                        │                            │
- │  POST new password +   │                            │
- │  token                 │                            │
- │───────────────────────→│                            │
- │                        │  verify token again        │
- │                        │  hash new password         │
- │                        │  update DB                 │
- │                        │  invalidate old token      │
- │                        │                            │
- │   "password changed"   │                            │
- │←───────────────────────│                            │
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant S as Server
+    participant E as Email Service
+    U->>S: Forgot password (email)
+    S->>S: Generate reset token, save hash in DB (with expiry)
+    S->>E: Send email with reset link
+    E-->>S: Email delivered
+    S-->>U: "Check your email"
+    U->>S: Click link /reset?token=xxx
+    S->>S: Verify token + check expiry
+    S-->>U: "Enter new password"
+    U->>S: POST new password + token
+    S->>S: Verify token again, hash new password, update DB, invalidate old token
+    S-->>U: "Password changed"
 ```
 
 ```javascript

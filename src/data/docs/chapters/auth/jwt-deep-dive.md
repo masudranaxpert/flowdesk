@@ -146,18 +146,14 @@ except jwt.InvalidTokenError:
 
 Access token short-lived রাখা উচিত — 15 থেকে 60 মিনিট। কিন্তু বারবার login করতে না হয় তাই **refresh token** ব্যবহার হয়।
 
-```text
-         Access Token (15 min)          API Request
-User  ──────────────────────────→  Server
-  ↑                                    │
-  │   401 Expired                       │
-  │←───────────────────────────────────│
-  │                                    │
-  │   Refresh Token → New Access       │
-  │──────────────────────────────────→│
-  │                                    │
-  │   New Access Token                 │
-  │←───────────────────────────────────│
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant S as Server
+    U->>S: Access Token (15 min) + API Request
+    S-->>U: 401 Expired
+    U->>S: Refresh Token → request new Access Token
+    S-->>U: New Access Token
 ```
 
 ```python

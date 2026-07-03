@@ -2,10 +2,14 @@
 
 বাস্তব দুনিয়ায় model train করার আগে সবচেয়ে বেশি সময় যায় data preparation-এ। পুরো pipeline এরকম:
 
-```text
-Raw Data → Clean → Feature Engineering → Split → Train → Evaluate
-   ▲                                                        │
-   │__________ iterate _____________________________________│
+```mermaid
+flowchart LR
+    A[Raw Data] --> B[Clean]
+    B --> C[Feature Engineering]
+    C --> D[Split]
+    D --> E[Train]
+    E --> F[Evaluate]
+    F -.->|iterate| A
 ```
 
 > [!tip] "Garbage in, garbage out"

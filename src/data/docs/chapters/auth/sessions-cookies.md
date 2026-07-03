@@ -13,17 +13,16 @@ Session-এর কাজের ধরন:
 ৬. Server session ID দেখে user চিনে ফেলে
 ```
 
-```text
-Browser                          Server
-  │                                │
-  │── POST /login (user, pass) ──►│
-  │                                │ ── verify, create session
-  │◄── Set-Cookie: sid=abc123 ────│
-  │                                │
-  │── GET /profile                │
-  │   Cookie: sid=abc123 ────────►│
-  │                                │ ── lookup session abc123
-  │◄── 200 OK (user data) ────────│
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant S as Server
+    B->>S: POST /login (user, pass)
+    S->>S: verify, create session
+    S-->>B: Set-Cookie: sid=abc123
+    B->>S: GET /profile (Cookie: sid=abc123)
+    S->>S: lookup session abc123
+    S-->>B: 200 OK (user data)
 ```
 
 > [!note] Session data কোথায় থাকে?

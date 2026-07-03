@@ -4,31 +4,17 @@
 
 OAuth এই সমস্যার সমাধান দেয়। এটা **delegated access** দেয় — অর্থাৎ তোমার password না দিয়েই একটা app কে তোমার কোনো resource এ limited access দেওয়া যায়।
 
-```text
-   ┌─────────┐         ┌──────────┐         ┌──────────────┐
-   │  Photo  │         │  Google  │         │    Google    │
-   │  App    │         │   Auth   │         │    Photos    │
-   │(Client) │         │  Server  │         │(Resource API)│
-   └────┬────┘         └─────┬────┘         └──────┬───────┘
-        │                    │                     │
-        │  ছবি দেখতে চাই     │                     │
-        │───────────────────→│                     │
-        │                    │                     │
-        │  "Photo App তোমার  │                     │
-        │   ছবি দেখতে চায়"  │                     │
-        │←───────────────────│                     │
-        │                    │                     │
-        │  তুমি approve করলে  │                     │
-        │───────────────────→│                     │
-        │                    │                     │
-        │   Access Token     │                     │
-        │←───────────────────│                     │
-        │                    │                     │
-        │   GET /photos + Token                    │
-        │──────────────────────────────────────────→│
-        │                                          │
-        │              ছবি গুলো                      │
-        │←──────────────────────────────────────────│
+```mermaid
+sequenceDiagram
+    participant P as Photo App (Client)
+    participant A as Google Auth Server
+    participant R as Google Photos API
+    P->>A: Request to view photos
+    A-->>P: Ask user: "Photo App wants to see your photos"
+    P->>A: User approves
+    A-->>P: Access Token
+    P->>R: GET /photos + Token
+    R-->>P: Photos data
 ```
 
 ## OAuth এর Roles
@@ -48,33 +34,19 @@ OAuth এ চারটা main role থাকে:
 
 এটা সবচেয়ে বেশি ব্যবহৃত flow। Web application এর জন্য standard। এখানে ধাপে ধাপে দেখি:
 
-```text
-Browser                    Client App              Auth Server
-   │                           │                        │
-   │  "Login with Google"      │                        │
-   │──────────────────────────→│                        │
-   │                           │                        │
-   │                           │  Redirect to auth URL  │
-   │  302 → accounts.google…   │                        │
-   │←──────────────────────────│                        │
-   │                           │                        │
-   │  Login + Consent screen                            │
-   │───────────────────────────────────────────────────→│
-   │                           │                        │
-   │  302 redirect with CODE                             │
-   │  ?code=AUTH_CODE         │                        │
-   │←───────────────────────────────────────────────────│
-   │                           │                        │
-   │                           │  POST /token            │
-   │                           │  code + client_secret  │
-   │                           │───────────────────────→│
-   │                           │                        │
-   │                           │  Access Token +        │
-   │                           │  Refresh Token         │
-   │                           │←───────────────────────│
-   │                           │                        │
-   │   Login success                                   │
-   │←──────────────────────────│                        │
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant C as Client App
+    participant A as Auth Server
+    B->>C: "Login with Google"
+    C-->>B: 302 redirect to auth URL
+    B->>A: Login + Consent screen
+    A-->>B: 302 redirect with CODE ?code=AUTH_CODE
+    B->>C: Redirect with code
+    C->>A: POST /token (code + client_secret)
+    A-->>C: Access Token + Refresh Token
+    C-->>B: Login success
 ```
 
 ধাপ গুলো:
@@ -134,26 +106,17 @@ grant_type=authorization_code
 
 **PKCE** (Proof Key for Code Exchange) হলো Authorization Code Flow এর একটা extension। SPA বা mobile app এ `client_secret` hide করা যায় না — সেই জন্য PKCE দরকার।
 
-```text
-Client                        Auth Server
-  │                               │
-  │  code_verifier = random(43)   │
-  │  code_challenge = SHA256(verifier) │
-  │                               │
-  │  Auth request + code_challenge│
-  │──────────────────────────────→│
-  │                               │
-  │  authorization code           │
-  │←──────────────────────────────│
-  │                               │
-  │  Token request + code_verifier│
-  │──────────────────────────────→│
-  │                               │
-  │  Server: SHA256(verifier)     │
-  │  == stored challenge?         │
-  │                               │
-  │  Access Token                 │
-  │←──────────────────────────────│
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as Auth Server
+    Note over C: code_verifier = random(43)
+    Note over C: code_challenge = SHA256(verifier)
+    C->>A: Auth request + code_challenge
+    A-->>C: Authorization code
+    C->>A: Token request + code_verifier
+    Note over A: SHA256(verifier) == stored challenge?
+    A-->>C: Access Token
 ```
 
 PKCE তে client একটা random `code_verifier` generate করে, তার hash (`code_challenge`) auth request এর সাথে পাঠায়। Token exchange এর সময় আসল `code_verifier` পাঠায়। যদি attacker code intercept করে, তার কাছে verifier নেই — token পাবে না।
@@ -177,20 +140,15 @@ grant_type=client_credentials
 
 কোনো user consent নেই, কোনো redirect নেই। সরাসরি client id + secret দিয়ে token আসে।
 
-```text
-  Backend Service                Auth Server           API
-       │                             │                  │
-       │  POST /token (credentials)  │                  │
-       │────────────────────────────→│                  │
-       │                             │                  │
-       │      Access Token           │                  │
-       │←────────────────────────────│                  │
-       │                             │                  │
-       │  GET /data + Bearer token                     │
-       │───────────────────────────────────────────────→│
-       │                                                │
-       │                    Data                        │
-       │←───────────────────────────────────────────────│
+```mermaid
+sequenceDiagram
+    participant B as Backend Service
+    participant A as Auth Server
+    participant API as API
+    B->>A: POST /token (credentials)
+    A-->>B: Access Token
+    B->>API: GET /data + Bearer token
+    API-->>B: Data
 ```
 
 ## Refresh Token Flow

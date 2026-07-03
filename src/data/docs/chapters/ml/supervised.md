@@ -2,24 +2,11 @@
 
 **Supervised Learning** হলো এমন ML যেখানে model কে label করা ডেটা দিয়ে শেখানো হয়। প্রতিটা input এর সাথে সঠিক answer (label) দেওয়া থাকে — ঠিক যেন teacher প্রশ্ন আর উত্তর একসাথে দেখাচ্ছে।
 
-```text
-  Training Data (labeled)
-  ┌──────────────────────────────┐
-  │ area  rooms  floor │  price  │
-  │  800    2      1   │  400k   │
-  │ 1200    3      2   │  600k   │
-  │ 1500    3      2   │  750k   │
-  │ 2000    4      3   │ 1000k   │
-  └──────────────────────────────┘
-                │
-                ▼
-         Model শেখে pattern
-                │
-                ▼
-  New input: [1800, 3, 2]
-         │
-         ▼
-  Predicted: 900k
+```mermaid
+flowchart TD
+    D["Training Data: area, rooms, floor → price"] --> M[Model learns pattern]
+    N["New input: 1800, 3, 2"] --> M
+    M --> P[Predicted: 900k]
 ```
 
 Supervised learning দুই ধরনের হয় — **Regression** আর **Classification**।

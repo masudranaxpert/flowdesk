@@ -4,20 +4,18 @@
 
 ভাবো তুমি কীভাবে একটা cat আর dog আলাদা করো? তুমি কি একটা checklist মনে করে সিদ্ধান্ত নাও — "চারটা পা, গোল কান, লেজ আছে"? না। তুমি ছোট থেকে অগণিত cat আর dog দেখেছো, আর তোমার brain অজান্তেই pattern শিখে নিয়েছে। Machine Learning ঠিক এভাবেই কাজ করে।
 
-```text
-  Traditional Programming            Machine Learning
-
-  DATA + RULES → ANSWER              DATA + ANSWERS → RULES
-
-  ┌──────┐  ┌───────┐                ┌──────┐  ┌────────┐
-  │ Input│  │ Rules │ → Output      │ Input│  │ Output │ → Rules
-  └──────┘  └───────┘                └──────┘  └────────┘
-       │        │                         │        │
-       └───┬────┘                         └───┬────┘
-           │                                  │
-           v                                  v
-       Programmer                          Model
-       লিখে দেয় rules                  নিজে শেখে rules
+```mermaid
+flowchart LR
+    subgraph Trad["Traditional Programming"]
+        T1[Input] --> T3[Output]
+        T2[Rules] --> T3
+    end
+    subgraph ML["Machine Learning"]
+        M1[Input] --> M3[Rules]
+        M2[Output] --> M3
+    end
+    T3 --> TP[Programmer writes rules]
+    M3 --> MDL[Model learns rules]
 ```
 
 Traditional programming এ তুমি rule লিখে দাও — "যদি temperature > 30, তাহলে output 'hot'"। Machine Learning এ তুমি হাজার হাজার temperature আর তার label দাও, আর model নিজে বুঝে নেয় কখন "hot" বলতে হয়।
@@ -58,15 +56,13 @@ Agent একটা environment এ trial আর error করে শেখে। 
 
 একটা ML project সাধারণত এই ধাপ গুলো অনুসরণ করে:
 
-```text
-┌─────────┐    ┌───────────┐    ┌─────────┐    ┌──────────┐    ┌─────────┐
-│  Data   │───→│ Preprocess│───→│  Train  │───→│ Evaluate │───→│  Deploy │
-│ Collect │    │ Clean,    │    │  Model  │    │ Test,    │    │  Use in │
-│         │    │ Scale     │    │         │    │ Metrics  │    │  prod   │
-└─────────┘    └───────────┘    └─────────┘    └──────────┘    └─────────┘
-      ↑                                               │
-      │                                               │
-      └────────── monitor, retrain ◄──────────────────┘
+```mermaid
+flowchart LR
+    A[Data Collect] --> B[Preprocess: Clean, Scale]
+    B --> C[Train Model]
+    C --> D[Evaluate: Test, Metrics]
+    D --> E[Deploy in Prod]
+    E -.->|monitor, retrain| A
 ```
 
 ### ১. Data Collection
