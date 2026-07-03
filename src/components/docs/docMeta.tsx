@@ -14,6 +14,7 @@ import {
   Calculator,
   Database,
   ScanEye,
+  Binary,
   BookOpen,
   type LucideIcon,
 } from 'lucide-react';
@@ -34,6 +35,7 @@ const iconRegistry: Record<string, LucideIcon> = {
   Calculator,
   Database,
   ScanEye,
+  Binary,
 };
 
 export function docIcon(name: string): LucideIcon {
