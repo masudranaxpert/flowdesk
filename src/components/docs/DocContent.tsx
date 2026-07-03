@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { Components } from 'react-markdown';
 import MarkdownView from '../MarkdownView';
 import CodeBlock from '../CodeBlock';
+import MermaidDiagram from './MermaidDiagram';
 
 const calloutMap: Record<string, { cls: string; label: string }> = {
   note: { cls: 'border-sky-400/40 bg-sky-500/10 text-sky-200', label: 'Note' },
@@ -12,13 +13,7 @@ const calloutMap: Record<string, { cls: string; label: string }> = {
 };
 
 function transformCallouts(markdown: string) {
-  // Handles two callout body styles found in chapter files:
-  //   > [!type] Title          →  title on same line after ]
-  //   # body text               →  body as heading (no > prefix)
-  // OR traditional:
-  //   > [!type]
-  //   > body text               →  body lines prefixed with >
-  const blockRegex = /^> *\[!(note|tip|warn|warning|danger|example)\]([^\n]*)\n((?:^#[^\n]*(?:\n|$)|^>.*(?:\n|$))+)/gim;
+  const blockRegex = /^> *\[\!(note|tip|warn|warning|danger|example)\]([^\n]*)\n((?:^#[^\n]*(?:\n|$)|^>.*(?:\n|$))+)/gim;
 
   return markdown.replace(blockRegex, (_match, kind: string, titleText: string, body: string) => {
     const key = String(kind).toLowerCase() === 'warning' ? 'warn' : String(kind).toLowerCase();
@@ -45,6 +40,9 @@ const docComponents: Components = {
     const match = /language-(\w+)/.exec(className || '');
     const text = String(children).replace(/\n$/, '');
     if (match) {
+      if (match[1] === 'mermaid') {
+        return <MermaidDiagram chart={text} />;
+      }
       return <CodeBlock code={text} language={match[1]} />;
     }
     if (text.includes('\n')) {
@@ -52,6 +50,11 @@ const docComponents: Components = {
     }
     return <code>{children}</code>;
   },
+  table: ({ children }) => (
+    <div className="doc-table-wrapper">
+      <table>{children}</table>
+    </div>
+  ),
 };
 
 export default function DocContent({ body }: { body: string }) {
