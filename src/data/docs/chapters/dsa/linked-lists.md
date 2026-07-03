@@ -10,10 +10,10 @@ Array আর linked list এর মূল পার্থক্য — array ত
 
 ```mermaid
 graph LR
-    Head["Head"] --> N1["Node 1\nval: 10\nnext: →"]
-    N1 --> N2["Node 2\nval: 20\nnext: →"]
-    N2 --> N3["Node 3\nval: 30\nnext: →"]
-    N3 --> N4["Node 4\nval: 40\nnext: None"]
+    Head["Head"] --> N1["Node 1<br/>val: 10<br/>next: →"]
+    N1 --> N2["Node 2<br/>val: 20<br/>next: →"]
+    N2 --> N3["Node 3<br/>val: 30<br/>next: →"]
+    N3 --> N4["Node 4<br/>val: 40<br/>next: None"]
 ```
 
 > [!note]

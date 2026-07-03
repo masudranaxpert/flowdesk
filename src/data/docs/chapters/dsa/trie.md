@@ -12,10 +12,10 @@ Trie হলো একটা গাছ (tree), কিন্তু সাধার
 graph TD
     R((root)) --> C[c]
     C --> A[a]
-    A --> T1[t # End: cat]
-    A --> R1[r # End: car]
-    R1 --> D[d # End: card]
-    A --> P1[p # End: cap]
+    A --> T1["t (end: cat)"]
+    A --> R1["r (end: car)"]
+    R1 --> D["d (end: card)"]
+    A --> P1["p (end: cap)"]
 
     style R fill:#1e293b,color:#fff
     style A fill:#3b82f6,color:#fff
