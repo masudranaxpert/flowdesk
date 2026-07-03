@@ -5,23 +5,13 @@
 - **Authentication (AuthN)** — তুমি কে? পরিচয় যাচাই। যেমন: username আর password দিলে server check করে তুমি আসলেই কি সেই ব্যক্তি।
 - **Authorization (AuthZ)** — তুমি কী করতে পারো? permission। যেমন: তুমি login করেছো, কিন্তু admin panel দেখতে পারবে কি পারবে না — সেটা authorization।
 
-```text
-  User
-   |
-   | username + password
-   v
-+----------+      Authentication       +----------+
-|  Login   |  ----> তুমি কে?  ---->    |  Server  |
-|  Screen  |                            |  checks  |
-+----------+                            +----------+
-                                              |
-                                   পরিচয় verify হলে
-                                              |
-                                              v
-                                    Authorization
-                                  তুমি কী পারো?
-                                    /        \
-                               admin?      user?
+```mermaid
+flowchart TD
+    U[User] -->|username + password| L[Login Screen]
+    L -->|Authentication: who are you?| S[Server checks]
+    S -->|identity verified| A{Authorization}
+    A -->|admin?| AD[Admin access]
+    A -->|user?| US[User access]
 ```
 
 একটা বাস্তব উদাহরণ দিই। তুমি একটা অফিস building এ ঢুকলে:
@@ -35,27 +25,16 @@
 
 সবচেয়ে পুরোনো আর পরিচিত method। User login করলে server একটা **session** create করে নিজের memory বা database এ store করে, আর browser কে একটা `session_id` দিয়ে একটা **cookie** পাঠায়।
 
-```text
-Browser                          Server
-   |                                |
-   |  POST /login (user, pass)     |
-   |  ---------------------------→  |
-   |                                |
-   |         validate credentials   |
-   |         create session #123    |
-   |                                |
-   |   Set-Cookie: session=123     |
-   |  ←---------------------------  |
-   |                                |
-   |  GET /dashboard                |
-   |  Cookie: session=123           |
-   |  ---------------------------→  |
-   |                                |
-   |         lookup session #123    |
-   |         found user = Karim     |
-   |                                |
-   |   200 OK (dashboard HTML)     |
-   |  ←---------------------------  |
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant S as Server
+    B->>S: POST /login (user, pass)
+    S->>S: validate credentials, create session #123
+    S-->>B: Set-Cookie: session=123
+    B->>S: GET /dashboard (Cookie: session=123)
+    S->>S: lookup session #123, found user = Karim
+    S-->>B: 200 OK (dashboard HTML)
 ```
 
 সুবিধা: simple, server সব নিয়ন্ত্রণে রাখে। অসুবিধা: প্রতিটা request এ server database/memory lookup করতে হয়। Multiple server থাকলে session share করা ঝামেলা।
@@ -64,26 +43,16 @@ Browser                          Server
 
 User login করলে server একটা **token** দেয়। Browser সেই token প্রতিটা request এ header এ পাঠায়। Server token verify করে user identify করে। সবচেয়ে জনপ্রিয় token format হলো **JWT**।
 
-```text
-Browser                          Server
-   |                                |
-   |  POST /login (user, pass)     |
-   |  ---------------------------→  |
-   |                                |
-   |   validate, generate JWT       |
-   |                                |
-   |   { "token": "eyJhb..." }      |
-   |  ←---------------------------  |
-   |                                |
-   |  GET /api/profile              |
-   |  Authorization: Bearer eyJhb.. |
-   |  ---------------------------→  |
-   |                                |
-   |   verify JWT signature         |
-   |   extract user_id              |
-   |                                |
-   |   200 OK (user data)           |
-   |  ←---------------------------  |
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant S as Server
+    B->>S: POST /login (user, pass)
+    S->>S: validate, generate JWT
+    S-->>B: { "token": "eyJhb..." }
+    B->>S: GET /api/profile (Authorization: Bearer eyJhb..)
+    S->>S: verify JWT signature, extract user_id
+    S-->>B: 200 OK (user data)
 ```
 
 সুবিধা: stateless — server কোনো session store করে রাখে না। Mobile app, SPA — সবার জন্য কাজ করে। অসুবিধা: token expire না হলে logout কঠিন, token চুরি হলে বিপদ।
