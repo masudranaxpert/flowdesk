@@ -6,9 +6,9 @@ Binary Search শুধুমাত্র sorted array তে কাজ কর�
 
 ```mermaid
 graph TD
-    A["target = 7<br/>[1, 3, 5, 7, 9, 11, 13]"] --> B["mid = 5? No, 5 < 7"]
+    A["target = 7<br/>[1, 3, 5, 7, 9, 11, 13]"] --> B["mid = 5? No, 5 &lt; 7"]
     B --> C["left = mid + 1<br/>Search right half"]
-    C --> D["mid = 9? No, 9 > 7"]
+    C --> D["mid = 9? No, 9 &gt; 7"]
     D --> E["right = mid - 1<br/>Search left half"]
     E --> F["mid = 7? Yes! Found!"]
 ```

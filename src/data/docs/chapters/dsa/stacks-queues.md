@@ -107,11 +107,11 @@ Monotonic stack হলো এমন stack যেখানে element গুল�
 graph TD
     A["Input: [2, 1, 2, 4, 3]"] --> B["Stack: []"]
     B --> C["i=0: push 2"]
-    C --> D["i=1: 1 < 2, push 1"]
-    D --> E["i=2: 2 > 1, pop 1 → NGE[1]=2"]
-    E --> F["i=3: 4 > 2, pop 2 → NGE[0]=4"]
+    C --> D["i=1: 1 &lt; 2, push 1"]
+    D --> E["i=2: 2 &gt; 1, pop 1, NGE=2"]
+    E --> F["i=3: 4 &gt; 2, pop 2, NGE=4"]
     F --> G["push 4"]
-    G --> H["i=4: 3 < 4, push 3"]
+    G --> H["i=4: 3 &lt; 4, push 3"]
     H --> I["Result: [4, 2, 4, -1, -1]"]
 ```
 
