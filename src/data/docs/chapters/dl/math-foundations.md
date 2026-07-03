@@ -13,6 +13,8 @@ Neural network-এর পেছনে মূলত দুটো math-এর শ�
 | Matrix | সংখ্যার গ্রিড | `np.array([[1,2],[3,4]])` | 2D |
 | Tensor | n-ডাইমেনশনাল অ্যারে | `np.zeros((2,3,4))` | 3D+ |
 
+নিচের কোডে `np.array` দিয়ে বিভিন্ন ডাইমেনশনের NumPy array তৈরি করা হয়েছে। `.shape` attribute দিয়ে প্রতিটা array-এর dimension দেখা যায় — deep learning-এ shape বোঝা খুব important কারণ প্রতিটা layer-এর input আর output shape মিলতে হয়।
+
 ```python
 import numpy as np
 
@@ -202,6 +204,8 @@ Loss
 # 2026-এ standard practice হলো training শুরুতে বড় learning rate, ধীরে ধীরে কমানো (warmup + cosine decay)। PyTorch-এ `torch.optim.lr_scheduler.CosineAnnealingLR` দিয়ে এটা করা যায়।
 
 ## Practical — NumPy দিয়ে সম্পূর্ণ Concept
+
+নিচের কোডে NumPy দিয়ে একটা complete neuron তৈরি করা হয়েছে — `np.dot(x, weights)` দিয়ে input আর weight-এর matrix multiplication, তারপর `np.exp` দিয়ে sigmoid activation। এরপর gradient descent manually implement করা হয়েছে — `np.outer` দিয়ে gradient calculate করে weight update করা হয়। এটা দেখায় যে PyTorch/TF এর ভেতরে আসলে কী হচ্ছে।
 
 ```python
 import numpy as np

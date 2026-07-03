@@ -29,6 +29,8 @@ Forward pass হলো input থেকে output পর্যন্ত সিগ
 1. **Linear transformation** — `z = W·x + b`
 2. **Activation** — `a = activation(z)`
 
+নিচের কোডে `np.dot(W, x)` হলো matrix multiplication — weight matrix `W` আর input vector `x` কে গুণ করে একটা নতুন vector বানায়। এটাই একটা layer-এর মূল কাজ। `relu` function ০-এর নিচের সব value কে ০ করে দেয়, যাতে non-linearity আসে।
+
 ```python
 import numpy as np
 
@@ -182,7 +184,7 @@ Mini-batch gradient descent সবচেয়ে জনপ্রিয় — �
 
 ## Practical Example — MNIST with PyTorch
 
-এবার একদম complete example দেখি। MNIST digit classification — 28×28 পিক্সেলের হাতের লেখা digit (0-9) চিনবে।
+এবার একদম complete example দেখি। MNIST digit classification — 28×28 পিক্সেলের হাতের লেখা digit (0-9) চিনবে। এখানে `torchvision` হলো PyTorch-এর image dataset library — এর ভেতরে MNIST, CIFAR সহ বিখ্যাত dataset ready পাওয়া যায়। `transforms.Compose` দিয়ে image-এ কী preprocessing হবে সেটা define করা হয় (যেমন image কে tensor-এ রূপান্তর)। Model-টি তিনটা fully connected layer নিয়ে তৈরি — `28*28 = 784` input থেকে শুরু করে ধাপে ধাপে ছোট হয়ে শেষে ১০টা class-এর output দেয়।
 
 ```python
 import torch
@@ -267,7 +269,7 @@ optimizer.step()
 
 ## Model Evaluation
 
-Train হওয়ার পর model এর আসল পরীক্ষা test data তে।
+Train হওয়ার পর model এর আসল পরীক্ষা test data তে। Evaluation এর সময় `model.eval()` দিয়ে model কে inference mode-এ নিতে হয়, আর `torch.no_grad()` দিয়ে gradient tracking বন্ধ করতে হয় — এতে memory বাঁচে আর calculation দ্রুত হয়। `torch.max(outputs, 1)` প্রতিটা sample-এর সবচেয়ে বড় probability-ওয়ালা class বের করে।
 
 ```python
 test_data = datasets.MNIST(root="./data", train=False, transform=transform)

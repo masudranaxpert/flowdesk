@@ -114,6 +114,8 @@ BERT-এ "I went to the **bank** to deposit money" আর "I sat by the river **
 
 শুরু থেকে word2vec train করতে গেলে বিশাল corpus লাগবে। কিন্তু pretrained model download করে সরাসরি ব্যবহার করা যায়:
 
+`gensim.downloader` দিয়ে pretrained word embedding model download করা যায়। `api.load("word2vec-google-news-300")` Google-এর প্রশিক্ষিত ৩০০-ডাইমেনশন word2vec model লোড করে। `model.most_similar("king")` দিয়ে সবচেয়ে similar word গুলো খোঁজা যায়। `positive` আর `negative` parameter দিয়ে analogy করা যায় — যেমন king - man + woman ≈ queen। `model.similarity("cat", "dog")` দুটো word-এর cosine similarity score দেয় (০ থেকে ১)।
+
 ```python
 import gensim.downloader as api
 
@@ -139,6 +141,8 @@ print(model.similarity("cat", "car"))    # ~0.20
 ```
 
 ## Practical — Pretrained Embedding দিয়ে Similar Word খোঁজা
+
+নিচের কোডে GloVe-এর একটা ছোট pretrained model (`glove-wiki-gigaword-100`) ব্যবহার করা হয়েছে। `most_similar` দিয়ে similar word খোঁজা, analogy (`positive` আর `negative` parameter), আর `doesnt_match` দিয়ে odd-one-out খোঁজা — তিনটি common embedding operation দেখানো হয়েছে।
 
 ```python
 import gensim.downloader as api

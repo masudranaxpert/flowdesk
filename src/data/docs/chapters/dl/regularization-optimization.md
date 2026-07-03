@@ -14,7 +14,7 @@ Test Accuracy:      65%  😱
 
 ## Dropout — র‍্যান্ডম Neuron বন্ধ করা
 
-Dropout training-এর সময় random ভাবে কিছু neuron "বন্ধ" করে দেয় (zero করে দেয়)। ফলে model একটা নির্দিষ্ট neuron-এর উপর অতিরিক্ত নির্ভর করতে পারে না — সব neuron-কে কাজে লাগাতে হয়।
+Dropout training-এর সময় random ভাবে কিছু neuron "বন্ধ" করে দেয় (zero করে দেয়)। ফলে model একটা নির্দিষ্ট neuron-এর উপর অতিরিক্ত নির্ভর করতে পারে না — সব neuron-কে কাজে লাগাতে হয়। নিচের কোডে `nn.Dropout(p=0.3)` এর `p=0.3` মানে training-এর সময় প্রতিটা neuron ৩০% সম্ভাবনায় বন্ধ হবে। বাকি ৭০% neuron-এর output স্কেল করে বাড়ানো হয় যাতে সামগ্রিক magnitude ঠিক থাকে। `p` বাড়ালে regularization বেশি হবে কিন্তু অতিরিক্ত হলে model underfit করতে পারে।
 
 ```text
 Normal Network:          With Dropout (p=0.5):
@@ -83,6 +83,7 @@ Normalization training অনেক stable আর fast করে। দুটো
 **Batch Norm:** এক batch-এর মধ্যে প্রতিটা feature-এর mean আর variance বের করে normalize করে। CNN-এ ভালো কাজ করে।
 
 **Layer Norm:** একটা sample-এর সব feature-এর mean আর variance নিয়ে normalize করে। Transformer/RNN-এ ব্যবহৃত।
+নিচের কোডে `BatchNorm2d(64)` এর ৬৪ মানে এই layer-টি ৬৪-channel feature map-এর জন্য — প্রতিটা channel আলাদাভাবে normalize হয়। `LayerNorm(768)` এর 768 মানে hidden dimension — Transformer এর প্রতিটা token এর vector একসাথে normalize হয়।
 
 ```python
 # Batch Norm — CNN-এর জন্য
@@ -143,6 +144,8 @@ for epoch in range(100):
 | **Adam** | adaptive learning rate per parameter | সবচেয়ে popular |
 | **AdamW** | Adam + correct weight decay | **2026-এ default choice** |
 
+নিচের কোডে `lr=1e-3` হলো learning rate (প্রতিটা step-এ weight কতটা পরিবর্তন হবে), `betas=(0.9, 0.999)` হলো momentum parameter (আগের gradient-এর দিক মনে রাখে, ০.৯ সাধারণ ডিফল্ট), আর `weight_decay=0.01` হলো L2 regularization strength (weight গুলোকে ছোট রাখে যাতে overfitting না হয়)। AdamW Adam-এর চেয়ে weight decay সঠিকভাবে implement করে বলে এটাই standard।
+
 ```python
 optimizer = torch.optim.AdamW(
     model.parameters(),
@@ -154,7 +157,7 @@ optimizer = torch.optim.AdamW(
 
 ## Learning Rate Scheduling
 
-Training-এর শুরুতে বড় learning rate, ধীরে ধীরে কমানো — fast convergence আর stable ending:
+Training-এর শুরুতে বড় learning rate, ধীরে ধীরে কমানো — fast convergence আর stable ending। `LinearLR` দিয়ে warmup করা হয় — শুরুতে ছোট learning rate থেকে ধীরে ধীরে বাড়ানো হয়। `CosineAnnealingLR` একটা cosine curve বরাবর learning rate ধীরে ধীরে কমিয়ে নিয়ে যায় — smooth decay আসে। `SequentialLR` এই দুটোকে একসাথে chain করে — প্রথম ৫ epoch warmup, তারপর cosine decay শুরু হয় (`milestones=[5]` দিয়ে সেট indicate করা হয়)।
 
 ```python
 from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR
@@ -175,7 +178,7 @@ scheduler = torch.optim.lr_scheduler.SequentialLR(
 
 ## Mixed Precision Training
 
-GPU-তে `fp16` বা `bf16` (bfloat16) ব্যবহার করে memory অর্ধেক আর speed দ্বিগুণ:
+GPU-তে `fp16` বা `bf16` (bfloat16) ব্যবহার করে memory অর্ধেক আর speed দ্বিগুণ। নিচের কোডে `autocast` একটা context manager — এর ভেতরে সব calculation `fp16`-এ হয় (memory কম লাগে, GPU দ্রুত করে)। কিন্তু `fp16`-এ gradient ছোট হয়ে underflow হতে পারে, তাই `GradScaler` দিয়ে loss-কে আগে বড় করে (scale up) backward pass করা হয়, তারপর update-এর সময় আবার ছোট করে (scale down) আনা হয়।
 
 ```python
 from torch.amp import autocast, GradScaler
@@ -200,6 +203,8 @@ for inputs, targets in dataloader:
 # `bf16` (bfloat16) আধুনিক GPU (Ampere+) এ ভালো — fp16-এর numeric range problem নেই। যদি GPU support করে, `torch.bfloat16` ব্যবহার করো।
 
 ## Practical — সম্পূর্ণ PyTorch Training Loop
+
+নিচের কোডে একটা complete training loop আছে যেখানে dropout, batch normalization, AdamW optimizer, cosine LR scheduler, আর early stopping — সব একসাথে দেখা যাচ্ছে। `nn.Sequential` দিয়ে layer গুলো একটার পর একটা সাজানো হয়েছে: Linear → BatchNorm → ReLU → Dropout, এই pattern প্রতিটা block-এ repeat হয়েছে। Validation loss ট্র্যাক করে best model save করা হয়েছে।
 
 ```python
 import torch

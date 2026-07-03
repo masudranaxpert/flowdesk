@@ -102,6 +102,8 @@ Python NLP এর জন্য একটা টন library আছে। মূ�
 | **Gensim** | Topic modeling, word2vec | Intermediate |
 | **TextBlob** | সহজ sentiment analysis | Beginner |
 
+`TextBlob` হলো একটা beginner-friendly NLP library। `TextBlob(text)` একটা object বানায়, আর `.sentiment.polarity` দিয়ে -১ থেকে ১ এর মধ্যে sentiment score দেয় — ১ মানে খুব positive, -১ মানে খুব negative।
+
 ```python
 # quick sentiment check with TextBlob
 from textblob import TextBlob
@@ -110,6 +112,8 @@ text = "This movie is absolutely fantastic!"
 blob = TextBlob(text)
 print(blob.sentiment.polarity)   # 0.9 — very positive
 ```
+
+`spaCy` production-ready NLP library। `spacy.load("en_core_web_sm")` দিয়ে একটা ছোট English language model load করা হয়। `nlp(text)` দিয়ে টেক্সট process করলে একটা `doc` object পাওয়া যায় — এর `.ents` property তে সব named entity (ব্যক্তি, প্রতিষ্ঠান, স্থান) পাওয়া যায়, আর `.label_` দিয়ে entity-এর ধরন দেখা যায় (PERSON, ORG, GPE ইত্যাদি)।
 
 ```python
 # spaCy দিয়ে entity extraction
@@ -134,6 +138,8 @@ California -> GPE
 ## Hugging Face — আজকের Game Changer
 
 2026 এ NLP বলতেই মাথায় আসে Hugging Face। এটা একটা platform আর library যেখানে হাজার হাজার pre-trained model ফ্রি পাওয়া যায়।
+
+`pipeline()` হলো Hugging Face-এর সবচেয়ে সহজ API — এক লাইনে task name দিলেই sentiment analysis, text generation, translation সব কাজ করা যায়। এটা automatically একটা pre-trained model download করে আর inference করে — নিজে কোনো model train করতে হয় না।
 
 ```python
 from transformers import pipeline

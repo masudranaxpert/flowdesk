@@ -60,6 +60,8 @@ print(df["label"].value_counts())
 
 ### Train/Test Split আর Vectorization
 
+`train_test_split` দিয়ে ডেটা কে training আর test set-এ ভাগ করা হয় — `stratify` দিলে দুটো set-এ class ratio সমান থাকে। `TfidfVectorizer` টেক্সট কে number-এ রূপান্তর করে: `stop_words="english"` দিয়ে "the", "is" সরানো হয়, `lowercase=True` দিয়ে সব ছোট হাতের করা হয়। `fit_transform` train data-তে vocab শেখে আর vector বানায়, আর test data-তে শুধু `transform` করা হয় — নতুন word শেখা হয় না।
+
 ```python
 X_train, X_test, y_train, y_test = train_test_split(
     df["text"], df["label"], test_size=0.25, random_state=42, stratify=df["label"]
@@ -112,7 +114,7 @@ P(spam | "free win iPhone") ∝ P(spam) × P("free"|spam) × P("win"|spam) × P(
 
 ## Project 2 — Sentiment Analysis
 
-এবার একটা sentiment classifier দেখি। Movie review দেখে positive/negative বলবে।
+এবার একটা sentiment classifier দেখি। Movie review দেখে positive/negative বলবে। এখানে `Pipeline` দিয়ে `TfidfVectorizer` আর `LogisticRegression` একসাথে বাঁধা হয়েছে — এর মানে টেক্সট দিলে সে vectorize হবে, তারপর classify হবে, সব একসাথে। `ngram_range=(1, 2)` দিয়ে single word আর two-word phrase দুটোকেই feature হিসেবে নেওয়া হয়।
 
 ```python
 from sklearn.linear_model import LogisticRegression

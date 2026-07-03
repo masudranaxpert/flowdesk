@@ -11,6 +11,9 @@ import {
   BrainCircuit,
   Languages,
   Network,
+  Calculator,
+  Database,
+  ScanEye,
   BookOpen,
   type LucideIcon,
 } from 'lucide-react';
@@ -28,6 +31,9 @@ const iconRegistry: Record<string, LucideIcon> = {
   BrainCircuit,
   Languages,
   Network,
+  Calculator,
+  Database,
+  ScanEye,
 };
 
 export function docIcon(name: string): LucideIcon {
@@ -47,6 +53,9 @@ const accentMap: Record<string, { ring: string; bg: string; text: string; glow: 
   violet: { ring: 'ring-violet-500/30', bg: 'bg-violet-500/12', text: 'text-violet-300', glow: 'shadow-[0_16px_40px_oklch(0.6_0.22_300/0.22)]', bar: 'bg-violet-400' },
   fuchsia: { ring: 'ring-fuchsia-500/30', bg: 'bg-fuchsia-500/12', text: 'text-fuchsia-300', glow: 'shadow-[0_16px_40px_oklch(0.65_0.25_320/0.22)]', bar: 'bg-fuchsia-400' },
   cyan: { ring: 'ring-cyan-500/30', bg: 'bg-cyan-500/12', text: 'text-cyan-300', glow: 'shadow-[0_16px_40px_oklch(0.7_0.13_200/0.22)]', bar: 'bg-cyan-400' },
+  green: { ring: 'ring-green-500/30', bg: 'bg-green-500/12', text: 'text-green-300', glow: 'shadow-[0_16px_40px_oklch(0.72_0.18_145/0.22)]', bar: 'bg-green-400' },
+  red: { ring: 'ring-red-500/30', bg: 'bg-red-500/12', text: 'text-red-300', glow: 'shadow-[0_16px_40px_oklch(0.63_0.22_25/0.22)]', bar: 'bg-red-400' },
+  purple: { ring: 'ring-purple-500/30', bg: 'bg-purple-500/12', text: 'text-purple-300', glow: 'shadow-[0_16px_40px_oklch(0.6_0.2_290/0.22)]', bar: 'bg-purple-400' },
 };
 
 export function docAccent(name: string) {
