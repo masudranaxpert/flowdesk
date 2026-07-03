@@ -174,12 +174,11 @@ export default function Docs() {
   );
 
   const grouped = useMemo(() => {
-    if (isSearching) return [];
     return docGroupOrder.map((group) => ({
       group,
       categories: docCategories.filter((category) => category.group === group),
     })).filter((entry) => entry.categories.length > 0);
-  }, [isSearching]);
+  }, []);
 
   const totalChapters = docCategories.reduce((sum, category) => sum + category.chapters.length, 0);
 

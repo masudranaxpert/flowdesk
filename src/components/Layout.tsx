@@ -33,6 +33,7 @@ import Dialog from './Dialog';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { cn, fuzzyMatch } from '../lib/utils';
+import { searchDocs } from '@/data/docs/search';
 import type { Bookmark as BookmarkType, CodeSnippet, Notebook, Question, RoutineItem } from '../types';
 
 const navItems = [
@@ -149,9 +150,16 @@ export default function Layout({ children }: { children: ReactNode }) {
     }
     setSearching(true);
     const t = setTimeout(() => {
+      const docHits = searchDocs(q, 5).map((r) => ({
+        id: `doc-${r.categoryId}-${r.chapterId}`,
+        type: 'Docs',
+        title: r.chapterTitle,
+        subtitle: `${r.categoryTitle} — ${r.snippet}`,
+        to: `/docs/${r.categoryId}/${r.chapterId}`,
+      }));
       api.search(q)
-        .then((items) => setSearchResults(items || []))
-        .catch(() => {})
+        .then((items) => setSearchResults([...docHits, ...(items || [])]))
+        .catch(() => setSearchResults(docHits))
         .finally(() => setSearching(false));
     }, 250);
     return () => clearTimeout(t);
@@ -351,7 +359,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             <div className="w-full max-w-2xl rounded-3xl border border-border bg-card p-3 shadow-2xl">
               <div className="flex items-center gap-2">
                 <Search className="ml-2 h-4 w-4 text-muted-foreground" />
-                <Input autoFocus value={globalSearch} onChange={(event) => setGlobalSearch(event.target.value)} placeholder="Search bookmarks, notes, code, questions, routine..." className="border-0 bg-transparent shadow-none focus-visible:ring-0" />
+                <Input autoFocus value={globalSearch} onChange={(event) => setGlobalSearch(event.target.value)} placeholder="Search docs, bookmarks, notes, code, questions..." className="border-0 bg-transparent shadow-none focus-visible:ring-0" />
                 <Button variant="ghost" size="icon" onClick={() => setSearchOpen(false)} aria-label="Close search">
                   <X className="h-4 w-4" />
                 </Button>
