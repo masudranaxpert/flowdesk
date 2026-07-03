@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { ArrowRight, GraduationCap, Search, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ArrowRight, FileText, GraduationCap, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -11,8 +11,9 @@ import {
   docLevelLabels,
   readProgress,
 } from '@/data/docs';
+import { searchDocs, type DocSearchResult } from '@/data/docs/search';
 import { docIcon, docAccent } from '@/components/docs/docMeta';
-import { cn, fuzzyMatch } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 function categoryProgress(chapterCount: number, readIds: Set<string>, category: typeof docCategories[number]) {
   const read = category.chapters.filter((chapter) => readIds.has(chapter.id)).length;
@@ -59,22 +60,126 @@ function DocCategoryCard({ category }: { category: typeof docCategories[number] 
   );
 }
 
+function highlightText(text: string, query: string): React.ReactNode {
+  const q = query.trim();
+  if (!q) return text;
+  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+  return parts.map((part, i) =>
+    part.toLowerCase() === q.toLowerCase()
+      ? <mark key={i} className="rounded bg-primary/20 px-0.5 text-foreground">{part}</mark>
+      : part,
+  );
+}
+
+function SearchResultRow({
+  result,
+  active,
+  query,
+  onClick,
+  onHover,
+}: {
+  result: DocSearchResult;
+  active: boolean;
+  query: string;
+  onClick: () => void;
+  onHover: () => void;
+}) {
+  return (
+    <button
+      onMouseEnter={onHover}
+      onClick={onClick}
+      className={cn(
+        'flex w-full items-start gap-3 rounded-xl p-2.5 text-left transition',
+        active ? 'bg-accent ring-1 ring-primary/30' : 'hover:bg-accent/50',
+      )}
+    >
+      <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <span className="truncate text-sm font-medium">{highlightText(result.chapterTitle, query)}</span>
+        </div>
+        <p className="truncate text-[11px] text-muted-foreground">
+          {result.categoryTitle}
+        </p>
+        {result.snippet && (
+          <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground/70">
+            {highlightText(result.snippet, query)}
+          </p>
+        )}
+      </div>
+      <Badge variant="outline" className="shrink-0 rounded-full text-[9px] capitalize">
+        {result.level}
+      </Badge>
+    </button>
+  );
+}
+
 export default function Docs() {
   const { categoryId } = useParams();
+  const navigate = useNavigate();
   const activeCategory = categoryId ? docCategories.find((c) => c.id === categoryId) : undefined;
   const [query, setQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  const searchResults = useMemo(() => searchDocs(query, 8), [query]);
+  const isSearching = query.trim().length >= 2;
+
+  useEffect(() => {
+    if (!isSearching) return;
+    function onClickOutside(e: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [isSearching]);
+
+  useEffect(() => setActiveIndex(0), [query]);
+
+  useEffect(() => {
+    function onSlash(e: KeyboardEvent) {
+      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        document.getElementById('docs-search-input')?.focus();
+        setSearchOpen(true);
+      }
+    }
+    document.addEventListener('keydown', onSlash);
+    return () => document.removeEventListener('keydown', onSlash);
+  }, []);
+
+  const handleSearchKey = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (!isSearching || searchResults.length === 0) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setActiveIndex((i) => (i + 1) % searchResults.length);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setActiveIndex((i) => (i - 1 + searchResults.length) % searchResults.length);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        const result = searchResults[activeIndex];
+        if (result) navigate(`/docs/${result.categoryId}/${result.chapterId}`);
+      } else if (e.key === 'Escape') {
+        setQuery('');
+        setSearchOpen(false);
+      }
+    },
+    [isSearching, searchResults, activeIndex, navigate],
+  );
 
   const grouped = useMemo(() => {
-    const q = query.trim();
+    if (isSearching) return [];
     return docGroupOrder.map((group) => ({
       group,
-      categories: docCategories.filter(
-        (category) =>
-          category.group === group &&
-          (q ? fuzzyMatch(q, [category.title, category.titleEn, category.description]) : true)
-      ),
+      categories: docCategories.filter((category) => category.group === group),
     })).filter((entry) => entry.categories.length > 0);
-  }, [query]);
+  }, [isSearching]);
 
   const totalChapters = docCategories.reduce((sum, category) => sum + category.chapters.length, 0);
 
@@ -96,18 +201,47 @@ export default function Docs() {
               Python, NumPy, Pandas, Git/CI-CD, Linux, Docker, JWT-OAuth থেকে Machine Learning, NLP, Deep Learning পর্যন্ত — সব এক জায়গায়, সম্পূর্ণ বাংলায়, কোড উদাহরণ সহ। মোট <span className="font-semibold text-foreground">{totalChapters}</span> চ্যাপ্টার।
             </p>
           </div>
-          <div className="relative w-full sm:w-72">
+          <div ref={searchRef} className="relative w-full sm:w-80">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
+              id="docs-search-input"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="টপিক খুঁজি..."
-              className="rounded-2xl bg-background/70 pl-9"
+              onChange={(e) => { setQuery(e.target.value); setSearchOpen(true); }}
+              onFocus={() => setSearchOpen(true)}
+              onKeyDown={handleSearchKey}
+              placeholder="চ্যাপ্টার, টপিক বা কীওয়ার্ড খুঁজি..."
+              className="rounded-2xl bg-background/70 pl-9 pr-9"
             />
-            {query && (
-              <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2" onClick={() => setQuery('')}>
+            {query ? (
+              <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2" onClick={() => { setQuery(''); setSearchOpen(false); }}>
                 <X className="h-4 w-4" />
               </Button>
+            ) : (
+              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md border border-border bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">/</kbd>
+            )}
+
+            {isSearching && searchOpen && (
+              <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-[60vh] overflow-y-auto rounded-2xl border border-border bg-popover/95 p-2 shadow-2xl backdrop-blur-xl">
+                {searchResults.length > 0 ? (
+                  <div className="space-y-1">
+                    {searchResults.map((result, i) => (
+                      <SearchResultRow
+                        key={`${result.categoryId}-${result.chapterId}`}
+                        result={result}
+                        active={i === activeIndex}
+                        query={query}
+                        onClick={() => navigate(`/docs/${result.categoryId}/${result.chapterId}`)}
+                        onHover={() => setActiveIndex(i)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-8 text-center">
+                    <p className="text-sm text-muted-foreground">কোনো ফলাফল পাওয়া যায়নি</p>
+                    <p className="mt-1 text-xs text-muted-foreground/60">অন্য কীওয়ার্ড দিয়ে চেষ্টা করুন</p>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
