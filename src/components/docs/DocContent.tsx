@@ -57,7 +57,7 @@ const docComponents: Components = {
 export default function DocContent({ body }: { body: string }) {
   const transformed = useMemo(() => transformCallouts(stripLeadingH1(body)), [body]);
   return (
-    <div className="doc-content prose prose-invert max-w-none prose-headings:scroll-mt-24 prose-headings:font-semibold prose-h1:text-3xl prose-h2:mt-10 prose-h2:border-b prose-h2:border-border/60 prose-h2:pb-2 prose-pre:bg-transparent prose-pre:p-0 prose-code:text-primary prose-code:before:hidden prose-code:after:hidden">
+    <div className="doc-content">
       <MarkdownView allowHtml components={docComponents}>{transformed}</MarkdownView>
     </div>
   );

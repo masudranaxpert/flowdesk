@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -597,10 +598,11 @@ pre {
 .code-window-header {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
   border-bottom: 1px solid rgb(255 255 255 / 0.08);
   background: #161b22;
-  padding: 0.5rem 0.75rem;
+  padding: 0.4rem 0.7rem;
+  min-height: 2.25rem;
 }
 
 .code-window-pre {
@@ -641,12 +643,12 @@ pre {
 }
 
 .doc-callout {
-  margin: 1.5rem 0;
-  padding: 1rem 1.25rem;
-  border-left: 3px solid;
-  border-radius: 0.75rem;
-  font-size: 0.9rem;
-  line-height: 1.7;
+  margin: 1.75rem 0;
+  padding: 0.9rem 1.2rem;
+  border-left: 4px solid;
+  border-radius: 0 0.6rem 0.6rem 0;
+  font-size: 0.95rem;
+  line-height: 1.72;
 }
 
 .doc-callout p:first-child {
@@ -687,6 +689,275 @@ pre {
 
 .doc-callout pre {
   margin: 0.75rem 0;
+}
+
+/* === Docs Content Design System === */
+.doc-content {
+  font-family: 'Hind Siliguri', var(--font-sans), system-ui, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.8;
+  color: var(--color-muted-foreground);
+  overflow-wrap: anywhere;
+}
+
+.doc-content > :first-child {
+  margin-top: 0;
+}
+
+.doc-content > :last-child {
+  margin-bottom: 0;
+}
+
+.doc-content h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--color-foreground);
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.doc-content h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-foreground);
+  margin-top: 2.75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--color-border) 70%, transparent);
+  letter-spacing: -0.005em;
+  scroll-margin-top: 6rem;
+}
+
+.doc-content h3 {
+  font-size: 1.25rem;
+  font-weight: 650;
+  line-height: 1.35;
+  color: var(--color-foreground);
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  scroll-margin-top: 6rem;
+}
+
+.doc-content h4 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--color-foreground);
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  scroll-margin-top: 6rem;
+}
+
+.doc-content p {
+  margin-top: 0;
+  margin-bottom: 1.1rem;
+  line-height: 1.8;
+}
+
+.doc-content strong {
+  font-weight: 700;
+  color: var(--color-foreground);
+}
+
+.doc-content em {
+  font-style: italic;
+}
+
+.doc-content a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  font-weight: 500;
+  transition: opacity 150ms ease;
+}
+
+.doc-content a:hover {
+  opacity: 0.82;
+}
+
+.doc-content :not(pre) > code {
+  font-size: 0.85em;
+  font-family: 'JetBrains Mono', var(--font-mono);
+  padding: 0.12em 0.4em;
+  border-radius: 0.35rem;
+  background: color-mix(in oklch, var(--color-primary) 10%, transparent);
+  color: var(--color-primary);
+  border: 1px solid color-mix(in oklch, var(--color-primary) 15%, transparent);
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.doc-content .code-window {
+  margin-top: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.doc-content .code-window + .code-window {
+  margin-top: 0;
+}
+
+.doc-content p + .code-window {
+  margin-top: 1.25rem;
+}
+
+.doc-content .code-window + p {
+  margin-top: 0.5rem;
+}
+
+.doc-content .code-window + h2,
+.doc-content .code-window + h3,
+.doc-content .code-window + h4 {
+  margin-top: 2.75rem;
+}
+
+.doc-content ul,
+.doc-content ol {
+  padding-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.doc-content ul {
+  list-style: disc;
+}
+
+.doc-content ol {
+  list-style: decimal;
+}
+
+.doc-content li {
+  margin-bottom: 0.45rem;
+  line-height: 1.78;
+  padding-left: 0.25rem;
+}
+
+.doc-content li::marker {
+  color: var(--color-primary);
+  opacity: 0.65;
+}
+
+.doc-content ul ul,
+.doc-content ol ol,
+.doc-content ul ol,
+.doc-content ol ul {
+  margin-top: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.doc-content li > p {
+  margin-bottom: 0.35rem;
+}
+
+.doc-content table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-top: 1.5rem;
+  margin-bottom: 2rem;
+  font-size: 0.9rem;
+  display: block;
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+}
+
+.doc-content thead {
+  background: color-mix(in oklch, var(--color-muted) 50%, transparent);
+}
+
+.doc-content th {
+  padding: 0.7rem 1rem;
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-foreground);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+  font-family: var(--font-sans);
+}
+
+.doc-content td {
+  padding: 0.65rem 1rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid color-mix(in oklch, var(--color-border) 50%, transparent);
+  line-height: 1.65;
+}
+
+.doc-content tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.doc-content tbody tr:hover {
+  background: color-mix(in oklch, var(--color-muted) 25%, transparent);
+}
+
+.doc-content p + table,
+.doc-content .code-window + table {
+  margin-top: 1.5rem;
+}
+
+.doc-content table + p {
+  margin-top: 0.5rem;
+}
+
+.doc-content table + h2,
+.doc-content table + h3 {
+  margin-top: 2.75rem;
+}
+
+.doc-content th :not(pre) > code,
+.doc-content td :not(pre) > code {
+  font-size: 0.82em;
+}
+
+.doc-content blockquote {
+  border-left: 3px solid var(--color-primary);
+  padding: 0.25rem 0 0.25rem 1.25rem;
+  margin: 1.5rem 0;
+  color: var(--color-muted-foreground);
+  font-style: italic;
+}
+
+.doc-content blockquote p {
+  margin-bottom: 0.25rem;
+}
+
+.doc-content hr {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 2.5rem 0;
+}
+
+.doc-content img {
+  max-width: 100%;
+  border-radius: 0.75rem;
+  margin: 1.5rem 0;
+}
+
+.doc-content pre {
+  margin: 1.25rem 0 2rem;
+  padding: 1.1rem 1.25rem;
+  font-size: 0.85rem;
+  line-height: 1.7;
+}
+
+.doc-content .doc-callout {
+  margin-top: 1.75rem;
+  margin-bottom: 2rem;
+}
+
+.doc-content .doc-callout + p {
+  margin-top: 0.5rem;
+}
+
+.doc-content .doc-callout + h2,
+.doc-content .doc-callout + h3 {
+  margin-top: 2.75rem;
 }
 
 code {
