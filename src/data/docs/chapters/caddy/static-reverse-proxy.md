@@ -1,6 +1,6 @@
 # Static File আর Reverse Proxy
 
-আগের chapter এ আমরা Caddy install করেছি আর basic Caddyfile দেখেছি। এবার দেখবো Caddy এর দুইটা সবচেয়ে important feature — **static file serving** আর **reverse proxy**। এই দুটো শিখলে তুমি যেকোনো web project deploy করতে পারবে।
+আগের chapter এ আমরা Caddy install করেছি আর basic Caddyfile দেখেছি। এবার দেখবো Caddy এর দুিনটা সবচেয়ে important feature — **static file serving** আর **reverse proxy**। এই দুটো শিখলে তুমি যেকোনো web project deploy করতে পারবে।
 
 ## Static File Serving
 
@@ -33,9 +33,9 @@ Request: example.com/about.html
 > [!tip]
 > `root` আর `file_server` দুটোই দরকার। `root` ছাড়া Caddy বুঝবে না কোন folder থেকে file নিতে হবে। `file_server` ছাড়া Caddy file serve করবে না।
 
-### Browse Option
+### Browse Option আর SPA
 
-কোনো `index.html` না থাকলে folder এর file list দেখানো যায়।
+কোনো `index.html` না থাকলে folder এর file list দেখানো যায়:
 
 ```text
 localhost:8080 {
@@ -44,17 +44,7 @@ localhost:8080 {
 }
 ```
 
-এখন `localhost:8080` খুললে folder এর ভেতরের file গুলোর একটা list দেখাবে। Development এ খুব useful।
-
-### React/Next.js Build Serve
-
 React বা Next.js এর static build serve করা যায়:
-
-```bash
-# React build করো
-npm run build
-# dist/ বা build/ folder তৈরি হবে
-```
 
 ```text
 myapp.com {
@@ -100,8 +90,6 @@ myapp.com {
 
 Python বা Node.js backend কে proxy করা যায়।
 
-### Python (FastAPI/Flask) Proxy
-
 ```text
 api.mysite.com {
     reverse_proxy localhost:8000
@@ -109,14 +97,6 @@ api.mysite.com {
 ```
 
 এখন `api.mysite.com/users` request করলে সেটা `localhost:8000/users` এ চলে যাবে।
-
-### Node.js Proxy
-
-```text
-app.mysite.com {
-    reverse_proxy localhost:3000
-}
-```
 
 ### Path Based Routing
 
@@ -148,10 +128,6 @@ mysite.com {
   Caddy → strips /api → /users
            ↓
   Backend: localhost:8000/users
-
-  Request: mysite.com/
-           ↓
-  Caddy → static file server
 ```
 
 > [!tip]
@@ -163,7 +139,15 @@ mysite.com {
 
 ```text
 api.mysite.com {
-    reverse_proxy localhost:8000 localhost:8001 localhost:8002
+    reverse_proxy {
+        to localhost:8000 localhost:8001 localhost:8002
+
+        # round robin (default)
+        lb_policy round_robin
+
+        # সবচেয়ে কম connection ওয়ালাকে
+        # lb_policy least_conn
+    }
 }
 ```
 
@@ -173,30 +157,6 @@ api.mysite.com {
     Request 3 → localhost:8002 (backend 3)
     Request 4 → localhost:8000 (আবার প্রথমে)
 ```
-
-### Load Balancing Policy
-
-ভাগ করার নিয়ম customize করা যায়:
-
-```text
-api.mysite.com {
-    reverse_proxy {
-        to localhost:8000 localhost:8001
-
-        # round robin (default)
-        lb_policy round_robin
-
-        # সবচেয়ে কম connection ওয়ালাকে
-        lb_policy least_conn
-
-        # IP hash (একই user সবসময় এক backend এ)
-        lb_policy ip_hash
-    }
-}
-```
-
-> [!note]
-> Production এ high traffic app এর জন্য একাধিক backend instance চালানো হয়। যেমন ৪টা FastAPI instance ৪টা port এ। Caddy load balancer হিসেবে কাজ করে request গুলো ভাগ করে দেয়। এতে single backend overload হয় না।
 
 ### Health Check
 
@@ -214,6 +174,9 @@ api.mysite.com {
 }
 ```
 
+> [!note]
+> Production এ high traffic app এর জন্য একাধিক backend instance চালানো হয়। যেমন ৪টা FastAPI instance ৪টা port এ। Caddy load balancer হিসেবে কাজ করে request গুলো ভাগ করে দেয়। এতে single backend overload হয় না।
+
 ## Header Manipulation
 
 Request বা response এর header customize করা যায়।
@@ -228,7 +191,6 @@ mysite.com {
         X-Frame-Options DENY
         X-Content-Type-Options nosniff
         Referrer-Policy strict-origin-when-cross-origin
-        X-Powered-By "Caddy"
     }
 }
 ```
@@ -269,32 +231,18 @@ Becomes: /new/page
 Backend gets: /new/page
 ```
 
-### Strip Path
-
-```text
-api.mysite.com {
-    handle_path /v1/* {
-        reverse_proxy localhost:8000
-    }
-}
-```
-
-`handle_path` automatic `/v1` কে strip করে দেয়। `/v1/users` হয়ে যায় `/users`।
+`handle_path` automatic path prefix strip করে: `/api/users` হয়ে যায় `/users`।
 
 ## Practical Caddyfile Examples
 
-### Example ১: Full Stack App
-
-Frontend React + Backend FastAPI:
+### Full Stack App: Frontend React + Backend FastAPI
 
 ```text
 myapp.com {
-    # API requests
     handle /api/* {
         reverse_proxy localhost:8000
     }
 
-    # Static React app
     handle {
         root * /var/www/myapp/dist
         file_server
@@ -303,11 +251,10 @@ myapp.com {
 }
 ```
 
-### Example ২: Multiple Services
+### Multiple Services সহ IP Restriction
 
 ```text
 {
-    # global options
     email admin@myapp.com
 }
 

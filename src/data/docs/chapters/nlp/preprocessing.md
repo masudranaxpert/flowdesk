@@ -1,156 +1,158 @@
 # Text Preprocessing আর Tokenization
 
-কল্পনা করো — তুমি একটা বিশাল text পেলে যেখানে কতো কথা লেখা। কিন্তু কম্পিউটার শুধু শুনে "আমি তোমাকে ভালোবাসি" এই বাক্যটা দেখলে কিছুই বোঝে না। কম্পিউটার তো সংখ্যা বোঝে। তাই এই ভাষাকে এমনভাবে পরিষ্কার আর সংখ্যায় রূপান্তর করতে হবে যেন model দিয়ে কাজে লাগানো যায়। এই পুরো কাজটাকেই বলে text preprocessing।
+NLP project শুরু করার আগে একটা জিনিস সবার আগে করতে হয় — raw text কে clean আর সুন্দর করা। এটাকেই বলে preprocessing। অনেকে এটা এড়িয়ে যায়, সরাসরি model এ ফেলে দেয়। কিন্তু সত্যি কথা হলো — ভালো preprocessing করলে model এর accuracy ১০-২০% পর্যন্ত বেড়ে যেতে পারে।
 
 ## Preprocessing কেন দরকার?
 
-র কম্পিউটার text কে শুধু "character গুলোর সমষ্টি" হিসেবে দেখে — meaning বোঝে না। আর raw text এ থাকে punctuation, uppercase/lowercase মিশ্রণ, stop words, spelling mistake — সব ঝামেলা।
+মেশিন তো মানুষের মতো পড়তে পারে না। যদি তুমি "Movie টা SUPER ভালো ছিল!!! 😍" লিখো, machine কে এটা confusion এ ফেলে দেয় — বড় হাতের অক্ষর, punctuation, emoji সব মিলিয়ে। preprocessing দিয়ে এই ঝামেলা গুলো পরিষ্কার করা হয়।
 
 ```text
-Raw Text → "WOW!!! This movie was SOOO good... 😍"
-
-Problem:
-- "WOW" vs "wow" — একই কিন্তু কম্পিউটার আলাদা ভাবে
-- "!!!" punctuation — noise
-- "SOOO" spelling variation
-- emoji — কীভাবে handle করবে?
+Raw Text: "Movie টা SUPER ভালো ছিল!!! 😍"
+            │
+            ▼
+     [ Preprocessing ]
+            │
+            ▼
+Clean Text: "movie টা super ভালো ছিল"
 ```
 
-> [!note]
-> Preprocessing এর মূল উদ্দেশ্য হলো — text থেকে noise সরানো আর এমন ফরম্যাটে আনা যা model সহজে শিখতে পারে। খারাপ preprocessing = খারাপ model। এটাই NLP এর সবচেয়ে গুরুত্বপূর্ণ ধাপ।
+## Step 1 — Lowercase আর Normalization
 
-## Lowercase আর Normalization
-
-সবচেয়ে basic ধাপ — সব অক্ষর lowercase করা। কারণ কম্পিউটারের কাছে "Good", "good", "GOOD" এই তিনটে আলাদা শব্দ।
+সবচেয়ে প্রথম step — সব অক্ষর ছোট হাতের করা। "Apple" আর "apple" মেশিনের কাছে দুটো আলাদা word। lowercase করলে দুটো এক হয়ে যায়।
 
 ```python
-text = "I LOVE Python Programming"
-
-normalized = text.lower()
-print(normalized)
-# i love python programming
+text = "Python is AWESOME and Powerful"
+cleaned = text.lower()
+print(cleaned)   # "python is awesome and powerful"
 ```
+
+Normalization এর মধ্যে আরো পড়ে — accent সরানো, unicode fix করা, extra space সরানো।
 
 ```python
 import re
 
-# Remove punctuation
-text = "Hello!!! How are you??? I'm fine."
-clean = re.sub(r"[^\w\s]", "", text)
-print(clean)
-# Hello How are you Im fine
+text = "Hello   world!  How   are  you?"
+cleaned = re.sub(r"\s+", " ", text).strip()
+print(cleaned)   # "Hello world! How are you?"
 ```
 
-> [!warn]
-> সব সময় lowercasing করা ঠিক না। যদি NER করতে হয় (নাম চেনা), তখন "Apple" (কোম্পানি) আর "apple" (ফল) আলাদা — uppercase মূল্যবান information। কাজ অনুযায়ী সিদ্ধান্ত নাও।
+> [!tip] সবসময় lowercase করবে না
+> Named Entity Recognition এর মতো task এ বড় হাতের অক্ষর কাজে লাগে। "Apple" (company) আর "apple" (fruit) আলাদা। Task বুঝে decide করো।
 
-## Tokenization — ভাঙা শব্দে
+## Step 2 — Tokenization
 
-Tokenization হলো text কে ছোট ছোট টুকরো (token) করে ভাঙা। এটাই NLP এর ভিত্তি।
+Tokenization হলো লেখাকে ছোট ছোট piece এ ভাগ করা। এই piece গুলোকে token বলে।
 
 ### Word Tokenization
 
-সবচেয়ে সহজ — স্পেস ধরে ভাঙা।
-
-```python
-text = "I love learning natural language processing"
-
-tokens = text.split()
-print(tokens)
-# ['I', 'love', 'learning', 'natural', 'language', 'processing']
-```
-
-কিন্তু সব সময় এত সহজ না। যেমন "don't", "I'm", "New York" — এগুলো tricky।
+সবচেয়ে সহজ পদ্ধতি — space আর punctuation ধরে ভাগ করা।
 
 ```python
 from nltk.tokenize import word_tokenize
+import nltk
+nltk.download("punkt")
+nltk.download("punkt_tab")
 
-tokens = word_tokenize("I don't think so.")
+text = "I love learning NLP, it's amazing!"
+tokens = word_tokenize(text)
 print(tokens)
-# ['I', 'do', "n't", 'think', 'so', '.']
 ```
-
-### Subword Tokenization (BPE) — Modern Approach
-
-LLM আমাদের শিখিয়েছে শব্দ না ভেঙে subword ভাঙতে। Byte Pair Encoding (BPE) হলো এই পদ্ধতি।
 
 ```text
-"unhappiness"
-
-Word token:     ["unhappiness"]         # একটাই token
-Subword (BPE):  ["un", "happiness"]     # দুটো token
-Character:      ["u","n","h","a",...]   # অনেক গুলো
+['I', 'love', 'learning', 'NLP', ',', 'it', "'s", 'amazing', '!']
 ```
 
-BPE এর সুবিধা — অপরিচিত শব্দ ও চিনতে পারে। যেমন "unbelieveable" নতুন শব্দ হলেও BPE একে "un" + "believe" + "able" এ ভাঙবে।
+### Subword Tokenization (BPE)
+
+2026 এর যুগে সবচেয়ে ব্যবহৃত হয় subword tokenization। LLM গুলো (GPT, Claude, Llama) সব এটাই use করে। এর পেছনে কারণ আছে — শব্দ ভাঙ্গলে rare word আর নতুন word ও handle করা যায়।
 
 ```python
 from transformers import AutoTokenizer
 
 tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
-tokens = tokenizer.tokenize("unhappiness")
+tokens = tokenizer.tokenize("unbelievably amazing")
 print(tokens)
-# ['un', '##ha', '##pp', '##iness']
 ```
 
-> [!tip]
-> Modern LLM গুলো (GPT-4, Llama, Claude) সবই subword tokenizer ব্যবহার করে। Word-level tokenization এখন শুধু classical NLP তে ব্যবহার হয়। Transformer era তে BPE বা SentencePiece হলো standard।
+```text
+['un', '##bel', '##ieva', '##bly', 'amazing']
+```
 
-## Stop Words Removal
+দেখো — "unbelievably" ভেঙে গেলো ছোট ছোট piece এ। এটাকে WordPiece (BPE এর ভাই) বলে।
 
-কিছু শব্দ থাকে যা বাক্যে অনেক বার আসে কিন্তু মূল অর্থে কোনো অবদান রাখে না। যেমন — "the", "is", "at", "which"। এদের stop word বলে।
+> [!note] BPE কেন দরকার
+> BPE (Byte Pair Encoding) দিয়ে মেশিন নতুন শব্দও বানাতে পারে। "ChatGPT" শব্দটা যদি training এ না থাকে, তবু "Chat" + "G" + "PT" ভাঙ্গে বুঝে যায়।
+
+## Step 3 — Stop Words Removal
+
+"the", "is", "in", "at" — এই সব word কে stop word বলে। এগুলো দিয়ে বাক্যে মানে এতো আসে না, কিন্তু ফাইল বড় করে। তাই সরিয়ে ফেলা হয়।
 
 ```python
 from nltk.corpus import stopwords
+nltk.download("stopwords")
 
+text = "this is a really good movie and i love it"
 stop_words = set(stopwords.words("english"))
-print(len(stop_words))   # 179
-
-words = ["I", "love", "the", "movie", "and", "the", "acting"]
+words = text.split()
 filtered = [w for w in words if w not in stop_words]
 print(filtered)
-# ['I', 'love', 'movie', 'acting']
 ```
 
-> [!warn]
-> Stop word removal সব সময় ভালো না। Sentiment analysis এ "not good" থেকে "not" সরালে অর্থ উল্টো হয়ে যায়! কাজ বুঝে remove করো।
+```text
+['really', 'good', 'movie', 'love']
+```
 
-## Stemming vs Lemmatization
+> [!warn] Classification এ সাবধান
+> Sentiment analysis এ "not" একটা stop word কিন্তু মানে পাল্টে দেয়। "not good" আর "good" আলাদা। Task বুঝে stop word remove করো।
 
-দুটোই শব্দকে base form এ আনার চেষ্টা করে, কিন্তু পদ্ধতি আলাদা।
+## Step 4 — Stemming vs Lemmatization
 
-| Feature | Stemming | Lemmatization |
-|---------|----------|---------------|
-| পদ্ধতি | শব্দের tail কেটে দেয় | অভিধান দেখে সঠিক form |
-| Speed | দ্রুত | ধীর |
+দুটোই একই কাজ করে — শব্দকে base form এ আনে। কিন্তু পদ্ধতি আলাদা।
+
+| বিষয় | Stemming | Lemmatization |
+|-------|----------|---------------|
+| পদ্ধতি | Rule দিয়ে কেটে দেয় | Dictionary দেখে |
 | Accuracy | কম | বেশি |
+| Speed | Fast | Slow |
 | উদাহরণ | "running" → "run" | "better" → "good" |
 
 ```python
 from nltk.stem import PorterStemmer, WordNetLemmatizer
+nltk.download("wordnet")
 
 stemmer = PorterStemmer()
-lemmatizer = WordNetLemmatizer()
+lemma = WordNetLemmatizer()
 
-words = ["running", "ran", "runs", "easily", "better"]
-
-print("Stemming:")
-for w in words:
-    print(f"  {w} → {stemmer.stem(w)}")
-# running → run, ran → ran, runs → run, easily → easili, better → better
-
-print("Lemmatization:")
-for w in words:
-    print(f"  {w} → {lemmatizer.lemmatize(w, pos='v')}")
-# running → run, ran → run, runs → run, easily → easily, better → better
+word = "running"
+print(stemmer.stem(word))      # run
+print(lemma.lemmatize(word))   # running (need POS tag)
+print(lemma.lemmatize("better", pos="a"))   # good
 ```
 
-> [!tip]
-> Stemming যদি দ্রুত ফলাফল লাগে (search engine, topic classification)। Lemmatization যদি সঠিক ফলাফল লাগে (chatbot, translation)। Production এ lemmatization বেশি ব্যবহার হয়।
+> [!tip] কোনটা use করবে
+> Production এ যাও লেম্মাটাইজেশন। Research এ বা স্পিড দরকার হলে stemming। একটা কাজ করলেই হবে, দুটো দরকার নেই।
+
+## Step 5 — Punctuation আর Number
+
+খাতা clean করার শেষ ধাপ। punctuation আর number সরানো।
+
+```python
+import re
+
+text = "Call me at 01712345678! Price: $500 only."
+clean_text = re.sub(r"[^a-zA-Z\s]", "", text)
+print(clean_text)
+```
+
+```text
+Call me at   Price  only
+```
+
+কিন্তু সব context এ সব সরানো ঠিক না। Phone number, price যদি কাজের তথ্য হয়, সরালে মানে নষ্ট হবে।
 
 ## Bag of Words (BoW)
 
-সবচেয়ে simple vectorization — কোন শব্দ কতবার আসলো সেটা গণনা করা।
+এবার আসি vectorization এ। মেশিন number ছাড়া কিছু বোঝে না। তাই টেক্সটকে number এ রূপান্তর করতে হয়। সবচেয়ে সহজ পদ্ধতি BoW।
 
 ```python
 from sklearn.feature_extraction.text import CountVectorizer
@@ -158,36 +160,38 @@ from sklearn.feature_extraction.text import CountVectorizer
 docs = [
     "I love python",
     "python is great",
-    "I love coding in python"
+    "I love coding"
 ]
 
 vectorizer = CountVectorizer()
-matrix = vectorizer.fit_transform(docs)
-
+X = vectorizer.fit_transform(docs)
 print(vectorizer.get_feature_names_out())
-# ['coding' 'great' 'in' 'is' 'love' 'python']
-
-print(matrix.toarray())
-# [[0 0 0 0 1 1]
-#  [0 1 0 1 0 1]
-#  [1 0 1 0 1 1]]
+print(X.toarray())
 ```
 
-সমস্যা — "python" সব বাক্যে আছে কিন্তু এটা বিশেষ কিছু বোঝায় না। আবার "the", "is" এর মতো সাধারণ শব্দ বেশি বার আসে। সমাধান হলো TF-IDF।
+```text
+['coding' 'great' 'is' 'love' 'python']
+[[0 0 0 1 1]
+ [0 1 1 0 1]
+ [1 0 0 1 0]]
+```
 
-## TF-IDF — গুরুত্ব বোঝা
+দেখো — প্রতিটা word এর জন্য একটা column, আর যতবার word টা এসেছে সেটা count।
 
-TF-IDF (Term Frequency – Inverse Document Frequency) বোঝায় কোন শব্দ একটা document এ গুরুত্বপূর্ণ।
+## TF-IDF — BoW এর উন্নত রূপ
+
+BoW এর সমস্যা — "the", "is" এই সব word সব document এ আছে, কিন্তু কোনো বিশেষ মানে নেই। TF-IDF এই সমস্যা সমাধান করে।
+
+**Formula:**
 
 ```text
 TF-IDF = TF × IDF
 
-TF     = একটা শব্দ একটা document এ কতবার আসলো
-IDF    = log(মোট document সংখ্যা / যেসব doc এ শব্দটা আছে)
-
-উচ্চ TF-IDF = শব্দটা এই doc এ specific
-নিম্ন TF-IDF = শব্দটা সব জায়গায় আছে (সাধারণ)
+TF     = (word count) / (total words in doc)
+IDF    = log(total docs / docs containing this word)
 ```
+
+ইনটুইশন: যে word টা অল্প document এ আছে কিন্তু যেখানে আছে সেখানে বেশি — সেটা important। যেমন "DNA" শব্দটা biology article এ বেশি, সাধারণ লেখায় না। এটার TF-IDF বেশি হবে।
 
 ```python
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -195,46 +199,37 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 docs = [
     "the cat sat on the mat",
     "the dog sat on the log",
-    "cats and dogs are animals"
+    "python programming is fun"
 ]
 
 tfidf = TfidfVectorizer()
-matrix = tfidf.fit_transform(docs)
-
-import pandas as pd
-df = pd.DataFrame(matrix.toarray(), columns=tfidf.get_feature_names_out())
-print(df.round(2))
+X = tfidf.fit_transform(docs)
+print(tfidf.get_feature_names_out())
+print(X.toarray().round(3))
 ```
 
-> [!example]
-> "the" শব্দটা সব ডকুমেন্টে আছে তাই IDF কম, ফলে TF-IDF কম। কিন্তু "log" শুধু একটায় আছে, তাই IDF বেশি, TF-IDF বেশি। এভাবে model বোঝে কোন শব্দ আসলে গুরুত্বপূর্ণ।
+## N-grams — Context ধরার উপায়
 
-## n-grams — Context যোগ করা
-
-শুধু single word না, দুটো বা তিনটা শব্দ একসাথে নিলে context পাওয়া যায়।
+একটা word দেখলেই সব মানে বোঝা যায় না। দুটো word একসাথে থাকলে মানে আলাদা। "not good" — এখানে "not" আর "good" আলাদা আলাদা positive আর negative। এটা ধরতে n-gram লাগে।
 
 ```python
-from sklearn.feature_extraction.text import CountVectorizer
-
 vectorizer = CountVectorizer(ngram_range=(1, 2))
-matrix = vectorizer.fit_transform(["not good", "very good"])
-
+X = vectorizer.fit_transform(["not good at all"])
 print(vectorizer.get_feature_names_out())
-# ['not' 'not good' 'very' 'very good']
 ```
 
 ```text
-Unigram (1-gram):  ["not", "good"]
-Bigram (2-gram):   ["not good"]
-Trigram (3-gram):  ["not very good"]
+['all' 'at' 'good' 'not' 'not good']
 ```
 
-> [!tip]
-> Sentiment analysis এ bigram খুব কাজে দেয়। "not good" এর অর্থ "not" আর "good" আলাদা আলাদা থেকে অনেক আলাদা। n-gram দিয়ে এই context ধরা যায়।
+দেখো — "not good" একটা আলাদা token হয়ে গেলো।
 
-## spaCy Pipeline
+> [!tip] N-gram এর জাদু
+> Sentiment analysis এ bigram (২ টার গ্রুপ) use করলে accuracy বাড়ে। কিন্তু n বড় করলে feature সংখ্যা বিস্ফোরণ ঘটায়। ১-২ এর মধ্যে রাখো।
 
-spaCy একটা pipeline দিয়ে কাজ করে — tokenizer, tagger, parser, NER সব একসাথে।
+## spaCy Pipeline — Production Ready
+
+spaCy দিয়ে এক লাইনেই সব preprocessing পাওয়া যায়। tokenization, POS tagging, NER — সব।
 
 ```python
 import spacy
@@ -243,44 +238,28 @@ nlp = spacy.load("en_core_web_sm")
 doc = nlp("Apple is looking at buying a U.K. startup for $1 billion")
 
 for token in doc:
-    print(f"{token.text:15} {token.lemma_:15} {token.pos_:10} {token.is_stop}")
+    print(token.text, "|", token.lemma_, "|", token.pos_)
 ```
 
-```text
-Apple           apple           PROPN      False
-is              be              AUX        True
-looking         look            VERB       False
-...
-```
+এক pipeline এ সব হয়ে যাচ্ছে — এটাই spaCy এর শক্তি।
 
-## বাংলা Text Handling
+## Bengali Text এর ক্ষেত্রে
 
-বাংলা text preprocessing একটু ঝামেলার কারণ — যুক্তাক্ষর, অনুস্বার, বিসর্গ।
+Bengali text এর preprocessing আলাদা। কারণ — word boundary detect করা কঠিন, stop word list আলাদা, conjunct অক্ষর আছে।
 
 ```python
-# Bengali text tokenization
-text = "আমি ভাত খাই"
+# Bengali stop word example
+bengali_stopwords = {"এই", "সেই", "আমি", "তুমি", "এবং", "বা", "কিন্তু"}
 
-tokens = text.split()
-print(tokens)
-# ['আমি', 'ভাত', 'খাই']
+text = "আমি বই পড়ি এবং খুব ভালোবাসি"
+words = text.split()
+filtered = [w for w in words if w not in bengali_stopwords]
+print(" ".join(filtered))   # বই পড়ি খুব ভালোবাসি
 ```
 
-বাংলার জন্য:
-- `bnltk` বা `spacy-bn` library ব্যবহার করো
-- SentencePiece tokenizer ভালো কাজ করে বাংলায়
-- multilingual model (XLM-R, mBERT) ব্যবহার করো
-
-> [!note]
-> বাংলা একটা morphologically rich language — একই root থেকে অনেক word form হয়। "খাই", "খাও", "খায়", "খাব" — সব "খা" root থেকে। তাই lemmatization বাংলায় খুব জরুরি কিন্তু কঠিন।
+> [!example] Bnlp আর bnltk
+> Bengali NLP এর জন্য `bnlp` আর `bnltk` নামে দুটো library আছে। Bengali tokenization, stemming, NER — সব করা যায়।
 
 ## Summary
 
-- Preprocessing হলো NLP এর ভিত্তি — খারাপ preprocessing = খারাপ model
-- Lowercase, punctuation removal, tokenization — basic ধাপ
-- Subword tokenization (BPE) হলো modern standard (LLM গুলো এটাই ব্যবহার করে)
-- Stop words, stemming, lemmatization — text clean করার টুল
-- Bag of Words আর TF-IDF — text কে vector এ রূপান্তর
-- n-grams দিয়ে context ধরা যায়
-
-পরের chapter এ আমরা এই preprocessing গুলো ব্যবহার করে একটা real project বানাবো — SMS spam classifier! চলো এগোই!
+Preprocessing হলো NLP এর ভিত্তি। lowercase, tokenization, stop word removal, stemming/lemmatization, vectorization (BoW, TF-IDF) — এই ধাপ গুলো সঠিকভাবে করতে পারলে model নিজে থেকেই ভালো perform করবে। পরের chapter এ দেখবো কীভাবে এই feature গুলো দিয়ে classification model বানানো যায়।
