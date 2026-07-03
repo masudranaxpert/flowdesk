@@ -202,14 +202,14 @@ DL এর জন্য কোড লিখতে framework লাগে। 2026 
 - **PyTorch** — research এ রাজা, Pythonic, dynamic
 - **TensorFlow/Keras** — production এ শক্ত, deployment friendly
 
+`nn.Linear(3, 1)` হলো PyTorch-এ একটা single neuron — ৩টা input নিয়ে ১টা output দেয়। এর ভেতরে weight আর bias automatically তৈরি হয়। পরের chapter গুলোতে এর বিস্তারিত দেখবো।
+
 ```python
 # PyTorch এ একটা simple neuron
 import torch.nn as nn
 
 neuron = nn.Linear(3, 1)   # 3 input, 1 output
 ```
-
-পরের chapter গুলোতে framework নিয়ে বিস্তারিত দেখবো।
 
 ## Summary
 

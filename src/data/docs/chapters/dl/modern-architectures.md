@@ -87,6 +87,8 @@ $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)
 - $\text{softmax}$ — score-গুলোকে probability তে পরিণত করে (০ থেকে ১, যোগফল ১)
 - $V$ — value-গুলোর weighted sum
 
+নিচের কোডে `torch.matmul` হলো matrix multiplication (উপরের formula-তে QK^T এর জন্য)। `math.sqrt(d_k)` দিয়ে score কে scale করা হয় যাতে value বড় না হয়ে যায়। `F.softmax(scores, dim=-1)` প্রতিটা query-এর জন্য সব key-এর score কে probability তে রূপান্তর করে — যোগফল ১ হয়। শেষে সেই probability দিয়ে value গুলোর weighted sum বের হয়।
+
 ```python
 import torch
 import torch.nn.functional as F
@@ -203,6 +205,8 @@ Reverse (noise থেকে image):  pure noise → step by step → পরি�
 Diffusion model noise থেকে step by step পরিষ্কার image বানাতে শেখে। Text condition দিলে (যেমন "a cat on the moon"), সেই text অনুযায়ী image generate করে।
 
 ## Practical — PyTorch-এ Self-Attention
+
+নিচের কোডে একটা সম্পূর্ণ Multi-Head Attention layer তৈরি করা হয়েছে। `W_q`, `W_k`, `W_v` হলো তিনটা learnable linear layer যা input থেকে Query, Key, Value vector বানায়। `W_o` শেষে সব head-এর output একসাথে যোগ করে final output দেয়। `num_heads=8` মানে ৮টা আলাদা attention head parallel চলবে — প্রতিটা head `d_model // num_heads` ডাইমেনশন নিয়ে কাজ করে (যেমন 512/8 = 64)। প্রতিটা head ভিন্ন ধরনের relationship (grammar, semantic ইত্যাদি) শিখতে পারে।
 
 ```python
 import torch

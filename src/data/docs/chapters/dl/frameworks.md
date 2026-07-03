@@ -43,6 +43,8 @@ print(y)   # tensor([1., 4., 9.])
 
 ### PyTorch Basics
 
+PyTorch-এ সবকিছুর মূলে আছে **tensor** — এটা NumPy array-এর মতো, কিন্তু GPU-তে চলতে পারে আর automatic gradient calculate করে। `torch.nn` module-এ neural network তৈরির সব building block আছে — `nn.Linear` (fully connected layer), `nn.Module` (সব model-এর base class), activation function সব। `requires_grad=True` দিলে PyTorch সেই tensor-এর সব operation track করে, যাতে পরে `backward()` call করলে automatic gradient বের হয় — এটাই **autograd**।
+
 ```python
 import torch
 import torch.nn as nn
@@ -71,7 +73,7 @@ print(x.grad)   # tensor(7.) — dy/dx = 2x + 3
 
 ### DataLoader আর Training Loop
 
-PyTorch এ data loading এর জন্য `DataLoader` আছে। Mini-batch এ ডেটা দেয়।
+PyTorch এ data loading এর জন্য `DataLoader` আছে। Mini-batch এ ডেটা দেয়। এখানে `criterion` হলো loss function (যেমন `CrossEntropyLoss` classification-এ ব্যবহৃত হয়), আর `optimizer` হলো সেই জিনিস যে weight update করে। Training loop-এ পাঁচটা ধাপ থাকে: `model(data)` দিয়ে forward pass, `criterion` দিয়ে loss হিসাব, `optimizer.zero_grad()` দিয়ে আগের gradient মুছে ফেলা, `loss.backward()` দিয়ে নতুন gradient বের করা, আর `optimizer.step()` দিয়ে weight আসলেই update করা।
 
 ```python
 from torch.utils.data import DataLoader, TensorDataset
@@ -112,7 +114,7 @@ print(y)   # tf.Tensor([1. 4. 9.], shape=(3,), dtype=float32)
 
 ### Keras Sequential API
 
-Keras এর Sequential API দিয়ে model বানানো একদম সহজ — এক লাইনে layer যোগ করে যাও।
+Keras এর Sequential API দিয়ে model বানানো একদম সহজ — এক লাইনে layer যোগ করে যাও। এখানে `Dense` হলো fully connected layer (প্রতিটা neuron আগের layer-এর সব neuron-এর সাথে connected)। `activation="relu"` দিলে hidden layer-এ non-linearity আসে, আর `activation="softmax"` শেষ layer-এ দিলে output গুলো probability হিসেবে আসে (যোগফল ১ হয়) — multi-class classification-এর জন্য এটাই দরকার। `compile()` এ optimizer, loss function আর metrics একসাথে set করে দেয়।
 
 ```python
 from tensorflow import keras
@@ -161,7 +163,7 @@ model = keras.Model(inputs=inputs, outputs=outputs)
 
 ## tf.data — Efficient Pipeline
 
-বড় dataset এর জন্য `tf.data` pipeline বানানো যায়। এটা PyTorch DataLoader এর সমতুল্য।
+বড় dataset এর জন্য `tf.data` pipeline বানানো যায়। এটা PyTorch DataLoader এর সমতুল্য। `from_tensor_slices` দিয়ে raw data থেকে dataset তৈরি হয়। এরপর `shuffle(100)` দিয়ে প্রতিবার ডেটা random order-এ আসে (overfitting কমায়), `batch(16)` দিয়ে ১৬টা sample একসাথে process হয়, আর `prefetch(AUTOTUNE)` দিয়ে পরের batch GPU-তে যাওয়ার সময় CPU পাশাপাশি পরের batch prepare করে রাখে — training অনেক fast হয়।
 
 ```python
 dataset = tf.data.Dataset.from_tensor_slices((X, y))
@@ -176,6 +178,8 @@ model.fit(dataset, epochs=10)
 
 ### PyTorch
 
+PyTorch-এ model save করার standard practice হলো শুধু weight (parameter value) গুলো save করা — এটাকে `state_dict` বলে। পুরো model class definition আলাদাভাবে থাকে, save করা file-এ শুধু numeric weight থাকে। Load করার সময় প্রথমে empty model বানিয়ে তার উপর saved weight বসাতে হয়।
+
 ```python
 # save
 torch.save(model.state_dict(), "model.pth")
@@ -187,6 +191,8 @@ model.eval()
 ```
 
 ### TensorFlow
+
+TensorFlow-এ পুরো model একসাথে save হয় — architecture, weight, optimizer state সব। একটা `.keras` file-এ সব থাকে, তাই load করা সহজ — class definition আলাদাভাবে রাখতে হয় না।
 
 ```python
 # save (complete model)
@@ -204,6 +210,8 @@ loaded = keras.models.load_model("my_model.keras")
 GPU use করা দুটো framework এই সহজ।
 
 ### PyTorch
+
+PyTorch-এ GPU ব্যবহার করতে হলে model আর data দুটোকেই explicitly GPU-তে পাঠাতে হয়। `torch.cuda.is_available()` দিয়ে চেক করা হয় GPU আছে কিনা, আর `.to(device)` দিয়ে tensor বা model সেই device-এ পাঠানো হয়।
 
 ```python
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -225,7 +233,7 @@ print("GPU available:", tf.config.list_physical_devices("GPU"))
 
 ## JAX — নতুন প্রতিযোগী
 
-JAX Google এর নতুন framework। Functional programming style, autodiff এর জন্য অসাধারণ। Research এ জনপ্রিয়তা বাড়ছে।
+JAX Google এর নতুন framework। Functional programming style, autodiff এর জন্য অসাধারণ। Research এ জনপ্রিয়তা বাড়ছে। JAX-এ `jnp` হলো JAX-এর নিজস্ব NumPy version — সব NumPy function এর মতো কাজ করে কিন্তু GPU/TPU-তে run হয় আর automatic differentiation support করে। `jax.grad()` একটা function নিয়ে তার derivative function বানিয়ে দেয় — যেমন এখানে `loss_fn` এর gradient বের করা হচ্ছে।
 
 ```python
 import jax
@@ -268,6 +276,8 @@ JAX এর শক্তি — XLA compiler দিয়ে অনেক fast ex
 
 ### PyTorch Version
 
+PyTorch এ একটা classifier model `nn.Module` inherit করে তৈরি করা হয়েছে। `nn.Linear(784, 128)` মানে ৭৮৪টা input নিয়ে ১২৮টা output দেয়। `forward()` method-এ data কীভাবে layer থেকে layer যাবে সেটা define করা থাকে। Training loop এ আগের মতো forward → loss → zero_grad → backward → step একই pattern অনুসরণ করা হয়েছে।
+
 ```python
 import torch
 import torch.nn as nn
@@ -297,6 +307,8 @@ for epoch in range(3):
 
 ### TensorFlow/Keras Version
 
+Keras-এ একই model অনেক কম কোডে লেখা যায়। `Sequential` এ শুধু layer গুলো একটার পর একটা যোগ করলেই হয় — `forward()` method আলাদাভাবে লিখতে হয় না। `compile()` এ optimizer আর loss set করে, `fit()` এ পুরো training এক লাইনে হয়ে যায়।
+
 ```python
 from tensorflow import keras
 from tensorflow.keras import layers
@@ -322,6 +334,8 @@ Production এ model deploy করার সময় framework choice গুর
 - **PyTorch** → TorchServe, ONNX export করে deploy
 - **TensorFlow** → TF Serving, TFLite (mobile), TF.js (browser)
 - **JAX** → সাধারণত PyTorch/TensorFlow এ convert করে deploy
+
+ONNX (Open Neural Network Exchange) হলো একটা universal format — PyTorch বা TensorFlow যেকোনো framework-এর model কে ONNX-এ export করলে সেটা Caffe2, ONNX Runtime, সহ অন্যান্য inference engine-এ চালানো যায়। এখানে `torch.onnx.export()` এ একটা dummy input দিতে হয় যাতে PyTorch trace করে model-এর computation graph বুঝতে পারে।
 
 ```python
 # PyTorch থেকে ONNX export

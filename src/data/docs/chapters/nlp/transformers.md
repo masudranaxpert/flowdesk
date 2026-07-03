@@ -178,6 +178,8 @@ print(result)
 
 LLM এর সাথে কাজ করতে হলে দুটা জিনিস লাগে — tokenizer আর model।
 
+`AutoTokenizer` যেকোনো pre-trained model-এর tokenizer automatically load করে — এটা টেক্সট কে model-এর ভাষায় (number) রূপান্তর করে। `AutoModelForSequenceClassification` সেই model-টি classification task-এর জন্য load করে। `return_tensors="pt"` দিলে output PyTorch tensor হয়। `model(**inputs)` দিয়ে forward pass হয় আর `.logits` এ raw prediction score পাওয়া যায়।
+
 ```python
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
@@ -197,6 +199,8 @@ print(outputs.logits)
 ## Fine-tuning — নিজের কাজে মানানো
 
 Pre-trained LLM কে নিজের specific task এ মানানোর প্রক্রিয়াই fine-tuning। এর জন্য labeled dataset লাগে।
+
+`TrainingArguments` এ সব training configuration set করা হয়: `num_train_epochs` কতবার পুরো dataset দেখবে, `per_device_train_batch_size` এক GPU-তে কত sample একসাথে, `learning_rate` weight update-এর rate। `Trainer` হলো Hugging Face-এর high-level training API — এটা training loop, gradient, optimizer — সব automatically handle করে। নিজে কোনো loop লেখার দরকার নেই।
 
 ```python
 from transformers import Trainer, TrainingArguments

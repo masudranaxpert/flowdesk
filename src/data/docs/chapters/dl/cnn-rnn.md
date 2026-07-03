@@ -37,7 +37,7 @@ Image (5×5):          Filter (3×3):       Output (3×3):
    filter slide করে feature detect করে
 ```
 
-প্রতিটা position এ filter আর image এর corresponding part গুণ হয়, যোগ হয়, একটা value বের হয়।
+প্রতিটা position এ filter আর image এর corresponding part গুণ হয়, যোগ হয়, একটা value বের হয়। নিচের কোডে `in_channels=3` মানে রঙের ছবির ৩টা channel (RGB), `out_channels=16` মানে ১৬টা ভিন্ন filter শিখবে (ফলে ১৬টা feature map তৈরি হবে)। `kernel_size=3` হলো ৩×৩ আকারের filter, `stride=1` মানে এক ঘর করে move করবে, আর `padding=1` দিয়ে চারপাশে zero বসানো হয় যাতে output-এর size input-এর সমান থাকে।
 
 ```python
 import torch
@@ -81,6 +81,8 @@ Input (4×4):          Output (2×2):
 দুই ধরনের pooling:
 - **Max Pooling** — সবচেয়ে জনপ্রিয়, সবচেয়ে বড় value নেয়
 - **Average Pooling** — গড় নেয়
+
+`nn.MaxPool2d(kernel_size=2, stride=2)` মানে প্রতিটা ২×২ window থেকে সবচেয়ে বড় value টা নেওয়া হবে, আর `stride=2` দিয়ে পরের window-এ যাওয়া হবে — ফলে feature map-এর size অর্ধেক হয়ে যায়। যেমন ৩২×৩২ input থেকে ১৬×১৬ output আসবে।
 
 ```python
 pool = nn.MaxPool2d(kernel_size=2, stride=2)
@@ -129,7 +131,7 @@ Output (class probabilities)
 
 ## Practical — CNN with PyTorch
 
-একটা সম্পূর্ণ CNN classifier দেখি:
+একটা সম্পূর্ণ CNN classifier দেখি: প্রথমে `conv1` ১টা channel থেকে ৩২টা feature map extract করে, `pool` ছবির size অর্ধেক করে, `conv2` ৩২ থেকে ৬৪ channel বানায়। তারপর `x.view(-1, ...)` দিয়ে ২D feature map কে ১D vector-এ flatten করা হয়, যাতে fully connected layer-এ ঢোকানো যায়। শেষে ১০টা class-এর output আসে। Training loop আগের মতোই — forward → loss → zero_grad → backward → step।
 
 ```python
 import torch
@@ -197,7 +199,7 @@ RNN প্রতিটা word একসাথে process করে, আর memo
   word3 ──► [RNN] ──► h3 ──► output
 ```
 
-প্রতিটা step এ RNN দুটো জিনিয়ে input নেয়: current word আর আগের hidden state। hidden state এ আগের তথ্য store থাকে।
+প্রতিটা step এ RNN দুটো জিনিয়ে input নেয়: current word আর আগের hidden state। hidden state এ আগের তথ্য store থাকে। নিচের কোডে `input_size=10` মানে প্রতিটা input token ১০-ডাইমেনশনের vector, `hidden_size=20` মানে RNN-এর memory ২০-ডাইমেনশনের (বড় হলে বেশি মনে রাখতে পারে কিন্তু বেশি parameter লাগে)। `batch_first=True` দিলে input shape হয় `(batch, sequence_length, input_size)` — এটা পড়তে সহজ বলে default হিসেবে use করা হয়।
 
 ```python
 import torch.nn as nn
@@ -244,6 +246,8 @@ state  │       ▼           ▼         │    state
        │  Output Gate ─────────      │
        └─────────────────────────────┘
 ```
+
+LSTM-এর parameter গুলো RNN-এর মতোই — `input_size` আর `hidden_size`। পার্থক্য হলো LSTM দুটো জিনিস return করে: `hidden` (short-term memory, যেমন RNN-এ) আর `cell` (LSTM-এর নিজস্ব long-term memory state)। এই cell state-ই হলো LSTM-এর মূল শক্তি — এর ভেতর দিয়ে information সহজে flow করতে পারে, ফলে দীর্ঘ sequence-ও মনে রাখতে পারে।
 
 ```python
 lstm = nn.LSTM(input_size=10, hidden_size=20, batch_first=True)

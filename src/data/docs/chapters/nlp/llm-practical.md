@@ -77,6 +77,8 @@ Llama 3 7B + LoRA adapter (~১০ মিলিয়ন parameter)
 **LoRA** (Low-Rank Adaptation): শুধু low-rank matrix train করে।
 **QLoRA**: base model-কে 4-bit quantize করে, তার উপর LoRA — আরও কম memory।
 
+`LoraConfig` এ `r=16` হলো rank — এটা নির্ধারণ করে কতটা adapter parameter train হবে (বড় হলে বেশি শেখে কিন্তু বেশি memory)। `target_modules` specify করে কোন কোন layer-এ LoRA adapter বসবে (attention layer-এর q_proj, v_proj সবচেয়ে common)। `load_in_4bit=True` দিয়ে base model ৪-bit-এ quantize করা হয় — memory প্রায় ৪ গুণ কম লাগে। `SFTTrainer` (Supervised Fine-Tuning Trainer) Hugging Face-এর trainer যেটা LoRA adapter-সহ training handle করে।
+
 ```python
 from peft import LoraConfig, get_peft_model
 from transformers import AutoModelForCausalLM, TrainingArguments
@@ -145,6 +147,8 @@ User Question
 ### Vector Store
 
 Document-গুলো embedding করে vector store-এ রাখা হয়। Similarity search দিয়ে relevant chunk বের করা হয়:
+
+`SentenceTransformer` হলো sentence-level embedding model — পুরো sentence কে একটা dense vector-এ রূপান্তর করে। `chromadb` হলো একটা lightweight vector database — embedding গুলো store করে রাখে আর similarity search করে সবচেয়ে কাছের document খুঁজে বের করে। `collection.add()` দিয়ে document add করা হয়, `collection.query()` দিয়ে query-এর সবচেয়ে relevant document retrieve করা হয়।
 
 ```python
 import chromadb
@@ -220,6 +224,8 @@ print(result)
 # সাধারণত **RAG first** — সস্তা, fast, নতুন তথ্য যোগ করা সহজ। Fine-tune শুধু তখন যখন RAG দিয়ে কাজ হচ্ছে না (specific style, format, বা reasoning pattern)। অনেক সময় দুটো একসাথে ব্যবহার করা হয়।
 
 ## Practical — Minimal RAG Pipeline
+
+নিচের কোডে একটা সম্পূর্ণ RAG pipeline দেখানো হয়েছে। প্রথমে document গুলো embedding করে ChromaDB-তে store করা হয়। `rag_query` function প্রশ্ন receive করে, সেই প্রশ্নের embedding দিয়ে vector database থেকে সবচেয়ে relevant ২টা document retrieve করে, সেই document গুলো context হিসেবে prompt-এ যোগ করে, আর শেষে LLM-কে সেই context-এর ভিত্তিতে উত্তর দিতে বলে।
 
 ```python
 from sentence_transformers import SentenceTransformer

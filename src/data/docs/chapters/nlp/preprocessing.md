@@ -47,6 +47,8 @@ Tokenization হলো লেখাকে ছোট ছোট piece এ ভা�
 
 সবচেয়ে সহজ পদ্ধতি — space আর punctuation ধরে ভাগ করা।
 
+NLTK-এর `word_tokenize()` function একটা sentence কে word-level token এ ভাগ করে — space আর punctuation দুটোকেই ধরে। `nltk.download("punkt")` দিয়ে tokenizer-এর জন্য দরকারি data একবার download করতে হয় (প্রথমবার ছাড়া আর লাগে না)।
+
 ```python
 from nltk.tokenize import word_tokenize
 import nltk
@@ -65,6 +67,8 @@ print(tokens)
 ### Subword Tokenization (BPE)
 
 2026 এর যুগে সবচেয়ে ব্যবহৃত হয় subword tokenization। LLM গুলো (GPT, Claude, Llama) সব এটাই use করে। এর পেছনে কারণ আছে — শব্দ ভাঙ্গলে rare word আর নতুন word ও handle করা যায়।
+
+Hugging Face-এর `AutoTokenizer.from_pretrained("bert-base-uncased")` দিয়ে BERT-এর tokenizer load করা হয়। `from_pretrained` method একটা pre-trained model-এর tokenizer download করে আনে — এটা জানে কীভাবে শব্দ ভাগ করতে হয় সেই model-এর জন্য। `.tokenize()` method টেক্সট কে subword piece এ ভাঙে।
 
 ```python
 from transformers import AutoTokenizer
@@ -115,6 +119,8 @@ print(filtered)
 | Accuracy | কম | বেশি |
 | Speed | Fast | Slow |
 | উদাহরণ | "running" → "run" | "better" → "good" |
+
+`PorterStemmer` একটা rule-based algorithm — suffix কেটে দিয়ে base form বানায় (যেমন "running" → "run", কিন্তু "better" → "bet" — ভুল হতে পারে কারণ dictionary দেখে না)। `WordNetLemmatizer` একটা dictionary-based approach — আসল base form (lemma) খুঁজে বের করে (যেমন "better" → "good"), কিন্তু `pos` parameter দিতে হয় (যেমন `pos="a"` মানে adjective) নাহলে সঠিক result আসে না।
 
 ```python
 from nltk.stem import PorterStemmer, WordNetLemmatizer
