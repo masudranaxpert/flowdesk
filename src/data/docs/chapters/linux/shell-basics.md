@@ -22,7 +22,7 @@ Shell script হলো একটা text file যেখানে Linux command �
 > [!note]
 > Shell script কে programming language ও বলা যায় — variable, loop, condition, function সব আছে। কিন্তু এটা specially command line কাজের জন্য design করা। Python এর মতো general purpose না।
 
-## Shebang
+## Shebang আর প্রথম Script
 
 প্রতিটা shell script এর প্রথম লাইনে **shebang** থাকে। এটা system কে বলে কোন shell দিয়ে script টা চালাতে হবে।
 
@@ -31,13 +31,6 @@ Shell script হলো একটা text file যেখানে Linux command �
 #!/bin/sh            # POSIX sh দিয়ে চালাও (portable)
 #!/usr/bin/env bash  # যেটা খুঁজে পাবে সেটা দিয়ে
 ```
-
-`#!` হলো shebang symbol, আর `/bin/bash` হলো shell এর path। এটা না দিলে script টা default shell এ চলবে, যেটা অন্য system এ অন্যরকম হতে পারে — তখন problem হবে।
-
-> [!tip]
-> Shebang সবসময় প্রথম লাইনে হবে, কোনো space বা empty line ছাড়া। নাহলে কাজ করবে না। আর script কে execute permission দিতে হবে: `chmod +x script.sh`।
-
-## প্রথম Script
 
 চলো একটা সহজ script লিখি:
 
@@ -53,10 +46,8 @@ echo "তুমি আছো: $(pwd)"
 এই file কে `hello.sh` নামে save করো। তারপর:
 
 ```bash
-# execute permission দাও
+# execute permission দাও আর চালাও
 chmod +x hello.sh
-
-# চালাও
 ./hello.sh
 ```
 
@@ -66,7 +57,10 @@ Hello, World!
 তুমি আছো: /home/rahim
 ```
 
-## Variables
+> [!tip]
+> Shebang সবসময় প্রথম লাইনে হবে, কোনো space বা empty line ছাড়া। নাহলে কাজ করবে না। আর script কে execute permission দিতে হবে: `chmod +x script.sh`।
+
+## Variables আর User Input
 
 Variable দিয়ে data store করা যায়। খেয়াল রাখবে — সমান চিহ্নের দুই পাশে কোনো space না।
 
@@ -80,34 +74,23 @@ PI=3.14
 echo "নাম: $name"
 echo "বয়স: $age"
 
-# command এর output কে variable এ রাখো
+# command এর output কে variable এ রাখো (command substitution)
 current_date=$(date +%Y-%m-%d)
 user_count=$(who | wc -l)
 
 echo "আজ: $current_date"
 echo "Login করা user: $user_count জন"
+
+# user এর কাছ থেকে input নাও
+read -p "তোমার নাম কী? " username
+read -s -p "Password: " pass    # hidden input
+echo "হ্যালো $username!"
 ```
 
 > [!warn]
 > `name = "Rahim"` লিখলে error হবে — সমান চিহ্নের দুই পাশে space থাকলে bash ভাববে এটা একটা command। সবসময় `name="Rahim"` এভাবে লিখবে।
 
-## User Input নেওয়া
-
-`read` দিয়ে user এর কাছ থেকে input নেওয়া যায়।
-
-```bash
-#!/bin/bash
-
-read -p "তোমার নাম কী? " username
-read -p "কত বছরের project? " years
-
-echo "হ্যালো $username! $years বছরের project — দারুণ!"
-
-# hidden input (password এর জন্য)
-read -s -p "Password: " pass
-```
-
-## if / else
+## if / else আর case
 
 Condition অনুযায়ী সিদ্ধান্ত নেওয়া যায়।
 
@@ -121,28 +104,10 @@ if [ $age -ge 18 ]; then
 else
     echo "তুমি এখনো minor"
 fi
-```
 
-Comparison operator গুলো:
-
-| Operator | মানে | String |
-|----------|------|--------|
-| `-eq` | সমান (number) | `=` |
-| `-ne` | সমান না | `!=` |
-| `-gt` | বড় | — |
-| `-lt` | ছোট | — |
-| `-ge` | বড় বা সমান | — |
-| `-le` | ছোট বা সমান | — |
-
-```bash
-# file check
+# file আছে কিনা চেক
 if [ -f "config.txt" ]; then
     echo "file আছে"
-fi
-
-# directory check
-if [ -d "backup" ]; then
-    echo "folder আছে"
 fi
 
 # একাধিক condition (AND)
@@ -151,9 +116,15 @@ if [ $age -gt 18 ] && [ $age -lt 60 ]; then
 fi
 ```
 
-## case
+| Operator | মানে |
+|----------|------|
+| `-eq` | সমান (number) |
+| `-ne` | সমান না |
+| `-gt` / `-lt` | বড় / ছোট |
+| `-ge` / `-le` | বড়/সমান / ছোট/সমান |
+| `-f` / `-d` | file আছে / folder আছে |
 
-অনেক condition থাকলে `case` ব্যবহার করো।
+অনেক condition থাকলে `case` ব্যবহার করো:
 
 ```bash
 #!/bin/bash
@@ -175,8 +146,6 @@ esac
 
 ## Loop গুলো
 
-### for Loop
-
 ```bash
 #!/bin/bash
 
@@ -194,13 +163,8 @@ done
 for ((i=0; i<5; i++)); do
     echo "Index: $i"
 done
-```
 
-### while Loop
-
-```bash
-#!/bin/bash
-
+# while loop
 count=1
 while [ $count -le 5 ]; do
     echo "Count: $count"
@@ -216,7 +180,7 @@ done < data.txt
 > [!tip]
 > যখন একটা file এর প্রতিটা line process করতে হবে, `while read line` pattern টা খুব কাজে দেয়। এটা দিয়ে CSV parse করা যায়, config file পড়া যায়।
 
-## Functions
+## Functions আর Arrays
 
 একই কাজ বারবার না করে function বানিয়ে রাখা যায়।
 
@@ -237,53 +201,20 @@ add() {
 greet "Rahim"
 result=$(add 10 20)
 echo "10 + 20 = $result"
-```
 
-```bash
-#!/bin/bash
-# function with return value
-
-is_even() {
-    if [ $(($1 % 2)) -eq 0 ]; then
-        return 0    # true
-    else
-        return 1    # false
-    fi
-}
-
-if is_even 10; then
-    echo "10 জোড় সংখ্যা"
-fi
-```
-
-## Arrays আর String Manipulation
-
-```bash
-#!/bin/bash
-
+# Arrays আর string manipulation
 fruits=("Apple" "Banana" "Cherry" "Mango")
-
 echo "প্রথম: ${fruits[0]}"
 echo "সব: ${fruits[@]}"
 echo "সংখ্যা: ${#fruits[@]}"
 
-for fruit in "${fruits[@]}"; do
-    echo "ফল: $fruit"
-done
-
-# নতুন element যোগ
-fruits+=("Orange")
-
-# String manipulation
 text="Hello, World!"
-echo "Length: ${#text}"
 echo "Uppercase: ${text^^}"
-echo "Lowercase: ${text,,}"
-echo "Substring: ${text:0:5}"
 echo "Replace: ${text/World/Linux}"
+echo "Substring: ${text:0:5}"
 ```
 
-## Exit Codes আর Command Substitution
+## Exit Codes
 
 প্রতিটা command শেষ হওয়ার পর একটা **exit code** দেয়। `0` মানে success, অন্য যেকোনো number মানে error।
 
@@ -297,11 +228,6 @@ if [ $? -eq 0 ]; then
 else
     echo "error হয়েছে!"
 fi
-
-# command substitution
-today=$(date +%Y-%m-%d)
-file_count=$(ls | wc -l)
-echo "আজ: $today, মোট file: $file_count"
 
 # explicit exit code
 exit 0    # success
@@ -351,9 +277,8 @@ fi
 # প্রতিটা command আগে দেখাও
 bash -x script.sh
 
-# script এর ভেতরে debug on
+# script এর ভেতরে debug on/off
 set -x    # debug start
-# ... command গুলো ...
 set +x    # debug stop
 ```
 

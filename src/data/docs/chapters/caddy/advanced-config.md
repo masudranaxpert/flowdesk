@@ -48,7 +48,7 @@ example.com {
 > [!tip]
 > Named matcher দিয়ে তুমি খুব precise control পাও। শুধু নির্দিষ্ট request গুলোকে আলাদা backend এ পাঠানো যায়, বা আলাদা header দেওয়া যায়। এটা production এ খুব কাজে দেয়।
 
-## Expression Matcher
+## Expression Matcher আর handle
 
 সবচেয়ে powerful matcher হলো **expression matcher**। এটা CEL (Common Expression Language) ব্যবহার করে।
 
@@ -64,23 +64,7 @@ example.com {
 }
 ```
 
-```text
-example.com {
-    # শুধু admin user আর specific IP
-    @admin {
-        expression {http.handlers.vars.role} == "admin"
-    }
-
-    respond @admin "Welcome Admin!" 200
-}
-```
-
-> [!note]
-- Expression matcher দিয়ে যেকোনো complex logic লেখা যায় — header check, IP filter, user agent detect ইত্যাদি। কিন্তু মনে রাখবে, complex expression performance এ প্রভাব ফেলতে পারে। সাধারণ matcher দিয়ে কাজ হলে সেটাই ভালো।
-
-## handle আর handle_path
-
-`handle` আর `handle_path` দিয়ে request কে আলাদা block এ ভাগ করা যায়।
+`handle` আর `handle_path` দিয়ে request কে আলাদা block এ ভাগ করা যায়:
 
 ```text
 example.com {
@@ -170,11 +154,6 @@ example.com {
 }
 ```
 
-```bash
-# environment variable সহ Caddy চালাও
-caddy run --config Caddyfile
-```
-
 > [!danger]
 > Secret (API key, password, token) কখনো directly Caddyfile এ লিখবে না। সবসময় environment variable ব্যবহার করো। নাহলে Caddyfile git এ commit হলে secret গুলো leak হয়ে যাবে। এটা বড় security risk।
 
@@ -184,7 +163,6 @@ Caddy তে detailed logging সেট আপ করা যায়।
 
 ```text
 {
-    # global log
     log {
         output file /var/log/caddy/access.log {
             roll_size 100mb
@@ -198,7 +176,6 @@ Caddy তে detailed logging সেট আপ করা যায়।
 
 example.com {
     reverse_proxy localhost:3000
-
     log {
         output file /var/log/caddy/example.log
         format json
@@ -216,7 +193,7 @@ example.com {
 > [!note]
 > Production এ JSON format log সবচেয়ে useful। কারণ log aggregation tool (যেমন ELK, Datadog, Loki) JSON parse করতে পারে। এতে search আর analyze করা সহজ হয়। আর log rotation দিলে disk full হওয়ার ভয় থাকে না।
 
-## Compression (zstd / gzip)
+## Compression আর Header
 
 Caddy automaticভাবে response compress করে। কিন্তু customize করা যায়।
 
@@ -227,6 +204,21 @@ example.com {
         gzip 5    # compression level 1-9
         minimum_length 256
     }
+
+    header {
+        X-Frame-Options DENY
+        X-Content-Type-Options nosniff
+        Permissions-Policy "geolocation=(), microphone=()"
+        Cache-Control "public, max-age=31536000"
+        -Server    # header delete করো
+    }
+
+    # rate limit
+    @toofast {
+        expression {http.handlers.vars.rate_count} > 100
+    }
+    respond @toofast "Too many requests" 429
+
     reverse_proxy localhost:3000
 }
 ```
@@ -235,33 +227,6 @@ example.com {
 |-----------|----------|
 | **zstd** | নতুন, দ্রুত আর ভালো compression ratio |
 | **gzip** | সব browser এ support করে, পুরোনো |
-| **brotli** | Google এর, ভালো কিন্তু সব জায়গায় support নেই |
-
-> [!tip]
-> Compression দিলে data ছোট হয়ে যায়, ফলে page দ্রুত load হয়। কিন্তু অনেক ছোট response (২৫৬ byte এর কম) compress করলে overhead বেশি হয়। তাই `minimum_length` দেওয়া ভালো। zstd হলো ২০২৬ এর best choice।
-
-## Rate Limiting আর Response Header
-
-```text
-example.com {
-    # rate limit: প্রতি IP থেকে বেশি request এলে block
-    @toofast {
-        expression {http.handlers.vars.rate_count} > 100
-    }
-    respond @toofast "Too many requests" 429
-
-    header {
-        # security header গুলো
-        X-Frame-Options DENY
-        X-Content-Type-Options nosniff
-        Permissions-Policy "geolocation=(), microphone=()"
-        Cache-Control "public, max-age=31536000"
-        -Server    # header delete করো
-    }
-
-    reverse_proxy localhost:3000
-}
-```
 
 > [!warn]
 > বড় production এর জন্য dedicated rate limiting plugin ব্যবহার করা ভালো। xcaddy দিয়ে build করলে `caddy-ratelimit` plugin যোগ করা যায়। এটা Redis এর মতো storage দিয়ে distributed rate limit করতে পারে।
@@ -340,12 +305,6 @@ services:
       - caddy_config:/config
     environment:
       - BACKEND_HOST=backend:8000
-
-  backend:
-    image: myapp:latest
-    restart: unless-stopped
-    expose:
-      - "8000"
 
 volumes:
   caddy_data:
