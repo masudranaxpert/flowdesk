@@ -1,0 +1,201 @@
+import { useMemo, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { ArrowRight, GraduationCap, Search, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import {
+  docCategories,
+  docGroupLabels,
+  docGroupOrder,
+  docLevelLabels,
+  readProgress,
+} from '@/data/docs';
+import { docIcon, docAccent } from '@/components/docs/docMeta';
+import { cn, fuzzyMatch } from '@/lib/utils';
+
+function categoryProgress(chapterCount: number, readIds: Set<string>, category: typeof docCategories[number]) {
+  const read = category.chapters.filter((chapter) => readIds.has(chapter.id)).length;
+  return { read, total: chapterCount, percent: chapterCount ? Math.round((read / chapterCount) * 100) : 0 };
+}
+
+function DocCategoryCard({ category }: { category: typeof docCategories[number] }) {
+  const Icon = docIcon(category.icon);
+  const accent = docAccent(category.accent);
+  const readIds = readProgress(category.id);
+  const { read, total, percent } = categoryProgress(category.chapters.length, readIds, category);
+
+  return (
+    <Link
+      to={`/docs/${category.id}`}
+      className="group relative flex flex-col overflow-hidden rounded-3xl border border-border bg-card/60 p-5 transition duration-300 hover:-translate-y-0.5 hover:border-border/80 hover:bg-card"
+    >
+      <div className="flex items-start gap-4">
+        <div className={cn('grid h-12 w-12 shrink-0 place-items-center rounded-2xl ring-1', accent.bg, accent.ring, accent.text)}>
+          <Icon className="h-6 w-6" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-base font-semibold tracking-tight">{category.titleEn}</h3>
+          <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{category.description}</p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center gap-2">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+          <div className={cn('h-full rounded-full transition-all', accent.bar)} style={{ width: `${percent}%` }} />
+        </div>
+        <span className="text-[11px] font-medium tabular-nums text-muted-foreground">{percent}%</span>
+      </div>
+
+      <div className="mt-3 flex items-center justify-between">
+        <Badge variant="secondary" className="rounded-full text-[11px]">
+          {read}/{total} চ্যাপ্টার
+        </Badge>
+        <span className={cn('flex items-center gap-1 text-xs font-medium opacity-0 transition group-hover:opacity-100', accent.text)}>
+          পড়া শুরু করি <ArrowRight className="h-3.5 w-3.5" />
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+export default function Docs() {
+  const { categoryId } = useParams();
+  const activeCategory = categoryId ? docCategories.find((c) => c.id === categoryId) : undefined;
+  const [query, setQuery] = useState('');
+
+  const grouped = useMemo(() => {
+    const q = query.trim();
+    return docGroupOrder.map((group) => ({
+      group,
+      categories: docCategories.filter(
+        (category) =>
+          category.group === group &&
+          (q ? fuzzyMatch(q, [category.title, category.titleEn, category.description]) : true)
+      ),
+    })).filter((entry) => entry.categories.length > 0);
+  }, [query]);
+
+  const totalChapters = docCategories.reduce((sum, category) => sum + category.chapters.length, 0);
+
+  if (activeCategory) {
+    return <CategoryView category={activeCategory} />;
+  }
+
+  return (
+    <div className="space-y-8">
+      <section className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary/10 via-card/40 to-card p-7 sm:p-9">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-primary/15 blur-3xl" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="max-w-2xl space-y-3">
+            <Badge variant="secondary" className="rounded-full">
+              <GraduationCap className="mr-1.5 h-3.5 w-3.5" /> বাংলায় শেখার ভান্ডার
+            </Badge>
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Docs — A to Z গাইড</h1>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Python, NumPy, Pandas, Git/CI-CD, Linux, Docker, JWT-OAuth থেকে Machine Learning, NLP, Deep Learning পর্যন্ত — সব এক জায়গায়, সম্পূর্ণ বাংলায়, কোড উদাহরণ সহ। মোট <span className="font-semibold text-foreground">{totalChapters}</span> চ্যাপ্টার।
+            </p>
+          </div>
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="টপিক খুঁজি..."
+              className="rounded-2xl bg-background/70 pl-9"
+            />
+            {query && (
+              <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2" onClick={() => setQuery('')}>
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {grouped.map(({ group, categories }) => (
+        <section key={group} className="space-y-4">
+          <div className="flex items-center gap-3">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              {docGroupLabels[group]}
+            </h2>
+            <div className="h-px flex-1 bg-border/60" />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {categories.map((category) => (
+              <DocCategoryCard key={category.id} category={category} />
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function CategoryView({ category }: { category: typeof docCategories[number] }) {
+  const Icon = docIcon(category.icon);
+  const accent = docAccent(category.accent);
+  const readIds = readProgress(category.id);
+  const readCount = category.chapters.filter((c) => readIds.has(c.id)).length;
+  const percent = category.chapters.length ? Math.round((readCount / category.chapters.length) * 100) : 0;
+
+  return (
+    <div className="space-y-7">
+      <Link to="/docs" className="flex items-center gap-2 text-xs text-muted-foreground transition hover:text-foreground">
+        <ArrowRight className="h-3.5 w-3.5 rotate-180" /> সব Docs
+      </Link>
+
+      <section className={cn('relative overflow-hidden rounded-3xl border border-border p-7 sm:p-9', accent.bg)}>
+        <div className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full bg-primary/15 blur-3xl" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="max-w-2xl space-y-3">
+            <div className={cn('grid h-12 w-12 place-items-center rounded-2xl ring-1', accent.ring, accent.text)}>
+              <Icon className="h-6 w-6" />
+            </div>
+            <div>
+              <Badge variant="secondary" className="rounded-full text-[11px]">{docGroupLabels[category.group]}</Badge>
+              <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">{category.titleEn}</h1>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{category.description}</p>
+            </div>
+          </div>
+          <div className="w-full space-y-1.5 sm:w-56">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>প্রগ্রেস</span>
+              <span className="font-medium tabular-nums">{percent}%</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-muted/60">
+              <div className={cn('h-full rounded-full transition-all', accent.bar)} style={{ width: `${percent}%` }} />
+            </div>
+            <p className="text-[11px] text-muted-foreground">{readCount}/{category.chapters.length} চ্যাপ্টার পড়া হয়েছে</p>
+          </div>
+        </div>
+      </section>
+
+      <div className="space-y-2.5">
+        {category.chapters.map((chapter, index) => {
+          const done = readIds.has(chapter.id);
+          return (
+            <Link
+              key={chapter.id}
+              to={`/docs/${category.id}/${chapter.id}`}
+              className="group flex items-center gap-4 rounded-2xl border border-border bg-card/50 p-4 transition hover:border-border/80 hover:bg-card"
+            >
+              <span className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-semibold tabular-nums ring-1', done ? 'bg-emerald-500/12 text-emerald-300 ring-emerald-500/30' : cn(accent.bg, accent.text, accent.ring))}>
+                {done ? '✓' : index + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold">{chapter.title}</p>
+                {chapter.subtitle && <p className="truncate text-xs text-muted-foreground">{chapter.subtitle}</p>}
+              </div>
+              <div className="hidden items-center gap-2 sm:flex">
+                <Badge variant="outline" className="rounded-full text-[10px]">{docLevelLabels[chapter.level]}</Badge>
+                <span className="text-[11px] text-muted-foreground">{chapter.minutes} মিঃ</span>
+              </div>
+              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-foreground" />
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

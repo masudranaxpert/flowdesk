@@ -1,0 +1,171 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  Circle,
+  Clock,
+  Hash,
+  ListTree,
+  LockKeyhole,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  docLevelLabels,
+  getChapter,
+  readProgress,
+  writeProgress,
+} from '@/data/docs';
+import { docIcon, docAccent } from '@/components/docs/docMeta';
+import DocContent from '@/components/docs/DocContent';
+import { cn } from '@/lib/utils';
+
+export default function DocReader() {
+  const { categoryId, chapterId } = useParams();
+  const navigate = useNavigate();
+  const data = useMemo(
+    () => (categoryId && chapterId ? getChapter(categoryId, chapterId) : undefined),
+    [categoryId, chapterId],
+  );
+
+  const [readIds, setReadIds] = useState<Set<string>>(() =>
+    categoryId ? readProgress(categoryId) : new Set(),
+  );
+
+  useEffect(() => {
+    if (categoryId) setReadIds(readProgress(categoryId));
+  }, [categoryId]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [chapterId]);
+
+  if (!data) {
+    return (
+      <div className="grid min-h-[50vh] place-items-center text-center">
+        <div className="space-y-3">
+          <LockKeyhole className="mx-auto h-8 w-8 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">চ্যাপ্টারটি খুঁজে পাওয়া যায়নি।</p>
+          <Button variant="outline" onClick={() => navigate('/docs')}>Docs-এ ফিরে যাই</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const { category, chapter, index, prev, next } = data;
+  const Icon = docIcon(category.icon);
+  const accent = docAccent(category.accent);
+  const isRead = readIds.has(chapter.id);
+  const percent = Math.round((readIds.size / category.chapters.length) * 100);
+
+  const toggleRead = () => {
+    const updated = new Set(readIds);
+    if (updated.has(chapter.id)) updated.delete(chapter.id);
+    else updated.add(chapter.id);
+    setReadIds(updated);
+    writeProgress(category.id, updated);
+  };
+
+  return (
+    <div className="grid gap-8 lg:grid-cols-[16rem_minmax(0,1fr)]">
+      <aside className="hidden lg:block">
+        <div className="sticky top-24 space-y-4">
+          <Link to="/docs" className="flex items-center gap-2 text-xs text-muted-foreground transition hover:text-foreground">
+            <ArrowLeft className="h-3.5 w-3.5" /> সব Docs
+          </Link>
+          <div className={cn('flex items-center gap-2.5 rounded-2xl p-3 ring-1', accent.bg, accent.ring)}>
+            <Icon className={cn('h-5 w-5 shrink-0', accent.text)} />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold">{category.titleEn}</p>
+              <p className="text-[11px] text-muted-foreground">{category.chapters.length} চ্যাপ্টার</p>
+            </div>
+          </div>
+          <div className="h-1 overflow-hidden rounded-full bg-muted">
+            <div className={cn('h-full rounded-full transition-all', accent.bar)} style={{ width: `${percent}%` }} />
+          </div>
+          <p className="px-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground/70">সূচি</p>
+          <nav className="max-h-[55vh] space-y-0.5 overflow-y-auto pr-1">
+            {category.chapters.map((item, i) => {
+              const active = item.id === chapter.id;
+              const done = readIds.has(item.id);
+              return (
+                <Link
+                  key={item.id}
+                  to={`/docs/${category.id}/${item.id}`}
+                  className={cn(
+                    'group flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] transition',
+                    active ? cn('font-medium', accent.bg, accent.text) : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                  )}
+                >
+                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-md bg-muted/60 text-[10px] tabular-nums">
+                    {done ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> : i + 1}
+                  </span>
+                  <span className="line-clamp-2 leading-snug">{item.title}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      </aside>
+
+      <article className="min-w-0 space-y-6">
+        <div className="flex items-center gap-2 lg:hidden">
+          <Link to="/docs" className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <ArrowLeft className="h-3.5 w-3.5" /> সব Docs
+          </Link>
+        </div>
+
+        <header className="space-y-3 border-b border-border/60 pb-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary" className="rounded-full text-[11px]">
+              <Hash className="mr-1 h-3 w-3" /> চ্যাপ্টার {index + 1}/{category.chapters.length}
+            </Badge>
+            <Badge variant="outline" className="rounded-full text-[11px]">{docLevelLabels[chapter.level]}</Badge>
+            <Badge variant="outline" className="rounded-full text-[11px]">
+              <Clock className="mr-1 h-3 w-3" /> {chapter.minutes} মিনিট
+            </Badge>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{chapter.title}</h1>
+          {chapter.subtitle && <p className="text-sm text-muted-foreground">{chapter.subtitle}</p>}
+          <Button variant={isRead ? 'default' : 'outline'} size="sm" className="rounded-full" onClick={toggleRead}>
+            {isRead ? <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> : <Circle className="mr-1.5 h-3.5 w-3.5" />}
+            {isRead ? 'পড়া হয়ে গেছে' : 'পড়া শেষ চিহ্নিত করি'}
+          </Button>
+        </header>
+
+        <DocContent body={chapter.body} />
+
+        <footer className="grid gap-3 border-t border-border/60 pt-6 sm:grid-cols-2">
+          {prev ? (
+            <Link to={`/docs/${category.id}/${prev.id}`} className="group flex items-center gap-3 rounded-2xl border border-border bg-card/50 p-4 transition hover:bg-card">
+              <ArrowLeft className="h-4 w-4 text-muted-foreground transition group-hover:text-foreground" />
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted-foreground">আগের চ্যাপ্টার</p>
+                <p className="truncate text-sm font-medium">{prev.title}</p>
+              </div>
+            </Link>
+          ) : <div />}
+          {next ? (
+            <Link to={`/docs/${category.id}/${next.id}`} className="group flex items-center justify-end gap-3 rounded-2xl border border-border bg-card/50 p-4 text-right transition hover:bg-card">
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted-foreground">পরের চ্যাপ্টার</p>
+                <p className="truncate text-sm font-medium">{next.title}</p>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground transition group-hover:text-foreground" />
+            </Link>
+          ) : (
+            <Link to="/docs" className="group flex items-center justify-end gap-3 rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4 text-right transition hover:bg-primary/10">
+              <div className="min-w-0">
+                <p className="text-[11px] text-primary/80">এই টপিক শেষ!</p>
+                <p className="text-sm font-medium text-primary">আরেকটা টপিক বেছে নিই</p>
+              </div>
+              <ListTree className="h-4 w-4 text-primary" />
+            </Link>
+          )}
+        </footer>
+      </article>
+    </div>
+  );
+}

@@ -18,6 +18,8 @@ const RoutinePage = lazy(() => import('./pages/Routine'));
 const FileSharePage = lazy(() => import('./pages/FileShare'));
 const HisabPage = lazy(() => import('./pages/Hisab'));
 const PasswordsPage = lazy(() => import('./pages/Passwords'));
+const DocsPage = lazy(() => import('./pages/Docs'));
+const DocReaderPage = lazy(() => import('./pages/DocReader'));
 const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
@@ -75,6 +77,9 @@ export default function App() {
               <Route path="/files" element={<FileSharePage />} />
               <Route path="/hisab" element={<HisabPage />} />
               <Route path="/passwords" element={<PasswordsPage />} />
+              <Route path="/docs" element={<DocsPage />} />
+              <Route path="/docs/:categoryId" element={<DocsPage />} />
+              <Route path="/docs/:categoryId/:chapterId" element={<DocReaderPage />} />
             </Route>
 
             <Route path="/notebooks/:shareCode" element={<SharePage />} />
