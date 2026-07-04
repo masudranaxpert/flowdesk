@@ -135,6 +135,15 @@ export const api = {
       form.append('file', file);
       return request<UploadedFile>('/files', { method: 'POST', body: form });
     },
-    delete: (id: string) => request<{ message: string }>(`/files/${id}`, { method: 'DELETE' }),
+    delete: (id: string) =>
+      request<{ message: string }>(`/files/${id}`, { method: 'DELETE' }),
+    rename: (id: string, name: string) =>
+      request<UploadedFile>(`/files/${id}`, { method: 'PUT', body: JSON.stringify({ name }) }),
+  },
+  docNotes: {
+    list: (categoryId: string, chapterId: string) =>
+      request<{ notes: Record<string, string> }>(`/doc-notes?categoryId=${encodeURIComponent(categoryId)}&chapterId=${encodeURIComponent(chapterId)}`),
+    save: (data: { categoryId: string; chapterId: string; sectionId: string; content: string }) =>
+      request<{ message: string }>('/doc-notes', { method: 'PUT', body: JSON.stringify(data) }),
   },
 };

@@ -833,6 +833,17 @@ export default async function handler(req, res) {
 
     if (slug.startsWith('files/')) {
       const fileId = slug.split('/')[1];
+      if (method === 'PUT' || method === 'PATCH') {
+        const user = await requireUser(req, res);
+        if (!user) return;
+        const uid = userId(user);
+        const newName = safeFileName(String(req.body.name || ''));
+        if (!newName) return res.status(400).json({ error: 'Valid name is required' });
+        const row = (await d1Query('SELECT * FROM uploaded_files WHERE id = ? AND userId = ? LIMIT 1;', [fileId, uid]))[0];
+        if (!row) return res.status(404).json({ error: 'File not found' });
+        await d1Query('UPDATE uploaded_files SET name = ? WHERE id = ? AND userId = ?;', [newName, fileId, uid]);
+        return res.json(filePayload({ ...row, name: newName }));
+      }
       if (method === 'DELETE') {
         const user = await requireUser(req, res);
         if (!user) return;
@@ -1020,7 +1031,7 @@ export default async function handler(req, res) {
       if (!user) return;
       const uid = user.id;
       await deleteAllUserFiles(uid);
-      for (const table of ['bookmarks', 'notebooks', 'codes', 'questions', 'categories', 'routines', 'ai_settings', 'chat_history', 'budgets', 'expenses', 'share_links', 'uploaded_files']) {
+      for (const table of ['bookmarks', 'notebooks', 'codes', 'questions', 'categories', 'routines', 'ai_settings', 'chat_history', 'budgets', 'expenses', 'share_links', 'uploaded_files', 'doc_notes']) {
         await d1Query(`DELETE FROM ${table} WHERE userId = ?;`, [uid]);
       }
       await d1Query('DELETE FROM app_users WHERE id = ?;', [uid]);
@@ -1182,6 +1193,50 @@ export default async function handler(req, res) {
         categories: categoryRows.map((row) => ({ category: row.category, amount: Number(row.amount || 0), count: Number(row.count || 0) })),
         recent: recentRows.map((row) => ({ ...row, amount: Number(row.amount || 0) })),
       });
+    }
+
+    if (slug === 'doc-notes') {
+      const user = await requireUser(req, res);
+      if (!user) return;
+      const uid = userId(user);
+
+      if (method === 'GET') {
+        const categoryId = String(query.categoryId || '');
+        const chapterId = String(query.chapterId || '');
+        if (!categoryId || !chapterId) return res.json({ notes: {} });
+        const rows = await d1Query(
+          'SELECT sectionId, content FROM doc_notes WHERE userId = ? AND categoryId = ? AND chapterId = ?;',
+          [uid, categoryId, chapterId]
+        );
+        const notes = {};
+        for (const row of rows) {
+          notes[row.sectionId] = row.content;
+        }
+        return res.json({ notes });
+      }
+
+      if (method === 'PUT') {
+        const { categoryId, chapterId, sectionId, content } = req.body;
+        if (!categoryId || !chapterId || !sectionId) {
+          return res.status(400).json({ error: 'categoryId, chapterId, sectionId are required' });
+        }
+        const text = String(content || '').trim();
+        const stamp = now();
+        if (text) {
+          await d1Query(
+            `INSERT INTO doc_notes (id, userId, categoryId, chapterId, sectionId, content, createdAt, updatedAt)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+             ON CONFLICT(userId, categoryId, chapterId, sectionId) DO UPDATE SET content = excluded.content, updatedAt = excluded.updatedAt;`,
+            [newId(), uid, categoryId, chapterId, sectionId, text, stamp, stamp]
+          );
+        } else {
+          await d1Query(
+            'DELETE FROM doc_notes WHERE userId = ? AND categoryId = ? AND chapterId = ? AND sectionId = ?;',
+            [uid, categoryId, chapterId, sectionId]
+          );
+        }
+        return res.json({ message: 'Saved' });
+      }
     }
 
     const parts = slug.split('/');

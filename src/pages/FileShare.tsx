@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react';
-import { Download, FileArchive, FileText, Image as ImageIcon, Link2, Search, Trash2, UploadCloud } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState, type DragEvent, type KeyboardEvent } from 'react';
+import { Check, Download, FileArchive, FileText, Image as ImageIcon, Link2, Pencil, Search, Trash2, UploadCloud, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { EmptyState, PaginationControls, SearchInput, Spinner } from '../components/UI';
@@ -41,6 +41,8 @@ export default function FileSharePage() {
   const [loading, setLoading] = useState(true);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState<Array<{ name: string; status: string }>>([]);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 250);
@@ -101,6 +103,43 @@ export default function FileSharePage() {
     await api.files.delete(file.id);
     toast.success('File deleted');
     load();
+  };
+
+  const startRename = (file: UploadedFile) => {
+    setRenamingId(file.id);
+    setRenameValue(file.name);
+  };
+
+  const cancelRename = () => {
+    setRenamingId(null);
+    setRenameValue('');
+  };
+
+  const commitRename = async (file: UploadedFile) => {
+    const name = renameValue.trim();
+    if (!name || name === file.name) {
+      cancelRename();
+      return;
+    }
+    try {
+      const updated = await api.files.rename(file.id, name);
+      setItems((prev) => prev.map((f) => (f.id === file.id ? updated : f)));
+      toast.success('Renamed successfully');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Rename failed');
+    } finally {
+      cancelRename();
+    }
+  };
+
+  const onRenameKeyDown = (file: UploadedFile, e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      commitRename(file);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelRename();
+    }
   };
 
   return (
@@ -174,20 +213,52 @@ export default function FileSharePage() {
           {items.map((file) => {
             const Icon = fileIcon(file);
             const isImage = file.mimeType?.startsWith('image/');
+            const isRenaming = renamingId === file.id;
             return (
               <Card key={file.id} className="interactive-card overflow-hidden rounded-2xl">
                 <CardContent className="p-3">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <a href={fileUrl(file)} target="_blank" rel="noreferrer" className="flex min-w-0 flex-1 items-center gap-3">
-                      <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl border border-border bg-muted/35">
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <a href={fileUrl(file)} target="_blank" rel="noreferrer" className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl border border-border bg-muted/35">
                       {isImage ? (
                         <img src={fileUrl(file)} alt={file.name} className="h-full w-full object-cover" />
                       ) : (
                         <Icon className="h-6 w-6 text-primary" />
                       )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate font-semibold">{file.name}</p>
+                      </a>
+                      <div className="min-w-0 flex-1">
+                        {isRenaming ? (
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              autoFocus
+                              value={renameValue}
+                              onChange={(e) => setRenameValue(e.target.value)}
+                              onKeyDown={(e) => onRenameKeyDown(file, e)}
+                              onBlur={() => commitRename(file)}
+                              className="w-full rounded-lg border border-primary/40 bg-card px-2 py-1 text-sm font-semibold outline-none focus:border-primary"
+                            />
+                            <button
+                              type="button"
+                              onMouseDown={(e) => { e.preventDefault(); commitRename(file); }}
+                              className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground"
+                              aria-label="Confirm rename"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onMouseDown={(e) => { e.preventDefault(); cancelRename(); }}
+                              className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground"
+                              aria-label="Cancel rename"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <a href={fileUrl(file)} target="_blank" rel="noreferrer" className="block">
+                            <p className="truncate font-semibold hover:text-primary transition">{file.name}</p>
+                          </a>
+                        )}
                         <div className="mt-1 flex flex-wrap gap-1.5">
                           <Badge variant="secondary" className="rounded-full">{bytes(file.size)}</Badge>
                           <Badge variant="outline" className="max-w-full rounded-full">
@@ -196,8 +267,13 @@ export default function FileSharePage() {
                           {file.createdAt && <span className="text-xs text-muted-foreground">{new Date(file.createdAt).toLocaleDateString()}</span>}
                         </div>
                       </div>
-                    </a>
+                    </div>
                     <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
+                      {!isRenaming && (
+                        <Button variant="outline" size="sm" onClick={() => startRename(file)}>
+                          <Pencil className="h-4 w-4" /> Rename
+                        </Button>
+                      )}
                       <Button variant="outline" size="sm" onClick={() => copyLink(file)}>
                         <Link2 className="h-4 w-4" /> Copy link
                       </Button>
@@ -206,9 +282,11 @@ export default function FileSharePage() {
                           <Download className="h-4 w-4" /> Open
                         </a>
                       </Button>
-                      <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => deleteFile(file)}>
-                        <Trash2 className="h-4 w-4" /> Delete
-                      </Button>
+                      {!isRenaming && (
+                        <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => deleteFile(file)}>
+                          <Trash2 className="h-4 w-4" /> Delete
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>

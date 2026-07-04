@@ -1,9 +1,11 @@
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Components } from 'react-markdown';
 import MarkdownView from '../MarkdownView';
 import CodeBlock from '../CodeBlock';
 import MermaidDiagram from './MermaidDiagram';
 import { Check, Plus, Trash2, X } from 'lucide-react';
+import { api } from '../../lib/api';
+import toast from 'react-hot-toast';
 
 const calloutMap: Record<string, { cls: string; label: string }> = {
   note: { cls: 'border-sky-400/40 bg-sky-500/10 text-sky-200', label: 'Note' },
@@ -159,23 +161,6 @@ function transformUnicodeMath(markdown: string): string {
 
 type NotesMap = Record<string, string>;
 
-function notesKey(categoryId: string, chapterId: string) {
-  return `docs-notes:${categoryId}:${chapterId}`;
-}
-
-function readNotes(categoryId: string, chapterId: string): NotesMap {
-  try {
-    const raw = localStorage.getItem(notesKey(categoryId, chapterId));
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeNotes(categoryId: string, chapterId: string, notes: NotesMap) {
-  localStorage.setItem(notesKey(categoryId, chapterId), JSON.stringify(notes));
-}
-
 function extractText(node: ReactNode): string {
   if (typeof node === 'string') return node;
   if (typeof node === 'number') return String(node);
@@ -286,6 +271,7 @@ function SectionNote({
 
 function makeDocComponents(
   notes: NotesMap,
+  notesReady: boolean,
   onSave: (id: string, text: string) => void,
 ): Components {
   const wrapHeading = (Tag: 'h2' | 'h3' | 'h4') =>
@@ -302,7 +288,9 @@ function makeDocComponents(
       return (
         <>
           <Tag id={sectionId}>{children}</Tag>
-          <SectionNote sectionId={sectionId} notes={notes} onSave={onSave} />
+          {notesReady && (
+            <SectionNote sectionId={sectionId} notes={notes} onSave={onSave} />
+          )}
         </>
       );
     };
@@ -341,7 +329,26 @@ type DocContentProps = {
 };
 
 export default function DocContent({ body, categoryId, chapterId }: DocContentProps) {
-  const [notes, setNotes] = useState<NotesMap>(() => readNotes(categoryId, chapterId));
+  const [notes, setNotes] = useState<NotesMap>({});
+  const [notesReady, setNotesReady] = useState(false);
+
+  useEffect(() => {
+    setNotesReady(false);
+    setNotes({});
+    let cancelled = false;
+    api.docNotes
+      .list(categoryId, chapterId)
+      .then((data) => {
+        if (!cancelled) {
+          setNotes(data.notes || {});
+          setNotesReady(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setNotesReady(true);
+      });
+    return () => { cancelled = true; };
+  }, [categoryId, chapterId]);
 
   const saveNote = useCallback(
     (sectionId: string, text: string) => {
@@ -349,9 +356,11 @@ export default function DocContent({ body, categoryId, chapterId }: DocContentPr
         const next = { ...prev };
         if (text.trim()) next[sectionId] = text;
         else delete next[sectionId];
-        writeNotes(categoryId, chapterId, next);
         return next;
       });
+      api.docNotes
+        .save({ categoryId, chapterId, sectionId, content: text })
+        .catch(() => toast.error('নোট সেভ হয়নি, আবার চেষ্টা করো'));
     },
     [categoryId, chapterId],
   );
@@ -361,7 +370,10 @@ export default function DocContent({ body, categoryId, chapterId }: DocContentPr
     [body],
   );
 
-  const components = useMemo(() => makeDocComponents(notes, saveNote), [notes, saveNote]);
+  const components = useMemo(
+    () => makeDocComponents(notes, notesReady, saveNote),
+    [notes, notesReady, saveNote],
+  );
 
   return (
     <div className="doc-content">
