@@ -35,6 +35,10 @@ print(stack[-1])
 
 উপরের কোডে প্রথমে তিনটা value push হয়। `pop()` করলে সবার শেষে রাখা `30` বের হয় — কারণ LIFO। `stack[-1]` দিয়ে top element দেখা যায় without removing (peek operation)।
 
+```dsa-viz
+stack
+```
+
 ## Queue — FIFO
 
 Queue হলো **First In, First Out (FIFO)** structure। যে আগে ঢোকে সে আগে বের হয়।
@@ -71,6 +75,10 @@ print(front)
 
 > [!warning]
 > Python list দিয়ে queue বানাবে না! `pop(0)` হলো $O(n)$ — কারণ বাকি সব element এক ঘর সামনে সরতে হয়। সবসময় `collections.deque` ব্যবহার করো।
+
+```dsa-viz
+queue
+```
 
 ## Deque — দুই দিকেই খোলা
 

@@ -9,8 +9,8 @@ import {
   docGroupLabels,
   docGroupOrder,
   docLevelLabels,
-  readProgress,
 } from '@/data/docs';
+import { useDocProgress } from '@/hooks/useDocProgress';
 import { searchDocs, type DocSearchResult } from '@/data/docs/search';
 import { docIcon, docAccent } from '@/components/docs/docMeta';
 import { cn } from '@/lib/utils';
@@ -23,7 +23,7 @@ function categoryProgress(chapterCount: number, readIds: Set<string>, category: 
 function DocCategoryCard({ category }: { category: typeof docCategories[number] }) {
   const Icon = docIcon(category.icon);
   const accent = docAccent(category.accent);
-  const readIds = readProgress(category.id);
+  const { readIds } = useDocProgress(category.id);
   const { read, total, percent } = categoryProgress(category.chapters.length, readIds, category);
 
   return (
@@ -270,7 +270,7 @@ export default function Docs() {
 function CategoryView({ category }: { category: typeof docCategories[number] }) {
   const Icon = docIcon(category.icon);
   const accent = docAccent(category.accent);
-  const readIds = readProgress(category.id);
+  const { readIds } = useDocProgress(category.id);
   const readCount = category.chapters.filter((c) => readIds.has(c.id)).length;
   const percent = category.chapters.length ? Math.round((readCount / category.chapters.length) * 100) : 0;
 

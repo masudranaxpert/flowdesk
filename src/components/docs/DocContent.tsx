@@ -3,6 +3,7 @@ import type { Components } from 'react-markdown';
 import MarkdownView from '../MarkdownView';
 import CodeBlock from '../CodeBlock';
 import MermaidDiagram from './MermaidDiagram';
+import DSAViz, { type VizType } from './DSAViz';
 import { Check, Plus, Trash2, X } from 'lucide-react';
 import { api } from '../../lib/api';
 import toast from 'react-hot-toast';
@@ -298,8 +299,15 @@ function makeDocComponents(
   return {
     pre: ({ children }) => <>{children}</>,
     code: ({ className, children }) => {
-      const match = /language-(\w+)/.exec(className || '');
       const text = String(children).replace(/\n$/, '');
+      if (className?.includes('language-dsa-viz')) {
+        const vizType = text.trim() as VizType;
+        const validTypes = ['bubble-sort', 'selection-sort', 'insertion-sort', 'binary-search', 'linear-search', 'stack', 'queue'];
+        if (validTypes.includes(vizType)) {
+          return <DSAViz type={vizType as VizType} />;
+        }
+      }
+      const match = /language-(\w+)/.exec(className || '');
       if (match) {
         if (match[1] === 'mermaid') {
           return <MermaidDiagram chart={text} />;
