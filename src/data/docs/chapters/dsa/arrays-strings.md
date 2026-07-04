@@ -68,6 +68,10 @@ def reverse_array(arr):
 > [!tip]
 > Two pointers এর দুটো common pattern: (১) **Opposite direction** — দুই প্রান্ত থেকে মাঝে আসা, (২) **Same direction** — দুটো pointer একই দিকে আলাদা গতিতে চলা (fast-slow)।
 
+```dsa-viz
+linear-search
+```
+
 ## Sliding Window
 
 Sliding window হলো array এর একটা "উইন্ডো" (subarray) নিয়ে সেটাকে স্লাইড করা। বারবার পুরো subarray হিসাব করার বদলে শুধু নতুন element যোগ আর পুরনো element বাদ দিয়ে হিসাব করা হয়।

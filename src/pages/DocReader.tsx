@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -12,12 +12,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  docLevelLabels,
-  getChapter,
-  readProgress,
-  writeProgress,
-} from '@/data/docs';
+import { docLevelLabels, getChapter } from '@/data/docs';
+import { useDocProgress } from '@/hooks/useDocProgress';
 import { docIcon, docAccent } from '@/components/docs/docMeta';
 import DocContent from '@/components/docs/DocContent';
 import { cn } from '@/lib/utils';
@@ -30,13 +26,7 @@ export default function DocReader() {
     [categoryId, chapterId],
   );
 
-  const [readIds, setReadIds] = useState<Set<string>>(() =>
-    categoryId ? readProgress(categoryId) : new Set(),
-  );
-
-  useEffect(() => {
-    if (categoryId) setReadIds(readProgress(categoryId));
-  }, [categoryId]);
+  const { readIds, toggle } = useDocProgress(categoryId);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -59,14 +49,6 @@ export default function DocReader() {
   const accent = docAccent(category.accent);
   const isRead = readIds.has(chapter.id);
   const percent = Math.round((readIds.size / category.chapters.length) * 100);
-
-  const toggleRead = () => {
-    const updated = new Set(readIds);
-    if (updated.has(chapter.id)) updated.delete(chapter.id);
-    else updated.add(chapter.id);
-    setReadIds(updated);
-    writeProgress(category.id, updated);
-  };
 
   return (
     <div className="grid gap-8 lg:grid-cols-[16rem_minmax(0,1fr)]">
@@ -129,7 +111,7 @@ export default function DocReader() {
           </div>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{chapter.title}</h1>
           {chapter.subtitle && <p className="text-sm text-muted-foreground">{chapter.subtitle}</p>}
-          <Button variant={isRead ? 'default' : 'outline'} size="sm" className="rounded-full" onClick={toggleRead}>
+          <Button variant={isRead ? 'default' : 'outline'} size="sm" className="rounded-full" onClick={() => toggle(chapter.id)}>
             {isRead ? <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> : <Circle className="mr-1.5 h-3.5 w-3.5" />}
             {isRead ? 'পড়া হয়ে গেছে' : 'পড়া শেষ চিহ্নিত করি'}
           </Button>

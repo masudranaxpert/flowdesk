@@ -36,6 +36,10 @@ print(binary_search([1, 3, 5, 7, 9, 11, 13], 7))
 > [!tip]
 > `mid = left + (right - left) // 2` overflow safe version। C++ বা Java তে integer overflow হতে পারে, তাই এই pattern অভ্যাস করো।
 
+```dsa-viz
+binary-search
+```
+
 ## কেন $O(\log n)$?
 
 প্রতি ধাপে search space অর্ধেক হয়। $n$ টা element থেকে $\frac{n}{2}$, তারপর $\frac{n}{4}$, তারপর $\frac{n}{8}$... যতক্ষণ না ১ টা বাকি থাকে।

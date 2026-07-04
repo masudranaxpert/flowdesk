@@ -21,6 +21,10 @@ print(bubble_sort([5, 2, 9, 1, 5, 6]))
 > [!warning]
 > Bubble Sort কখনো production এ ব্যবহার করো না। এটা শুধু learning এর জন্য। Real life এ Python এর `sorted()` function ব্যবহার করো — সেটা Timsort ব্যবহার করে যেটা $O(n \log n)$।
 
+```dsa-viz
+bubble-sort
+```
+
 ## Selection Sort — সবচেয়ে ছোটটা খুঁজে সামনে রাখো
 
 এবার ভাবো তুমি একটা দোকানে আছো। সবচেয়ে সস্তা জিনিস টা খুঁজে বের করো, সামনে রাখো। তারপর বাকিগুলো থেকে আবার সবচেয়ে সস্তা খুঁজে আবার সামনে।
@@ -40,6 +44,10 @@ print(selection_sort([64, 25, 12, 22, 11]))
 ```
 
 প্রতি iteration এ বাকি array থেকে minimum খুঁজে সামনে বসায়। Swap কম হয় ঠিকই কিন্তু compare এর সংখ্যা এখনো $O(n^2)$।
+
+```dsa-viz
+selection-sort
+```
 
 ## Insertion Sort — কার্ড সাজানোর মতো
 
@@ -63,6 +71,10 @@ print(insertion_sort([12, 11, 13, 5, 6]))
 
 > [!tip]
 > Small array এর জন্য Insertion Sort দারুণ কাজ করে। Timsort এর মতো hybrid algorithm গুলো ছোট partition এ Insertion Sort ব্যবহার করে।
+
+```dsa-viz
+insertion-sort
+```
 
 ## Merge Sort — Divide and Conquer এর রাজা
 

@@ -96,5 +96,27 @@ export function readProgress(categoryId: string): Set<string> {
 }
 
 export function writeProgress(categoryId: string, ids: Set<string>) {
-  localStorage.setItem(docProgressKey(categoryId), JSON.stringify([...ids]));
+  try {
+    localStorage.setItem(docProgressKey(categoryId), JSON.stringify([...ids]));
+    window.dispatchEvent(new CustomEvent('docs-progress-change', { detail: { categoryId } }));
+  } catch {}
+}
+
+export function clearAllProgress() {
+  try {
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith('docs-progress:'))
+      .forEach((key) => localStorage.removeItem(key));
+    window.dispatchEvent(new CustomEvent('docs-progress-change'));
+  } catch {}
+}
+
+export function totalReadCount(): number {
+  return docCategories.reduce((sum, category) => {
+    return sum + category.chapters.filter((ch) => readProgress(category.id).has(ch.id)).length;
+  }, 0);
+}
+
+export function totalChapterCount(): number {
+  return docCategories.reduce((sum, category) => sum + category.chapters.length, 0);
 }
