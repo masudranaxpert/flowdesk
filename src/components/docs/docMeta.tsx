@@ -16,6 +16,7 @@ import {
   ScanEye,
   Binary,
   BookOpen,
+  Layers,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -36,6 +37,7 @@ const iconRegistry: Record<string, LucideIcon> = {
   Database,
   ScanEye,
   Binary,
+  Layers,
 };
 
 export function docIcon(name: string): LucideIcon {
