@@ -17,6 +17,7 @@ import {
   PanelLeftClose,
   Plus,
   Search,
+  Send,
   Sparkles,
   Sun,
   X,
@@ -57,6 +58,17 @@ const quickActions = [
   { to: '/bookmarks', label: 'Save link', icon: Bookmark },
   { to: '/notebooks/new', label: 'Write note', icon: BookOpen },
 ];
+
+const searchTypeMeta: Record<string, { icon: typeof Bookmark; color: string }> = {
+  Docs:     { icon: ListTree,    color: 'oklch(0.65 0.19 290)' },
+  Bookmark: { icon: Bookmark,    color: 'oklch(0.65 0.18 250)' },
+  Note:     { icon: BookOpen,    color: 'oklch(0.65 0.18 160)' },
+  Code:     { icon: Code2,       color: 'oklch(0.70 0.18 50)' },
+  'Q&A':    { icon: HelpCircle,  color: 'oklch(0.65 0.16 30)' },
+  File:     { icon: Files,       color: 'oklch(0.65 0.19 330)' },
+  Expense:  { icon: WalletCards, color: 'oklch(0.70 0.22 300)' },
+  Transfer: { icon: Send,        color: 'oklch(0.62 0.19 295)' },
+};
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
@@ -355,7 +367,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         </nav>
 
         {searchOpen && (
-          <div className="fixed inset-0 z-[90] flex items-start justify-center bg-black/65 p-3 pt-20 backdrop-blur-sm sm:p-6">
+          <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/65 p-3 pt-20 backdrop-blur-sm sm:p-6">
             <div className="w-full max-w-2xl rounded-3xl border border-border bg-card p-3 shadow-2xl">
               <div className="flex items-center gap-2">
                 <Search className="ml-2 h-4 w-4 text-muted-foreground" />
@@ -371,24 +383,34 @@ export default function Layout({ children }: { children: ReactNode }) {
                   </div>
                 ) : searchResults.length === 0 ? (
                   <p className="px-3 py-8 text-center text-sm text-muted-foreground">{globalSearch ? 'No result found.' : 'Start typing to search your workspace.'}</p>
-                ) : searchResults.map((item) => (
-                  <button
-                    key={`${item.type}-${item.id}`}
-                    type="button"
-                    onClick={() => {
-                      setSearchOpen(false);
-                      setGlobalSearch('');
-                      navigate(item.to);
-                    }}
-                    className="flex w-full cursor-pointer items-center gap-3 rounded-2xl border border-border bg-muted/30 p-3 text-left transition hover:bg-muted/60"
-                  >
-                    <Badge variant="secondary" className="rounded-full">{item.type}</Badge>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{item.title}</p>
-                      <p className="truncate text-xs text-muted-foreground">{item.subtitle}</p>
-                    </div>
-                  </button>
-                ))}
+                ) : searchResults.map((item) => {
+                  const meta = searchTypeMeta[item.type] || { icon: Search, color: 'oklch(0.6 0.1 250)' };
+                  const Icon = meta.icon;
+                  return (
+                    <button
+                      key={`${item.type}-${item.id}`}
+                      type="button"
+                      onClick={() => {
+                        setSearchOpen(false);
+                        setGlobalSearch('');
+                        navigate(item.to);
+                      }}
+                      className="flex w-full cursor-pointer items-center gap-3 rounded-2xl border border-border bg-muted/30 p-3 text-left transition hover:border-primary/30 hover:bg-muted/60"
+                    >
+                      <span
+                        className="grid h-9 w-9 shrink-0 place-items-center rounded-xl"
+                        style={{ backgroundColor: `color-mix(in oklch, ${meta.color} 15%, transparent)`, color: meta.color }}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold">{item.title}</p>
+                        <p className="truncate text-xs text-muted-foreground">{item.subtitle}</p>
+                      </div>
+                      <Badge variant="outline" className="shrink-0 rounded-full text-[10px]" style={{ color: meta.color, borderColor: `color-mix(in oklch, ${meta.color} 30%, transparent)` }}>{item.type}</Badge>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
