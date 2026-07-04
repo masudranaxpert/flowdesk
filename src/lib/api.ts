@@ -1,4 +1,4 @@
-import type { AiSetting, AuthenticatorItem, Bookmark, Budget, Category, CodeSnippet, Expense, Notebook, PasswordItem, Question, RoutineItem, Stats, UploadedFile } from '../types';
+import type { AiSetting, AuthenticatorItem, Bookmark, Budget, Category, CodeSnippet, Expense, Notebook, PasswordItem, Question, RoutineItem, Stats, Transfer, UploadedFile } from '../types';
 
 import { Capacitor } from '@capacitor/core';
 
@@ -118,6 +118,13 @@ export const api = {
     create: (data: Partial<Expense>) => request<Expense>('/expenses', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: Partial<Expense>) => request<Expense>(`/expenses/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: string) => request<void>(`/expenses/${id}`, { method: 'DELETE' }),
+  },
+  transfers: {
+    list: (params?: Record<string, string>) => request<any>(`/transfers${qs(params)}`),
+    summary: (params?: Record<string, string>) => request<any>(`/transfers/summary${qs(params)}`),
+    create: (data: Partial<Transfer>) => request<Transfer>('/transfers', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<Transfer>) => request<Transfer>(`/transfers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => request<void>(`/transfers/${id}`, { method: 'DELETE' }),
   },
   aiSettings: {
     get: () => request<AiSetting>('/ai-settings'),

@@ -137,6 +137,18 @@ export interface Expense {
   updatedAt: string;
 }
 
+export interface Transfer {
+  _id: string;
+  person: string;
+  amount: number;
+  reason: string;
+  date: string;
+  method: string;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AiSetting {
   _id: string;
   singleton: string;

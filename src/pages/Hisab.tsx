@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import {
   Banknote, Bot, Bus, Calendar, Check, ChevronDown, CreditCard,
-  Gamepad2, GraduationCap, HeartPulse, Home, Landmark, Lightbulb,
-  type LucideProps, Package, Plus, Receipt, RefreshCw, ShoppingBag,
-  Smartphone, TabletSmartphone, Trash2, UtensilsCrossed, Wallet,
+  Gamepad2, Gift, GraduationCap, HeartPulse, Home, Landmark, Lightbulb,
+  type LucideProps, Package, Plus, Receipt, RefreshCw, Send, ShoppingBag,
+  Smartphone, TabletSmartphone, Trash2, Users, UtensilsCrossed, Wallet,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
@@ -11,7 +11,7 @@ import { runAiChat, defaultAiSettings, type AiSettings } from '../lib/ai';
 import MarkdownView from '../components/MarkdownView';
 import { FormField, PaginationControls, SearchInput, Spinner } from '../components/UI';
 import { Select } from '../components/Select';
-import type { Budget, Expense } from '../types';
+import type { Budget, Expense, Transfer } from '../types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -76,6 +76,22 @@ function today() {
 
 function money(value: number, currency = 'BDT') {
   return `${currency} ${Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+}
+
+const personPalette = [
+  'oklch(0.65 0.20 350)', 'oklch(0.65 0.19 290)', 'oklch(0.65 0.18 250)',
+  'oklch(0.65 0.18 160)', 'oklch(0.70 0.18 50)', 'oklch(0.65 0.16 30)',
+  'oklch(0.65 0.19 330)', 'oklch(0.65 0.18 200)',
+];
+
+function personColor(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return personPalette[Math.abs(hash) % personPalette.length];
+}
+
+function personInitial(name: string) {
+  return name.trim().charAt(0).toUpperCase() || '?';
 }
 
 function useCountUp(target: number, duration = 700) {
@@ -300,6 +316,59 @@ function ExpenseItem({
   );
 }
 
+function TransferItem({
+  item,
+  currency,
+  index,
+  onDelete,
+}: {
+  item: Transfer;
+  currency: string;
+  index: number;
+  onDelete: (id: string) => void;
+}) {
+  const [slidingOut, setSlidingOut] = useState(false);
+  const color = personColor(item.person);
+
+  const handleDelete = () => {
+    setSlidingOut(true);
+    setTimeout(() => onDelete(item._id), 350);
+  };
+
+  return (
+    <div
+      className={`hisab-expense-item rounded-2xl border border-border bg-muted/25 p-3 ${slidingOut ? 'hisab-slide-out' : ''}`}
+      style={{ animationDelay: `${index * 60}ms`, animation: slidingOut ? undefined : `staggerIn 400ms ease-out ${index * 60}ms both` }}
+    >
+      <div className="flex items-center gap-3">
+        <span
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-bold"
+          style={{ backgroundColor: `color-mix(in oklch, ${color} 18%, transparent)`, color }}
+        >
+          {personInitial(item.person)}
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-semibold">{item.person}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            {item.reason && <Badge variant="secondary" className="rounded-full">{item.reason}</Badge>}
+            <Badge variant="outline" className="flex items-center gap-1 rounded-full"><MethodIcon name={item.method} /> {item.method}</Badge>
+            <span className="text-xs text-muted-foreground">{item.date}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span className="font-semibold">{money(Number(item.amount), currency)}</span>
+          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={handleDelete}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+      {item.notes && <p className="mt-2 pl-13 text-sm text-muted-foreground">{item.notes}</p>}
+    </div>
+  );
+}
+
 export default function HisabPage() {
   const [month, setMonth] = useState(currentMonth());
   const [budget, setBudget] = useState<Budget | null>(null);
@@ -328,6 +397,12 @@ export default function HisabPage() {
   const [showCheck, setShowCheck] = useState(false);
   const [progressMounted, setProgressMounted] = useState(false);
 
+  const [transfers, setTransfers] = useState<Transfer[]>([]);
+  const [transferSummary, setTransferSummary] = useState<{ totalAmount: number; totalCount: number; persons: Array<{ person: string; amount: number; count: number }> }>({ totalAmount: 0, totalCount: 0, persons: [] });
+  const [transferForm, setTransferForm] = useState({ person: '', amount: '', reason: '', date: today(), method: 'cash', notes: '' });
+  const [transferFormOpen, setTransferFormOpen] = useState(false);
+  const [transferCheck, setTransferCheck] = useState(false);
+
   useEffect(() => {
     api.aiSettings.get()
       .then((value) => {
@@ -354,8 +429,10 @@ export default function HisabPage() {
       api.budgets.list({ month, limit: '1' }),
       api.expenses.list({ month, page: String(page), limit: String(PAGE_SIZE), search: debouncedSearch }),
       api.expenses.summary({ month }),
+      api.transfers.list({ month }),
+      api.transfers.summary({ month }),
     ])
-      .then(([budgetData, expenseData, summaryData]) => {
+      .then(([budgetData, expenseData, summaryData, transferData, transferSumData]) => {
         const currentBudget = (budgetData.items || [])[0] || null;
         setBudget(currentBudget);
         setBudgetAmount(currentBudget ? String(currentBudget.amount) : '');
@@ -367,6 +444,12 @@ export default function HisabPage() {
           totalCount: Number(summaryData.totalCount || 0),
           categories: summaryData.categories || [],
           recent: summaryData.recent || [],
+        });
+        setTransfers(transferData.items || transferData || []);
+        setTransferSummary({
+          totalAmount: Number(transferSumData.totalAmount || 0),
+          totalCount: Number(transferSumData.totalCount || 0),
+          persons: transferSumData.persons || [],
         });
         requestAnimationFrame(() => setProgressMounted(true));
       })
@@ -387,6 +470,7 @@ export default function HisabPage() {
   const animatedSpent = useCountUp(spent);
   const animatedRemaining = useCountUp(remaining);
   const animatedLimit = useCountUp(limit);
+  const animatedGiven = useCountUp(transferSummary.totalAmount);
 
   const statusGlow = percent >= 90 ? 'hisab-card-glow-red' : percent >= 70 ? 'hisab-card-glow-amber' : 'hisab-card-glow-green';
 
@@ -453,6 +537,30 @@ export default function HisabPage() {
     }
   };
 
+  const addTransfer = async () => {
+    if (!transferForm.person.trim()) return toast.error('Person name is required');
+    if (!Number(transferForm.amount)) return toast.error('Amount is required');
+    try {
+      await api.transfers.create({ ...transferForm, amount: Number(transferForm.amount) });
+      setTransferCheck(true);
+      setTimeout(() => {
+        setTransferCheck(false);
+        setTransferForm({ person: '', amount: '', reason: '', date: transferForm.date, method: transferForm.method, notes: '' });
+        setTransferFormOpen(false);
+      }, 800);
+      toast.success('Transfer added');
+      load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to add transfer');
+    }
+  };
+
+  const deleteTransfer = async (id: string) => {
+    await api.transfers.delete(id);
+    toast.success('Transfer deleted');
+    load();
+  };
+
   const aiBudgetPlan = async () => {
     setAiLoading(true);
     try {
@@ -498,7 +606,7 @@ export default function HisabPage() {
         </div>
       </section>
 
-      <div className="grid gap-3 lg:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card className={`rounded-3xl hisab-card-interactive ${statusGlow}`} style={{ animationDelay: '0ms' }}>
           <CardContent className="p-5">
             <p className="text-sm text-muted-foreground">Monthly budget</p>
@@ -526,6 +634,14 @@ export default function HisabPage() {
             <p className="text-sm text-muted-foreground">Remaining</p>
             <p className={`mt-2 text-3xl font-semibold ${remaining < 0 ? 'text-destructive' : 'text-success'}`}>{money(animatedRemaining, budget?.currency || 'BDT')}</p>
             <p className="mt-3 text-sm text-muted-foreground">{remaining < 0 ? 'Over budget' : 'Available to spend'}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-3xl hisab-card-interactive hisab-card-glow-violet" style={{ animationDelay: '240ms' }}>
+          <CardContent className="p-5">
+            <p className="text-sm text-muted-foreground">Given away</p>
+            <p className="mt-2 text-3xl font-semibold">{money(animatedGiven, budget?.currency || 'BDT')}</p>
+            <p className="mt-3 text-sm text-muted-foreground">{transferSummary.totalCount} transfer{transferSummary.totalCount === 1 ? '' : 's'} this month</p>
           </CardContent>
         </Card>
       </div>
@@ -586,6 +702,99 @@ export default function HisabPage() {
             </CardContent>
           </div>
         </div>
+      </Card>
+
+      <Card className="rounded-3xl overflow-hidden">
+        <div className="flex items-center justify-between p-4 sm:p-5 pb-0 sm:pb-0">
+          <div className="flex items-center gap-2">
+            <Send className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold">Given to people</h2>
+            {transferSummary.totalAmount > 0 && (
+              <Badge variant="secondary" className="rounded-full">{money(transferSummary.totalAmount, budget?.currency || 'BDT')}</Badge>
+            )}
+          </div>
+          <button
+            className={`hisab-fab grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-foreground ${transferFormOpen ? 'open' : ''}`}
+            onClick={() => setTransferFormOpen(!transferFormOpen)}
+          >
+            <Plus className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className={`hisab-expand-content ${transferFormOpen ? 'expanded' : ''}`}>
+          <div>
+            <CardContent className="space-y-4 p-4 pt-4 sm:p-5 sm:pt-4">
+              {transferCheck ? (
+                <div className="flex items-center justify-center py-6">
+                  <div className="hisab-check grid h-16 w-16 place-items-center rounded-full bg-success/15">
+                    <Check className="h-8 w-8 text-success" />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    <FormField label="Person">
+                      <Input value={transferForm.person} onChange={(e) => setTransferForm({ ...transferForm, person: e.target.value })} placeholder="Mom, GF, Rakib..." />
+                    </FormField>
+                    <FormField label="Amount">
+                      <Input type="number" min="0" value={transferForm.amount} onChange={(e) => setTransferForm({ ...transferForm, amount: e.target.value })} placeholder="3000" />
+                    </FormField>
+                    <FormField label="Reason">
+                      <Input value={transferForm.reason} onChange={(e) => setTransferForm({ ...transferForm, reason: e.target.value })} placeholder="Gift, allowance, emergency..." />
+                    </FormField>
+                    <FormField label="Method">
+                      <select className="h-11 w-full rounded-2xl border border-border bg-background px-3" value={transferForm.method} onChange={(e) => setTransferForm({ ...transferForm, method: e.target.value })}>
+                        {methods.map((m) => <option key={m} value={m}>{methodMeta[m].label}</option>)}
+                      </select>
+                    </FormField>
+                    <FormField label="Date">
+                      <Input type="date" value={transferForm.date} onChange={(e) => setTransferForm({ ...transferForm, date: e.target.value })} />
+                    </FormField>
+                    <FormField label="Notes">
+                      <Input value={transferForm.notes} onChange={(e) => setTransferForm({ ...transferForm, notes: e.target.value })} placeholder="Optional" />
+                    </FormField>
+                  </div>
+                  <Button onClick={addTransfer}><Plus className="h-4 w-4" /> Add transfer</Button>
+                </>
+              )}
+            </CardContent>
+          </div>
+        </div>
+
+        <CardContent className="p-4 sm:p-5 pt-0">
+          {transfers.length === 0 ? (
+            <p className="rounded-2xl border border-border bg-muted/25 p-5 text-center text-sm text-muted-foreground">
+              No transfers yet. Money given to people will show here — separate from expenses &amp; budget.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {transfers.map((item, i) => (
+                <TransferItem
+                  key={item._id}
+                  item={item}
+                  currency={budget?.currency || 'BDT'}
+                  index={i}
+                  onDelete={deleteTransfer}
+                />
+              ))}
+            </div>
+          )}
+
+          {transferSummary.persons.length > 0 && (
+            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              {transferSummary.persons.slice(0, 8).map((p) => (
+                <span
+                  key={p.person}
+                  className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
+                  style={{ backgroundColor: `color-mix(in oklch, ${personColor(p.person)} 12%, transparent)`, color: personColor(p.person) }}
+                >
+                  {p.person} · {money(p.amount, budget?.currency || 'BDT')}
+                </span>
+              ))}
+            </div>
+          )}
+        </CardContent>
       </Card>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
