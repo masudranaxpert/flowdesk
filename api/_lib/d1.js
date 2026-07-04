@@ -212,6 +212,12 @@ export async function ensureSchema() {
         createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL,
         UNIQUE(userId, categoryId, chapterId, sectionId)
       );`),
+      d1Query(`CREATE TABLE IF NOT EXISTS transfers (
+        id TEXT PRIMARY KEY, userId TEXT NOT NULL, person TEXT NOT NULL,
+        amount REAL DEFAULT 0, reason TEXT DEFAULT '', date TEXT NOT NULL,
+        method TEXT DEFAULT 'cash', notes TEXT DEFAULT '',
+        createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL
+      );`),
     ]);
 
     await Promise.all([
@@ -225,6 +231,7 @@ export async function ensureSchema() {
       d1Query(`CREATE INDEX IF NOT EXISTS idx_expenses_user_date ON expenses(userId, date);`),
       d1Query(`CREATE INDEX IF NOT EXISTS idx_share_links_code ON share_links(code);`),
       d1Query(`CREATE INDEX IF NOT EXISTS idx_doc_notes_user_chapter ON doc_notes(userId, categoryId, chapterId);`),
+      d1Query(`CREATE INDEX IF NOT EXISTS idx_transfers_user_date ON transfers(userId, date);`),
     ]);
 
     await Promise.all([

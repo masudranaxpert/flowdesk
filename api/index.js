@@ -87,6 +87,13 @@ const resources = {
     search: ['title', 'category', 'method', 'notes'],
     sort: 'date DESC, createdAt DESC',
   },
+  transfers: {
+    table: 'transfers',
+    columns: ['person', 'amount', 'reason', 'date', 'method', 'notes'],
+    defaults: { amount: 0, reason: '', method: 'cash', notes: '' },
+    search: ['person', 'reason', 'method', 'notes'],
+    sort: 'date DESC, createdAt DESC',
+  },
   uploaded_files: {
     table: 'uploaded_files',
     columns: ['name', 'mimeType', 'size'],
@@ -228,6 +235,11 @@ function buildWhere(resource, query, uid) {
     }
     if (query.category && query.category !== 'all') add('category = ?', String(query.category).trim().toLowerCase());
   }
+  if (resource === 'transfers') {
+    if (query.month && query.month !== 'all') {
+      add("substr(date, 1, 7) = ?", String(query.month).slice(0, 7));
+    }
+  }
   return { where: where.join(' AND '), params };
 }
 
@@ -347,6 +359,18 @@ function validateResourceData(resource, data, { partial = false } = {}) {
     if (next.date !== undefined || !partial) {
       const date = String(next.date || today).trim().slice(0, 10);
       next.date = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : today;
+    }
+    if (next.method !== undefined) next.method = String(next.method || 'cash').trim().toLowerCase() || 'cash';
+    if (next.notes !== undefined) next.notes = String(next.notes || '').slice(0, 5000);
+  }
+  if (resource === 'transfers') {
+    const todayDate = new Date().toISOString().slice(0, 10);
+    if (!partial) next.person = String(next.person || '').trim() || 'Someone';
+    if (next.amount !== undefined) next.amount = Math.max(0, Number(next.amount) || 0);
+    if (next.reason !== undefined) next.reason = String(next.reason || '').slice(0, 500);
+    if (next.date !== undefined || !partial) {
+      const date = String(next.date || todayDate).trim().slice(0, 10);
+      next.date = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : todayDate;
     }
     if (next.method !== undefined) next.method = String(next.method || 'cash').trim().toLowerCase() || 'cash';
     if (next.notes !== undefined) next.notes = String(next.notes || '').slice(0, 5000);
@@ -1031,7 +1055,7 @@ export default async function handler(req, res) {
       if (!user) return;
       const uid = user.id;
       await deleteAllUserFiles(uid);
-      for (const table of ['bookmarks', 'notebooks', 'codes', 'questions', 'categories', 'routines', 'ai_settings', 'chat_history', 'budgets', 'expenses', 'share_links', 'uploaded_files', 'doc_notes']) {
+      for (const table of ['bookmarks', 'notebooks', 'codes', 'questions', 'categories', 'routines', 'ai_settings', 'chat_history', 'budgets', 'expenses', 'transfers', 'share_links', 'uploaded_files', 'doc_notes']) {
         await d1Query(`DELETE FROM ${table} WHERE userId = ?;`, [uid]);
       }
       await d1Query('DELETE FROM app_users WHERE id = ?;', [uid]);
@@ -1191,6 +1215,24 @@ export default async function handler(req, res) {
         totalAmount: Number(totalRows[0]?.totalAmount || 0),
         totalCount: Number(totalRows[0]?.totalCount || 0),
         categories: categoryRows.map((row) => ({ category: row.category, amount: Number(row.amount || 0), count: Number(row.count || 0) })),
+        recent: recentRows.map((row) => ({ ...row, amount: Number(row.amount || 0) })),
+      });
+    }
+
+    if (slug === 'transfers/summary' && method === 'GET') {
+      const user = await requireUser(req, res);
+      if (!user) return;
+      const uid = userId(user);
+      const month = /^\d{4}-\d{2}$/.test(String(query.month || '')) ? String(query.month).slice(0, 7) : new Date().toISOString().slice(0, 7);
+      const where = 'userId = ? AND substr(date, 1, 7) = ?';
+      const params = [uid, month];
+      const totalRows = await d1Query(`SELECT COALESCE(SUM(amount), 0) AS totalAmount, COUNT(*) AS totalCount FROM transfers WHERE ${where};`, params);
+      const personRows = await d1Query(`SELECT person, COALESCE(SUM(amount), 0) AS amount, COUNT(*) AS count FROM transfers WHERE ${where} GROUP BY person ORDER BY amount DESC;`, params);
+      const recentRows = await d1Query(`SELECT person, amount, reason, date, method FROM transfers WHERE ${where} ORDER BY date DESC, createdAt DESC LIMIT 50;`, params);
+      return res.json({
+        totalAmount: Number(totalRows[0]?.totalAmount || 0),
+        totalCount: Number(totalRows[0]?.totalCount || 0),
+        persons: personRows.map((row) => ({ person: row.person, amount: Number(row.amount || 0), count: Number(row.count || 0) })),
         recent: recentRows.map((row) => ({ ...row, amount: Number(row.amount || 0) })),
       });
     }

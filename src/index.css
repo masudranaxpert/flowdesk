@@ -426,6 +426,13 @@ code, pre {
   box-shadow: 0 16px 48px oklch(0 0 0 / 0.2), 0 0 24px oklch(0.63 0.2 25 / 0.1);
 }
 
+.hisab-card-glow-violet {
+  border-color: oklch(0.62 0.19 295 / 0.3);
+}
+.hisab-card-glow-violet:hover {
+  box-shadow: 0 16px 48px oklch(0 0 0 / 0.2), 0 0 24px oklch(0.62 0.19 295 / 0.1);
+}
+
 .hisab-over-budget {
   animation: pulseGlow 2s ease-in-out infinite;
 }
