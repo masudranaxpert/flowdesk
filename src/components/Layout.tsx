@@ -336,7 +336,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         </main>
 
         <nav className="fixed inset-x-3 bottom-3 z-40 grid grid-cols-5 rounded-2xl border border-border bg-card/90 p-1 shadow-2xl backdrop-blur-xl lg:hidden">
-          {navItems.filter((item) => ['/', '/chatbot', '/routine', '/files', '/passwords'].includes(item.to)).map((item) => (
+          {navItems.filter((item) => ['/', '/chatbot', '/routine', '/files', '/hisab'].includes(item.to)).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

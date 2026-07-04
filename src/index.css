@@ -989,6 +989,158 @@ pre {
   margin-top: 2.75rem;
 }
 
+/* === Doc Section Notes === */
+
+.doc-note-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.4rem 0 0.25rem;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-muted-foreground);
+  border: 1px dashed color-mix(in oklch, var(--color-border) 80%, transparent);
+  border-radius: 0.5rem;
+  background: transparent;
+  transition: all 180ms ease;
+}
+
+.doc-note-add:hover {
+  color: var(--color-primary);
+  border-color: color-mix(in oklch, var(--color-primary) 35%, transparent);
+  background: color-mix(in oklch, var(--color-primary) 5%, transparent);
+}
+
+.doc-note-display {
+  margin: 0.75rem 0 1.25rem;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid color-mix(in oklch, var(--color-primary) 50%, transparent);
+  border-radius: 0 0.6rem 0.6rem 0;
+  background: color-mix(in oklch, var(--color-primary) 6%, transparent);
+}
+
+.doc-note-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.doc-note-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-primary);
+  opacity: 0.85;
+}
+
+.doc-note-badge::before {
+  content: '';
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 9999px;
+  background: currentColor;
+}
+
+.doc-note-body {
+  font-size: 0.95rem;
+  line-height: 1.72;
+  color: var(--color-muted-foreground);
+}
+
+.doc-note-body p:first-child {
+  margin-top: 0;
+}
+
+.doc-note-body p:last-child {
+  margin-bottom: 0;
+}
+
+.doc-note-body code {
+  font-size: 0.85em;
+}
+
+.doc-note-editor {
+  margin: 0.75rem 0 1.25rem;
+}
+
+.doc-note-textarea {
+  width: 100%;
+  min-height: 5rem;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: var(--color-foreground);
+  background: color-mix(in oklch, var(--color-card) 80%, transparent);
+  border: 1px solid color-mix(in oklch, var(--color-primary) 25%, var(--color-border));
+  border-radius: 0.6rem;
+  resize: vertical;
+  outline: none;
+  transition: border-color 150ms ease;
+}
+
+.doc-note-textarea:focus {
+  border-color: color-mix(in oklch, var(--color-primary) 50%, transparent);
+}
+
+.doc-note-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.doc-note-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  border-radius: 0.45rem;
+  border: 1px solid var(--color-border);
+  transition: all 150ms ease;
+}
+
+.doc-note-btn-save {
+  color: var(--color-primary-foreground);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.doc-note-btn-save:hover {
+  opacity: 0.9;
+}
+
+.doc-note-btn-cancel,
+.doc-note-btn-edit {
+  color: var(--color-muted-foreground);
+  background: var(--color-card);
+}
+
+.doc-note-btn-cancel:hover,
+.doc-note-btn-edit:hover {
+  color: var(--color-foreground);
+  background: var(--color-muted);
+}
+
+.doc-note-btn-delete {
+  color: oklch(0.7 0.2 25);
+  background: transparent;
+  border-color: oklch(0.63 0.2 25 / 0.2);
+}
+
+.doc-note-btn-delete:hover {
+  background: oklch(0.63 0.2 25 / 0.1);
+  border-color: oklch(0.63 0.2 25 / 0.35);
+}
+
 code {
   font-size: 0.8125rem;
 }

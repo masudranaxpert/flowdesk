@@ -135,7 +135,7 @@ export default function DocReader() {
           </Button>
         </header>
 
-        <DocContent body={chapter.body} />
+        <DocContent body={chapter.body} categoryId={category.id} chapterId={chapter.id} />
 
         <footer className="grid gap-3 border-t border-border/60 pt-6 sm:grid-cols-2">
           {prev ? (

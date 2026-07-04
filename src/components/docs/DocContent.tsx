@@ -1,19 +1,22 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import type { Components } from 'react-markdown';
 import MarkdownView from '../MarkdownView';
 import CodeBlock from '../CodeBlock';
 import MermaidDiagram from './MermaidDiagram';
+import { Check, Plus, Trash2, X } from 'lucide-react';
 
 const calloutMap: Record<string, { cls: string; label: string }> = {
   note: { cls: 'border-sky-400/40 bg-sky-500/10 text-sky-200', label: 'Note' },
   tip: { cls: 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200', label: 'Tip' },
+  important: { cls: 'border-blue-400/40 bg-blue-500/10 text-blue-200', label: 'Important' },
   warn: { cls: 'border-amber-400/40 bg-amber-500/10 text-amber-200', label: 'Warning' },
+  warning: { cls: 'border-amber-400/40 bg-amber-500/10 text-amber-200', label: 'Warning' },
   danger: { cls: 'border-rose-400/40 bg-rose-500/10 text-rose-200', label: 'Danger' },
   example: { cls: 'border-violet-400/40 bg-violet-500/10 text-violet-200', label: 'Example' },
 };
 
 function transformCallouts(markdown: string) {
-  const blockRegex = /^> *\[\!(note|tip|warn|warning|danger|example)\]([^\n]*)\n((?:^#[^\n]*(?:\n|$)|^>.*(?:\n|$))+)/gim;
+  const blockRegex = /^> *\[\!(note|tip|important|warn|warning|danger|example)\]([^\n]*)\n((?:^#[^\n]*(?:\n|$)|^>.*(?:\n|$))+)/gim;
 
   return markdown.replace(blockRegex, (_match, kind: string, titleText: string, body: string) => {
     const key = String(kind).toLowerCase() === 'warning' ? 'warn' : String(kind).toLowerCase();
@@ -130,18 +133,12 @@ function toLatex(text: string): string {
     result = result.replaceAll(char, latex);
   }
 
-  // Post-processing: fix spacing after LaTeX commands
   result = result.replace(/\\cdot([a-zA-Z])/g, '\\cdot $1');
   result = result.replace(/\\partial([a-zA-Z])/g, '\\partial $1');
   result = result.replace(/\\nabla([a-zA-Z])/g, '\\nabla $1');
 
-  // Function names
   result = result.replace(/(?<![a-zA-Z\\])(log|exp|ln|max|min)\(/g, '\\$1(');
-
-  // Multi-letter uppercase acronyms (BCE, MSE, MAE, etc.)
   result = result.replace(/([A-Z]{2,})/g, '\\text{$1}');
-
-  // ASCII ^ with multi-char exponent: ^epoch → ^{epoch} (skip ^{ ^ digit ^\)
   result = result.replace(/\^([a-zA-Z]{2,})(?![\d{])/g, '^{$1}');
 
   return result;
@@ -158,39 +155,217 @@ function transformUnicodeMath(markdown: string): string {
   }).join('');
 }
 
-// ── Component ────────────────────────────────────────────────────────────────
+// ── Section Notes ────────────────────────────────────────────────────────────
 
-const docComponents: Components = {
-  pre: ({ children }) => <>{children}</>,
-  code: ({ className, children }) => {
-    const match = /language-(\w+)/.exec(className || '');
-    const text = String(children).replace(/\n$/, '');
-    if (match) {
-      if (match[1] === 'mermaid') {
-        return <MermaidDiagram chart={text} />;
+type NotesMap = Record<string, string>;
+
+function notesKey(categoryId: string, chapterId: string) {
+  return `docs-notes:${categoryId}:${chapterId}`;
+}
+
+function readNotes(categoryId: string, chapterId: string): NotesMap {
+  try {
+    const raw = localStorage.getItem(notesKey(categoryId, chapterId));
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeNotes(categoryId: string, chapterId: string, notes: NotesMap) {
+  localStorage.setItem(notesKey(categoryId, chapterId), JSON.stringify(notes));
+}
+
+function extractText(node: ReactNode): string {
+  if (typeof node === 'string') return node;
+  if (typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(extractText).join('');
+  if (node && typeof node === 'object' && 'props' in node) {
+    return extractText((node as Record<string, any>).props?.children);
+  }
+  return '';
+}
+
+function SectionNote({
+  sectionId,
+  notes,
+  onSave,
+}: {
+  sectionId: string;
+  notes: NotesMap;
+  onSave: (id: string, text: string) => void;
+}) {
+  const existing = notes[sectionId] || '';
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+
+  if (editing) {
+    return (
+      <div className="doc-note-editor animate-fade-in">
+        <textarea
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder="তোমার নোট লেখো... (Markdown সাপোর্ট করে)"
+          rows={3}
+          className="doc-note-textarea"
+        />
+        <div className="doc-note-actions">
+          <button
+            type="button"
+            onClick={() => {
+              onSave(sectionId, draft);
+              setEditing(false);
+            }}
+            className="doc-note-btn doc-note-btn-save"
+          >
+            <Check className="h-3.5 w-3.5" /> সেভ করুন
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setEditing(false);
+              setDraft('');
+            }}
+            className="doc-note-btn doc-note-btn-cancel"
+          >
+            <X className="h-3.5 w-3.5" /> বাতিল
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (existing) {
+    return (
+      <div className="doc-note-display animate-fade-in">
+        <div className="doc-note-header">
+          <span className="doc-note-badge">আমার নোট</span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setDraft(existing);
+                setEditing(true);
+              }}
+              className="doc-note-btn doc-note-btn-edit"
+            >
+              সম্পাদনা
+            </button>
+            <button
+              type="button"
+              onClick={() => onSave(sectionId, '')}
+              className="doc-note-btn doc-note-btn-delete"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> মুছুন
+            </button>
+          </div>
+        </div>
+        <div className="doc-note-body">
+          <MarkdownView>{existing}</MarkdownView>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        setDraft('');
+        setEditing(true);
+      }}
+      className="doc-note-add"
+    >
+      <Plus className="h-3.5 w-3.5" /> নোট যোগ করুন
+    </button>
+  );
+}
+
+// ── Components ────────────────────────────────────────────────────────────────
+
+function makeDocComponents(
+  notes: NotesMap,
+  onSave: (id: string, text: string) => void,
+): Components {
+  const wrapHeading = (Tag: 'h2' | 'h3' | 'h4') =>
+    function HeadingWithNote({
+      children,
+      node,
+    }: {
+      children?: ReactNode;
+      node?: { position?: { start?: { line?: number } } };
+    }) {
+      const text = extractText(children).trim().slice(0, 40);
+      const line = node?.position?.start?.line ?? 0;
+      const sectionId = text ? `${text}-L${line}` : `L${line}`;
+      return (
+        <>
+          <Tag id={sectionId}>{children}</Tag>
+          <SectionNote sectionId={sectionId} notes={notes} onSave={onSave} />
+        </>
+      );
+    };
+
+  return {
+    pre: ({ children }) => <>{children}</>,
+    code: ({ className, children }) => {
+      const match = /language-(\w+)/.exec(className || '');
+      const text = String(children).replace(/\n$/, '');
+      if (match) {
+        if (match[1] === 'mermaid') {
+          return <MermaidDiagram chart={text} />;
+        }
+        return <CodeBlock code={text} language={match[1]} />;
       }
-      return <CodeBlock code={text} language={match[1]} />;
-    }
-    if (text.includes('\n')) {
-      return <CodeBlock code={text} language="plaintext" />;
-    }
-    return <code>{children}</code>;
-  },
-  table: ({ children }) => (
-    <div className="doc-table-wrapper">
-      <table>{children}</table>
-    </div>
-  ),
+      if (text.includes('\n')) {
+        return <CodeBlock code={text} language="plaintext" />;
+      }
+      return <code>{children}</code>;
+    },
+    table: ({ children }) => (
+      <div className="doc-table-wrapper">
+        <table>{children}</table>
+      </div>
+    ),
+    h2: wrapHeading('h2'),
+    h3: wrapHeading('h3'),
+    h4: wrapHeading('h4'),
+  };
+}
+
+type DocContentProps = {
+  body: string;
+  categoryId: string;
+  chapterId: string;
 };
 
-export default function DocContent({ body }: { body: string }) {
+export default function DocContent({ body, categoryId, chapterId }: DocContentProps) {
+  const [notes, setNotes] = useState<NotesMap>(() => readNotes(categoryId, chapterId));
+
+  const saveNote = useCallback(
+    (sectionId: string, text: string) => {
+      setNotes((prev) => {
+        const next = { ...prev };
+        if (text.trim()) next[sectionId] = text;
+        else delete next[sectionId];
+        writeNotes(categoryId, chapterId, next);
+        return next;
+      });
+    },
+    [categoryId, chapterId],
+  );
+
   const transformed = useMemo(
     () => transformUnicodeMath(transformCallouts(stripLeadingH1(body))),
     [body],
   );
+
+  const components = useMemo(() => makeDocComponents(notes, saveNote), [notes, saveNote]);
+
   return (
     <div className="doc-content">
-      <MarkdownView allowHtml components={docComponents}>{transformed}</MarkdownView>
+      <MarkdownView allowHtml components={components}>{transformed}</MarkdownView>
     </div>
   );
 }
