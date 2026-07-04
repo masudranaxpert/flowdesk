@@ -21,6 +21,12 @@ function fileUrl(file: UploadedFile) {
   return file.url || `/api/files/${file.id}`;
 }
 
+function authFileUrl(file: UploadedFile) {
+  const base = fileUrl(file);
+  const token = localStorage.getItem('auth-token');
+  return token && base.startsWith('/api/') ? `${base}?token=${encodeURIComponent(token)}` : base;
+}
+
 function absoluteFileUrl(file: UploadedFile) {
   return `${window.location.origin}${fileUrl(file)}`;
 }
@@ -219,9 +225,9 @@ export default function FileSharePage() {
                 <CardContent className="p-3">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                     <div className="flex min-w-0 flex-1 items-center gap-3">
-                      <a href={fileUrl(file)} target="_blank" rel="noreferrer" className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl border border-border bg-muted/35">
+                      <a href={authFileUrl(file)} target="_blank" rel="noreferrer" className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl border border-border bg-muted/35">
                       {isImage ? (
-                        <img src={fileUrl(file)} alt={file.name} className="h-full w-full object-cover" />
+                        <img src={authFileUrl(file)} alt={file.name} className="h-full w-full object-cover" />
                       ) : (
                         <Icon className="h-6 w-6 text-primary" />
                       )}
@@ -255,7 +261,7 @@ export default function FileSharePage() {
                             </button>
                           </div>
                         ) : (
-                          <a href={fileUrl(file)} target="_blank" rel="noreferrer" className="block">
+                          <a href={authFileUrl(file)} target="_blank" rel="noreferrer" className="block">
                             <p className="truncate font-semibold hover:text-primary transition">{file.name}</p>
                           </a>
                         )}
@@ -278,7 +284,7 @@ export default function FileSharePage() {
                         <Link2 className="h-4 w-4" /> Copy link
                       </Button>
                       <Button variant="outline" size="sm" asChild>
-                        <a href={fileUrl(file)} download target="_blank" rel="noreferrer">
+                        <a href={authFileUrl(file)} download target="_blank" rel="noreferrer">
                           <Download className="h-4 w-4" /> Open
                         </a>
                       </Button>
