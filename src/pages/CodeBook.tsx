@@ -75,7 +75,9 @@ function fileSize(size = 0) {
 }
 
 function attachmentUrl(file: UploadedFile) {
-  return file.url || `/api/files/${file.id}`;
+  const base = file.url || `/api/files/${file.id}`;
+  const token = localStorage.getItem('auth-token');
+  return token && base.startsWith('/api/') ? `${base}?token=${encodeURIComponent(token)}` : base;
 }
 
 function isReadableCodeFile(file: File) {

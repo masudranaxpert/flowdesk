@@ -879,7 +879,7 @@ export default async function handler(req, res) {
       const bucket = getFileBucket();
       if (!row || !bucket) return res.status(404).json({ error: 'File not found' });
       const header = req.headers.authorization || '';
-      const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+      const token = header.startsWith('Bearer ') ? header.slice(7) : (query.token || '');
       const session = token ? await verifyToken(token) : null;
       const currentUid = session?.id || null;
       if (row.userId !== currentUid) {
