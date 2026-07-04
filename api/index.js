@@ -1120,35 +1120,31 @@ export default async function handler(req, res) {
       if (!q) return res.json([]);
       const uid = userId(user);
       const term = like(q);
-      const rows = await d1Query(`
-        (SELECT 'bookmarks' AS type, id, title, url AS subtitle FROM bookmarks WHERE userId = ? AND (title LIKE ? OR url LIKE ? OR description LIKE ? OR category LIKE ? OR tags LIKE ? OR EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(tags) THEN tags ELSE '[]' END) WHERE json_each.value LIKE ?)) ORDER BY createdAt DESC LIMIT 5)
-        UNION ALL
-        (SELECT 'notebooks' AS type, id, title, category AS subtitle FROM notebooks WHERE userId = ? AND (title LIKE ? OR content LIKE ? OR category LIKE ? OR tags LIKE ? OR EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(tags) THEN tags ELSE '[]' END) WHERE json_each.value LIKE ?)) ORDER BY updatedAt DESC LIMIT 5)
-        UNION ALL
-        (SELECT 'codes' AS type, id, title, language AS subtitle FROM codes WHERE userId = ? AND (title LIKE ? OR code LIKE ? OR language LIKE ? OR description LIKE ? OR category LIKE ? OR tags LIKE ? OR EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(tags) THEN tags ELSE '[]' END) WHERE json_each.value LIKE ?) OR attachments LIKE ? OR EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(attachments) THEN attachments ELSE '[]' END) WHERE json_each.value LIKE ?)) ORDER BY createdAt DESC LIMIT 5)
-        UNION ALL
-        (SELECT 'questions' AS type, id, title, platform AS subtitle FROM questions WHERE userId = ? AND (title LIKE ? OR problem LIKE ? OR solution LIKE ? OR code LIKE ? OR language LIKE ? OR difficulty LIKE ? OR platform LIKE ? OR category LIKE ? OR link LIKE ? OR tags LIKE ? OR EXISTS (SELECT 1 FROM json_each(CASE WHEN json_valid(tags) THEN tags ELSE '[]' END) WHERE json_each.value LIKE ?)) ORDER BY createdAt DESC LIMIT 5)
-        UNION ALL
-        (SELECT 'files' AS type, id, name AS title, mimeType AS subtitle FROM uploaded_files WHERE userId = ? AND (name LIKE ? OR mimeType LIKE ?) ORDER BY createdAt DESC LIMIT 5)
-        UNION ALL
-        (SELECT 'expenses' AS type, id, title, category AS subtitle FROM expenses WHERE userId = ? AND (title LIKE ? OR category LIKE ? OR notes LIKE ?) ORDER BY date DESC LIMIT 5)
-      `, [
-        uid, term, term, term, term, term, term,
-        uid, term, term, term, term, term,
-        uid, term, term, term, term, term, term, term, term, term,
-        uid, term, term, term, term, term, term, term, term, term, term, term,
-        uid, term, term,
-        uid, term, term, term,
-      ]);
-      return res.json(
-        rows.map((row) => ({
-          id: row.id,
-          type: row.type === 'bookmarks' ? 'Bookmark' : row.type === 'notebooks' ? 'Note' : row.type === 'codes' ? 'Code' : row.type === 'files' ? 'File' : row.type === 'expenses' ? 'Expense' : 'Q&A',
-          title: row.title,
-          subtitle: row.subtitle,
-          to: row.type === 'bookmarks' ? '/bookmarks' : row.type === 'notebooks' ? '/notebooks' : row.type === 'codes' ? '/codes' : row.type === 'files' ? '/files' : row.type === 'expenses' ? '/hisab' : '/questions',
-        }))
-      );
+
+      const sources = [
+        { table: 'bookmarks', cols: 'id, title, url AS subtitle', where: 'title LIKE ? OR url LIKE ? OR description LIKE ? OR category LIKE ? OR tags LIKE ?', params: [term, term, term, term, term], type: 'Bookmark', to: '/bookmarks' },
+        { table: 'notebooks', cols: 'id, title, category AS subtitle', where: 'title LIKE ? OR content LIKE ? OR category LIKE ? OR tags LIKE ?', params: [term, term, term, term], type: 'Note', to: '/notebooks' },
+        { table: 'codes', cols: 'id, title, language AS subtitle', where: 'title LIKE ? OR code LIKE ? OR description LIKE ? OR category LIKE ? OR tags LIKE ?', params: [term, term, term, term, term], type: 'Code', to: '/codes' },
+        { table: 'questions', cols: 'id, title, platform AS subtitle', where: 'title LIKE ? OR problem LIKE ? OR platform LIKE ? OR category LIKE ?', params: [term, term, term, term], type: 'Q&A', to: '/questions' },
+        { table: 'uploaded_files', cols: 'id, name AS title, mimeType AS subtitle', where: 'name LIKE ?', params: [term], type: 'File', to: '/files' },
+        { table: 'expenses', cols: 'id, title, category AS subtitle', where: 'title LIKE ? OR category LIKE ? OR notes LIKE ?', params: [term, term, term], type: 'Expense', to: '/hisab' },
+        { table: 'transfers', cols: 'id, person AS title, reason AS subtitle', where: 'person LIKE ? OR reason LIKE ? OR notes LIKE ?', params: [term, term, term], type: 'Transfer', to: '/hisab' },
+      ];
+
+      const results = [];
+      await Promise.all(sources.map(async (src) => {
+        try {
+          const rows = await d1Query(
+            `SELECT ${src.cols} FROM ${src.table} WHERE userId = ? AND (${src.where}) ORDER BY createdAt DESC LIMIT 5;`,
+            [uid, ...src.params]
+          );
+          for (const row of rows) {
+            results.push({ id: row.id, type: src.type, title: row.title, subtitle: row.subtitle, to: src.to });
+          }
+        } catch {}
+      }));
+
+      return res.json(results);
     }
 
     if (slug === 'ai-settings') {
