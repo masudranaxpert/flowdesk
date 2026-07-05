@@ -8,6 +8,7 @@ export interface DocChapter {
   minutes: number;
   tags?: string[];
   body: string;
+  bodyEn?: string;
 }
 
 export interface DocCategory {
@@ -23,15 +24,20 @@ export interface DocCategory {
 
 import { docMeta } from './meta';
 
-const chapterModules = import.meta.glob('./chapters/**/*.md', {
+const chapterModules = import.meta.glob(['./chapters/**/*.md', './chapters/**/*.en.md'], {
   eager: true,
   query: '?raw',
   import: 'default',
 }) as Record<string, string>;
 
+const FALLBACK = '# কনটেন্ট শীঘ্রই আসছে\n\nএই চ্যাপ্টারটি এখনো লেখা হচ্ছে।';
+
 function bodyFor(categoryId: string, chapterId: string): string {
-  const key = `./chapters/${categoryId}/${chapterId}.md`;
-  return chapterModules[key] ?? '# কনটেন্ট শীঘ্রই আসছে\n\nএই চ্যাপ্টারটি এখনো লেখা হচ্ছে।';
+  return chapterModules[`./chapters/${categoryId}/${chapterId}.md`] ?? FALLBACK;
+}
+
+function bodyForEn(categoryId: string, chapterId: string): string | undefined {
+  return chapterModules[`./chapters/${categoryId}/${chapterId}.en.md`];
 }
 
 export const docCategories: DocCategory[] = docMeta.map((category) => ({
@@ -39,6 +45,7 @@ export const docCategories: DocCategory[] = docMeta.map((category) => ({
   chapters: category.chapters.map((chapter) => ({
     ...chapter,
     body: bodyFor(category.id, chapter.id),
+    bodyEn: bodyForEn(category.id, chapter.id),
   })),
 }));
 
