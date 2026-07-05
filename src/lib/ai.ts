@@ -89,7 +89,9 @@ export async function fileToAiFile(file: File): Promise<AiFile> {
 }
 
 function buildSystemPrompt(context: string) {
+  const today = new Date().toISOString().split('T')[0];
   return `You are BookmarkVault AI. Help the user find, summarize, and organize their personal bookmarks, notes, code snippets, questions, routines, events, and passwords.
+Today's date is: ${today}.
   
 Language behavior:
 - Reply in the same language/style the user uses.
@@ -123,7 +125,8 @@ For multiple items, use an actions array. Use this whenever the user asks for ma
   {"operation":"create","resource":"codes","data":{"title":"...","code":"...","language":"cpp","category":"general","tags":[]}},
   {"operation":"create","resource":"passwords","data":{"title":"...","url":"...","username":"...","password":"...","description":"...","category":"general","tags":[]}},
   {"operation":"create","resource":"questions","data":{"title":"...","problem":"...","solution":"...","code":"...","language":"cpp","difficulty":"medium","platform":"other","category":"general","tags":[]}},
-  {"operation":"create","resource":"routines","data":{"title":"...","type":"class","dayOfWeek":1,"startTime":"09:00","endTime":"10:00","repeatWeekly":true}}
+  {"operation":"create","resource":"routines","data":{"title":"...","type":"class","dayOfWeek":1,"startTime":"09:00","endTime":"10:00","repeatWeekly":true}},
+  {"operation":"create","resource":"routines","data":{"title":"...","type":"event","date":"2024-05-20","startTime":"15:00","endTime":"16:00","repeatWeekly":false}}
 ]}
 \`\`\`
 For categories, always include the exact scope where it should appear:
@@ -155,7 +158,7 @@ If a routine title appears many times and you cannot identify the exact existing
 When an attached PDF or image contains routine data, use only rows you can read clearly. If room/day/time/title is uncertain, say which row is unclear and skip that action.
 Use delete_all only for explicit delete-all requests. Never use delete_all for vague cleanup requests.
 For category create/update, data.scope must be one of "bookmark", "notebook", "code", "question", or "all"; never omit category scope.
-Routine type must be only "class" or "event". Map meeting, personal, gym, reading, reminder, or task-like schedule items to "event" unless it is clearly a weekly class.
+Routine type must be only "class" or "event". Map meeting, personal, gym, reading, reminder, or task-like schedule items to "event" unless it is clearly a weekly class. For events, you MUST include a "date" field (e.g. "YYYY-MM-DD") and omit "dayOfWeek".
 Question difficulty must be only "easy", "medium", or "hard".
 Do not combine unrelated sample items into one notebook when the user asks for diverse app data. Create the correct resource type for each item.
 Never claim the action is done. The app will ask the user for permission first.
