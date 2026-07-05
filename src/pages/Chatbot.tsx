@@ -1081,6 +1081,98 @@ export default function ChatbotPage() {
                                 <span className="text-xs font-medium">{writingAction ? 'Preparing action preview...' : 'Writing response...'}</span>
                               </div>
                             )}
+
+                            {Array.isArray(message.actionBatches) && message.actionBatches.length > 0 && (
+                              <div className="mt-3 w-full space-y-2">
+                                {message.actionBatches.map((batch: any) => {
+                                  const meta = actionStatusMeta(batch.status);
+                                  const StatusIcon = meta.icon;
+                                  const totalActions = batch.actions.length + batch.rejected.length;
+                                  const expanded = expandedActionBatchId === batch.id;
+                                  const pending = batch.status === 'pending' && pendingActionBatchId === batch.id;
+                                  return (
+                                    <div key={batch.id} className={`chat-action-panel overflow-hidden rounded-2xl border p-3 shadow-sm ${meta.className}`}>
+                                      <button
+                                        type="button"
+                                        className="flex w-full min-w-0 items-center gap-2 text-left"
+                                        onClick={() => setExpandedActionBatchId(expanded ? '' : batch.id)}
+                                      >
+                                        <StatusIcon className="h-4 w-4 shrink-0" />
+                                        <div className="min-w-0 flex-1">
+                                          <p className="truncate text-sm font-semibold">Tool actions - {meta.label}</p>
+                                          <p className="truncate text-xs opacity-80">
+                                            {totalActions} action{totalActions === 1 ? '' : 's'}
+                                            {batch.rejected.length > 0 ? `, ${batch.rejected.length} unsafe blocked` : ''}
+                                          </p>
+                                        </div>
+                                        <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                                      </button>
+                                      {pending && (
+                                        <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                                          <Button className="h-auto min-h-9 min-w-0 whitespace-normal py-2 text-xs sm:text-sm" aria-label="Approve actions" onClick={executeAction} disabled={executing}>
+                                            {hasDestructiveAction(batch.actions) ? 'Approve destructive action' : `Approve ${batch.actions.length}`}
+                                          </Button>
+                                          <Button variant="outline" className="h-auto min-h-9 min-w-0 whitespace-normal py-2 text-xs sm:text-sm" aria-label="Cancel actions" onClick={cancelPendingActions} disabled={executing}>Cancel</Button>
+                                        </div>
+                                      )}
+                                      {expanded && (
+                                        <div className="chat-action-panel-body chat-scroll mt-3 space-y-3 overflow-y-auto pr-1">
+                                          {batch.actions.length > 0 && (
+                                            <div className="flex flex-wrap gap-1.5">
+                                              {actionSummaries(batch.actions).map((summary) => (
+                                                <Badge key={summary.label} variant="secondary" className="rounded-full bg-background/70 text-foreground">
+                                                  {summary.count} {summary.label}
+                                                </Badge>
+                                              ))}
+                                            </div>
+                                          )}
+                                          {batch.actions.length > 0 && (
+                                            <div className="space-y-1.5">
+                                              {batch.actions.map((action: any, actionIndex: number) => (
+                                                <div key={`${batch.id}-valid-${actionIndex}`} className="rounded-xl bg-background/70 px-2 py-2 text-xs text-foreground">
+                                                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                                                    <Badge variant="outline" className="h-5 rounded-full px-2 text-[10px]">{actionRisk(action)}</Badge>
+                                                    <span className="min-w-0 flex-1 break-words font-semibold">{actionLabelWithContext(action, vaultContext)}</span>
+                                                  </div>
+                                                  <div className="mt-1.5 space-y-0.5 text-[11px] leading-4 text-muted-foreground">
+                                                    {actionDetails(action, vaultContext).map((detail, detailIndex) => (
+                                                      <p key={`${batch.id}-valid-${actionIndex}-detail-${detailIndex}`} className="break-words">{detail}</p>
+                                                    ))}
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          )}
+                                          {batch.rejected.length > 0 && (
+                                            <div>
+                                              <p className="mb-1 text-xs font-semibold">Unsafe actions blocked</p>
+                                              <div className="space-y-1.5">
+                                                {batch.rejected.map((issue: any, issueIndex: number) => (
+                                                  <div key={`${batch.id}-rejected-${issueIndex}`} className="rounded-xl bg-background/70 px-2 py-2 text-xs text-foreground">
+                                                    <p className="break-words font-semibold">{actionLabelWithContext(issue.action, vaultContext)}</p>
+                                                    <p className="mt-1 text-[11px] text-muted-foreground">{issue.reason}</p>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                              <details className="mt-2 rounded-xl bg-background/70 p-2 text-xs text-foreground">
+                                                <summary className="cursor-pointer font-semibold">Raw blocked JSON</summary>
+                                                <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words">{JSON.stringify(batch.rejected, null, 2)}</pre>
+                                              </details>
+                                            </div>
+                                          )}
+                                          {batch.actions.length > 0 && (
+                                            <details className="rounded-xl bg-background/70 p-2 text-xs text-foreground">
+                                              <summary className="cursor-pointer font-semibold">Raw action JSON</summary>
+                                              <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words">{JSON.stringify(batch.actions, null, 2)}</pre>
+                                            </details>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div className="max-w-[88%] sm:max-w-[75%]">
@@ -1106,99 +1198,7 @@ export default function ChatbotPage() {
                         )}
                       </div>
                     ))}
-                    {actionBatches.length > 0 && (
-                      <div className="flex justify-center">
-                        <div className="w-full max-w-[92%] space-y-2 sm:max-w-[82%]">
-                          {actionBatches.map((batch) => {
-                            const meta = actionStatusMeta(batch.status);
-                            const StatusIcon = meta.icon;
-                            const totalActions = batch.actions.length + batch.rejected.length;
-                            const expanded = expandedActionBatchId === batch.id;
-                            const pending = batch.status === 'pending' && pendingActionBatchId === batch.id;
-                            return (
-                              <div key={batch.id} className={`chat-action-panel overflow-hidden rounded-2xl border p-3 shadow-sm ${meta.className}`}>
-                                <button
-                                  type="button"
-                                  className="flex w-full min-w-0 items-center gap-2 text-left"
-                                  onClick={() => setExpandedActionBatchId(expanded ? '' : batch.id)}
-                                >
-                                  <StatusIcon className="h-4 w-4 shrink-0" />
-                                  <div className="min-w-0 flex-1">
-                                    <p className="truncate text-sm font-semibold">Tool actions - {meta.label}</p>
-                                    <p className="truncate text-xs opacity-80">
-                                      {totalActions} action{totalActions === 1 ? '' : 's'}
-                                      {batch.rejected.length > 0 ? `, ${batch.rejected.length} unsafe blocked` : ''}
-                                    </p>
-                                  </div>
-                                  <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
-                                </button>
-                                {pending && (
-                                  <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                                    <Button className="h-auto min-h-9 min-w-0 whitespace-normal py-2 text-xs sm:text-sm" aria-label="Approve actions" onClick={executeAction} disabled={executing}>
-                                      {hasDestructiveAction(batch.actions) ? 'Approve destructive action' : `Approve ${batch.actions.length}`}
-                                    </Button>
-                                    <Button variant="outline" className="h-auto min-h-9 min-w-0 whitespace-normal py-2 text-xs sm:text-sm" aria-label="Cancel actions" onClick={cancelPendingActions} disabled={executing}>Cancel</Button>
-                                  </div>
-                                )}
-                                {expanded && (
-                                  <div className="chat-action-panel-body chat-scroll mt-3 space-y-3 overflow-y-auto pr-1">
-                                    {batch.actions.length > 0 && (
-                                      <div className="flex flex-wrap gap-1.5">
-                                        {actionSummaries(batch.actions).map((summary) => (
-                                          <Badge key={summary.label} variant="secondary" className="rounded-full bg-background/70 text-foreground">
-                                            {summary.count} {summary.label}
-                                          </Badge>
-                                        ))}
-                                      </div>
-                                    )}
-                                    {batch.actions.length > 0 && (
-                                      <div className="space-y-1.5">
-                                        {batch.actions.map((action, actionIndex) => (
-                                          <div key={`${batch.id}-valid-${actionIndex}`} className="rounded-xl bg-background/70 px-2 py-2 text-xs text-foreground">
-                                            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                                              <Badge variant="outline" className="h-5 rounded-full px-2 text-[10px]">{actionRisk(action)}</Badge>
-                                              <span className="min-w-0 flex-1 break-words font-semibold">{actionLabelWithContext(action, vaultContext)}</span>
-                                            </div>
-                                            <div className="mt-1.5 space-y-0.5 text-[11px] leading-4 text-muted-foreground">
-                                              {actionDetails(action, vaultContext).map((detail, detailIndex) => (
-                                                <p key={`${batch.id}-valid-${actionIndex}-detail-${detailIndex}`} className="break-words">{detail}</p>
-                                              ))}
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    )}
-                                    {batch.rejected.length > 0 && (
-                                      <div>
-                                        <p className="mb-1 text-xs font-semibold">Unsafe actions blocked</p>
-                                        <div className="space-y-1.5">
-                                          {batch.rejected.map((issue, issueIndex) => (
-                                            <div key={`${batch.id}-rejected-${issueIndex}`} className="rounded-xl bg-background/70 px-2 py-2 text-xs text-foreground">
-                                              <p className="break-words font-semibold">{actionLabelWithContext(issue.action, vaultContext)}</p>
-                                              <p className="mt-1 text-[11px] text-muted-foreground">{issue.reason}</p>
-                                            </div>
-                                          ))}
-                                        </div>
-                                        <details className="mt-2 rounded-xl bg-background/70 p-2 text-xs text-foreground">
-                                          <summary className="cursor-pointer font-semibold">Raw blocked JSON</summary>
-                                          <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words">{JSON.stringify(batch.rejected, null, 2)}</pre>
-                                        </details>
-                                      </div>
-                                    )}
-                                    {batch.actions.length > 0 && (
-                                      <details className="rounded-xl bg-background/70 p-2 text-xs text-foreground">
-                                        <summary className="cursor-pointer font-semibold">Raw action JSON</summary>
-                                        <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-words">{JSON.stringify(batch.actions, null, 2)}</pre>
-                                      </details>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
+                    {/* Replaced actionBatches block */}
                     <div ref={bottomRef} />
                   </div>
                 </div>
