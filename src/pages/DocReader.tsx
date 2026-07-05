@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -7,6 +7,7 @@ import {
   Circle,
   Clock,
   Hash,
+  Languages,
   ListTree,
   LockKeyhole,
 } from 'lucide-react';
@@ -27,6 +28,14 @@ export default function DocReader() {
   );
 
   const { readIds, toggle } = useDocProgress(categoryId);
+  const [lang, setLang] = useState<'bn' | 'en'>(() =>
+    localStorage.getItem('docs-lang') === 'en' ? 'en' : 'bn',
+  );
+
+  const switchLang = (l: 'bn' | 'en') => {
+    setLang(l);
+    localStorage.setItem('docs-lang', l);
+  };
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -111,13 +120,32 @@ export default function DocReader() {
           </div>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{chapter.title}</h1>
           {chapter.subtitle && <p className="text-sm text-muted-foreground">{chapter.subtitle}</p>}
-          <Button variant={isRead ? 'default' : 'outline'} size="sm" className="rounded-full" onClick={() => toggle(chapter.id)}>
-            {isRead ? <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> : <Circle className="mr-1.5 h-3.5 w-3.5" />}
-            {isRead ? 'পড়া হয়ে গেছে' : 'পড়া শেষ চিহ্নিত করি'}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant={isRead ? 'default' : 'outline'} size="sm" className="rounded-full" onClick={() => toggle(chapter.id)}>
+              {isRead ? <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> : <Circle className="mr-1.5 h-3.5 w-3.5" />}
+              {isRead ? 'পড়া হয়ে গেছে' : 'পড়া শেষ চিহ্নিত করি'}
+            </Button>
+
+            {chapter.bodyEn && (
+              <div className="inline-flex items-center rounded-full border border-border bg-card/50 p-0.5 text-[11px] font-medium">
+                <button
+                  onClick={() => switchLang('bn')}
+                  className={cn('rounded-full px-3 py-1 transition', lang === 'bn' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
+                >
+                  বাংলা
+                </button>
+                <button
+                  onClick={() => switchLang('en')}
+                  className={cn('flex items-center gap-1 rounded-full px-3 py-1 transition', lang === 'en' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
+                >
+                  <Languages className="h-3 w-3" /> English
+                </button>
+              </div>
+            )}
+          </div>
         </header>
 
-        <DocContent body={chapter.body} categoryId={category.id} chapterId={chapter.id} />
+        <DocContent body={lang === 'en' && chapter.bodyEn ? chapter.bodyEn : chapter.body} categoryId={category.id} chapterId={chapter.id} />
 
         <footer className="grid gap-3 border-t border-border/60 pt-6 sm:grid-cols-2">
           {prev ? (

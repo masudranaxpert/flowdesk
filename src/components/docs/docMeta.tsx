@@ -17,6 +17,7 @@ import {
   Binary,
   BookOpen,
   Layers,
+  BookText,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -38,6 +39,7 @@ const iconRegistry: Record<string, LucideIcon> = {
   ScanEye,
   Binary,
   Layers,
+  BookText,
 };
 
 export function docIcon(name: string): LucideIcon {
@@ -60,6 +62,7 @@ const accentMap: Record<string, { ring: string; bg: string; text: string; glow: 
   green: { ring: 'ring-green-500/30', bg: 'bg-green-500/12', text: 'text-green-300', glow: 'shadow-[0_16px_40px_oklch(0.72_0.18_145/0.22)]', bar: 'bg-green-400' },
   red: { ring: 'ring-red-500/30', bg: 'bg-red-500/12', text: 'text-red-300', glow: 'shadow-[0_16px_40px_oklch(0.63_0.22_25/0.22)]', bar: 'bg-red-400' },
   purple: { ring: 'ring-purple-500/30', bg: 'bg-purple-500/12', text: 'text-purple-300', glow: 'shadow-[0_16px_40px_oklch(0.6_0.2_290/0.22)]', bar: 'bg-purple-400' },
+  pink: { ring: 'ring-pink-500/30', bg: 'bg-pink-500/12', text: 'text-pink-300', glow: 'shadow-[0_16px_40px_oklch(0.7_0.18_350/0.22)]', bar: 'bg-pink-400' },
 };
 
 export function docAccent(name: string) {
