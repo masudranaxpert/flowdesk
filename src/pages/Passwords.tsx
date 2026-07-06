@@ -84,13 +84,13 @@ function TOTPCard({ item, onEdit, onDelete }: { item: AuthenticatorItem; onEdit:
     <Card className="overflow-hidden group hover:shadow-lg transition-all duration-300 border-border/60">
       <CardContent className="p-0">
         <div className="p-5">
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ring-1 ${ringColor}`}>
+          <div className="flex justify-between items-start gap-2 mb-4">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <div className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center ring-1 ${ringColor}`}>
                 <Shield className="w-5 h-5 text-primary" />
               </div>
-              <div>
-                <h3 className="font-semibold text-base leading-tight">{item.name}</h3>
+              <div className="min-w-0">
+                <h3 className="truncate font-semibold text-base leading-tight">{item.name}</h3>
                 {(item.issuer || item.account) && (
                   <p className="text-xs text-muted-foreground truncate max-w-[180px]">
                     {item.issuer && <span>{item.issuer}</span>}
