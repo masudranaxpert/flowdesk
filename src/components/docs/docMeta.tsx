@@ -18,6 +18,8 @@ import {
   BookOpen,
   Layers,
   BookText,
+  Zap,
+  Radio,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -40,6 +42,8 @@ const iconRegistry: Record<string, LucideIcon> = {
   Binary,
   Layers,
   BookText,
+  Zap,
+  Radio,
 };
 
 export function docIcon(name: string): LucideIcon {
