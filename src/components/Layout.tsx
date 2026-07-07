@@ -14,6 +14,7 @@ import {
   ListTree,
   Menu,
   Moon,
+  PanelLeft,
   PanelLeftClose,
   Plus,
   Search,
@@ -141,6 +142,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
 export default function Layout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const [sidebarHidden, setSidebarHidden] = useState(() => localStorage.getItem('sidebarHidden') === 'true');
   const [searchOpen, setSearchOpen] = useState(false);
   const [globalSearch, setGlobalSearch] = useState('');
   const [searchResults, setSearchResults] = useState<Array<{ id: string; type: string; title: string; subtitle: string; to: string }>>([]);
@@ -148,6 +150,10 @@ export default function Layout({ children }: { children: ReactNode }) {
   const [dark, setDark] = useState(() => localStorage.getItem('theme') !== 'light');
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    localStorage.setItem('sidebarHidden', String(sidebarHidden));
+  }, [sidebarHidden]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark);
@@ -283,7 +289,10 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="fixed inset-y-0 left-0 z-30 hidden w-[18.5rem] border-r border-sidebar-border bg-sidebar/92 backdrop-blur-xl lg:block">
+      <div className={cn(
+        "fixed inset-y-0 left-0 z-30 hidden w-[18.5rem] border-r border-sidebar-border bg-sidebar/92 backdrop-blur-xl transition-transform duration-300 lg:block",
+        sidebarHidden && "-translate-x-full"
+      )}>
         <SidebarContent />
       </div>
 
@@ -306,16 +315,23 @@ export default function Layout({ children }: { children: ReactNode }) {
         </div>
       )}
 
-      <div className="flex min-h-screen flex-col lg:pl-[18.5rem]">
+      <div className={cn(
+        "flex min-h-screen flex-col transition-all duration-300",
+        !sidebarHidden ? "lg:pl-[18.5rem]" : "lg:pl-0"
+      )}>
         <header className="sticky top-0 z-20 border-b border-border/70 bg-background/78 backdrop-blur-xl">
           <div className="flex min-h-16 items-center gap-2 px-3 py-2 sm:px-5 lg:h-16 lg:px-7 lg:py-0">
             <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setOpen(true)} aria-label="Open menu">
               <Menu className="h-5 w-5" />
             </Button>
+            
+            <Button variant="ghost" size="icon" className="hidden lg:flex shrink-0 mr-1" onClick={() => setSidebarHidden(prev => !prev)} aria-label="Toggle Sidebar">
+              {sidebarHidden ? <PanelLeft className="h-5 w-5 text-muted-foreground" /> : <PanelLeftClose className="h-5 w-5 text-muted-foreground" />}
+            </Button>
 
             <div className="min-w-0 flex-1 md:flex-none">
               <div className="truncate text-xs text-muted-foreground md:flex md:items-center md:gap-2">
-                <PanelLeftClose className="hidden h-3.5 w-3.5 lg:block" />
+                <span className="hidden lg:block text-muted-foreground/60">—</span>
                 Knowledge workspace
               </div>
               <h1 className="truncate text-base font-semibold tracking-tight sm:text-lg">{active.label}</h1>
