@@ -855,7 +855,7 @@ export default async function handler(req, res) {
       return res.json(payload);
     }
 
-    if (slug.startsWith('files/')) {
+    if (slug.startsWith('files/') && !slug.startsWith('files/multipart')) {
       const fileId = slug.split('/')[1];
       if (method === 'PUT' || method === 'PATCH') {
         const user = await requireUser(req, res);
