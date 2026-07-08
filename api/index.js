@@ -924,8 +924,8 @@ export default async function handler(req, res) {
       if (!file || typeof file === 'string') return res.status(400).json({ error: 'File is required' });
       const size = Number(file.size || 0);
       if (!size) return res.status(400).json({ error: 'Empty file is not allowed' });
-      const maxUpload = 50 * 1024 * 1024;
-      if (size > maxUpload) return res.status(413).json({ error: 'File must be 50MB or smaller' });
+      const maxUpload = 300 * 1024 * 1024;
+      if (size > maxUpload) return res.status(413).json({ error: 'File must be 300MB or smaller' });
       const uid = userId(user);
       await pruneUserFiles(uid, size);
       const rowId = newId();
@@ -939,6 +939,81 @@ export default async function handler(req, res) {
       });
       await d1Query('INSERT INTO uploaded_files (id, userId, objectKey, name, mimeType, size, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?);', [rowId, uid, objectKey, name, mimeType, size, stamp]);
       const payload = filePayload({ id: rowId, name, mimeType, size, createdAt: stamp });
+      return res.status(201).json(payload);
+    }
+
+    if (slug === 'files/multipart/create' && method === 'POST') {
+      const user = await requireUser(req, res);
+      if (!user) return;
+      const bucket = getFileBucket();
+      if (!bucket) return res.status(500).json({ error: 'R2 bucket binding missing.' });
+      
+      const { name, mimeType, size } = req.body;
+      if (!name || !size) return res.status(400).json({ error: 'Name and size are required' });
+      
+      const maxUpload = 300 * 1024 * 1024;
+      if (size > maxUpload) return res.status(413).json({ error: 'File must be 300MB or smaller' });
+      
+      const uid = userId(user);
+      await pruneUserFiles(uid, size);
+      const rowId = newId();
+      const safeName = safeFileName(name || 'file');
+      const safeMimeType = mimeType || 'application/octet-stream';
+      const objectKey = `${uid}/${new Date().toISOString().slice(0, 10)}/${rowId}-${safeName}`;
+      
+      const multipartUpload = await bucket.createMultipartUpload(objectKey, {
+        httpMetadata: { contentType: safeMimeType },
+        customMetadata: { userId: uid, name: safeName },
+      });
+      
+      return res.status(201).json({
+        uploadId: multipartUpload.uploadId,
+        key: objectKey,
+        fileId: rowId
+      });
+    }
+
+    if (slug === 'files/multipart/upload' && method === 'POST') {
+      const user = await requireUser(req, res);
+      if (!user) return;
+      const bucket = getFileBucket();
+      if (!bucket) return res.status(500).json({ error: 'R2 bucket binding missing.' });
+      if (!req.rawRequest?.formData) return res.status(400).json({ error: 'Multipart upload is required' });
+      
+      const form = await req.rawRequest.formData();
+      const chunk = form.get('chunk');
+      const uploadId = form.get('uploadId');
+      const key = form.get('key');
+      const partNumber = Number(form.get('partNumber'));
+      
+      if (!chunk || !uploadId || !key || !partNumber) {
+        return res.status(400).json({ error: 'Missing required parameters' });
+      }
+      
+      const multipartUpload = bucket.resumeMultipartUpload(key, uploadId);
+      const part = await multipartUpload.uploadPart(partNumber, await chunk.arrayBuffer());
+      return res.json({ partNumber: part.partNumber, etag: part.etag });
+    }
+
+    if (slug === 'files/multipart/complete' && method === 'POST') {
+      const user = await requireUser(req, res);
+      if (!user) return;
+      const bucket = getFileBucket();
+      if (!bucket) return res.status(500).json({ error: 'R2 bucket binding missing.' });
+      
+      const { uploadId, key, fileId, parts, name, mimeType, size } = req.body;
+      if (!uploadId || !key || !fileId || !parts) return res.status(400).json({ error: 'Missing required parameters' });
+      
+      const multipartUpload = bucket.resumeMultipartUpload(key, uploadId);
+      await multipartUpload.complete(parts);
+      
+      const uid = userId(user);
+      const stamp = now();
+      const safeName = safeFileName(name || 'file');
+      const safeMimeType = mimeType || 'application/octet-stream';
+      
+      await d1Query('INSERT INTO uploaded_files (id, userId, objectKey, name, mimeType, size, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?);', [fileId, uid, key, safeName, safeMimeType, size, stamp]);
+      const payload = filePayload({ id: fileId, name: safeName, mimeType: safeMimeType, size, createdAt: stamp });
       return res.status(201).json(payload);
     }
 

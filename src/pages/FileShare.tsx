@@ -76,7 +76,45 @@ export default function FileSharePage() {
     setUploading(files.map((file) => ({ name: file.name, status: 'Uploading' })));
     try {
       for (const file of files) {
-        await api.files.upload(file);
+        const CHUNK_SIZE = 20 * 1024 * 1024; // 20MB chunks
+        if (file.size > CHUNK_SIZE) {
+          const { uploadId, key, fileId } = await api.files.createMultipart({
+            name: file.name,
+            mimeType: file.type || 'application/octet-stream',
+            size: file.size
+          });
+
+          const parts = [];
+          const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+          for (let i = 0; i < totalChunks; i++) {
+            const start = i * CHUNK_SIZE;
+            const end = Math.min(start + CHUNK_SIZE, file.size);
+            const chunk = file.slice(start, end);
+            
+            setUploading((current) => current.map((item) => 
+              item.name === file.name ? { ...item, status: `Uploading part ${i + 1}/${totalChunks}` } : item
+            ));
+
+            const { partNumber, etag } = await api.files.uploadPart(chunk, uploadId, key, i + 1);
+            parts.push({ partNumber, etag });
+          }
+
+          setUploading((current) => current.map((item) => 
+            item.name === file.name ? { ...item, status: 'Finishing upload' } : item
+          ));
+
+          await api.files.completeMultipart({
+            uploadId,
+            key,
+            fileId,
+            parts,
+            name: file.name,
+            mimeType: file.type || 'application/octet-stream',
+            size: file.size
+          });
+        } else {
+          await api.files.upload(file);
+        }
         setUploading((current) => current.map((item) => item.name === file.name ? { ...item, status: 'Uploaded' } : item));
       }
       toast.success(`${files.length} file${files.length === 1 ? '' : 's'} uploaded`);
