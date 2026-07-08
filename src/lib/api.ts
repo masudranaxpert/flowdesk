@@ -142,6 +142,18 @@ export const api = {
       form.append('file', file);
       return request<UploadedFile>('/files', { method: 'POST', body: form });
     },
+    createMultipart: (data: { name: string; mimeType: string; size: number }) => 
+      request<{ uploadId: string; key: string; fileId: string }>('/files/multipart/create', { method: 'POST', body: JSON.stringify(data) }),
+    uploadPart: (chunk: Blob, uploadId: string, key: string, partNumber: number) => {
+      const form = new FormData();
+      form.append('chunk', chunk);
+      form.append('uploadId', uploadId);
+      form.append('key', key);
+      form.append('partNumber', partNumber.toString());
+      return request<{ partNumber: number; etag: string }>('/files/multipart/upload', { method: 'POST', body: form });
+    },
+    completeMultipart: (data: { uploadId: string; key: string; fileId: string; parts: { partNumber: number; etag: string }[]; name: string; mimeType: string; size: number }) => 
+      request<UploadedFile>('/files/multipart/complete', { method: 'POST', body: JSON.stringify(data) }),
     delete: (id: string) =>
       request<{ message: string }>(`/files/${id}`, { method: 'DELETE' }),
     rename: (id: string, name: string) =>
