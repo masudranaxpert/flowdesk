@@ -1,47 +1,112 @@
-import { useRef, useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import JWPlayer from '@jwplayer/jwplayer-react';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+declare global {
+  interface Window {
+    jwplayer?: any;
+  }
+}
+
 const JW_LIBRARY = 'https://content.jwplatform.com/libraries/SAHhwvZq.js';
 const JW_KEY = 'zTEbSn/eAplL0RLXT030FzOcek6qXmtrxju6Jg==';
+const PLAYER_DIV_ID = 'jw-player-target';
+
+function loadScriptOnce(src: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`);
+    if (existing) {
+      if (window.jwplayer) return resolve();
+      existing.addEventListener('load', () => resolve());
+      existing.addEventListener('error', () => reject(new Error('Script load failed')));
+      return;
+    }
+    const el = document.createElement('script');
+    el.src = src;
+    el.async = true;
+    el.onload = () => resolve();
+    el.onerror = () => reject(new Error(`Failed to load ${src}`));
+    document.head.appendChild(el);
+  });
+}
 
 export default function VideoPlayer() {
   const { fileId } = useParams<{ fileId: string }>();
   const navigate = useNavigate();
   const playerRef = useRef<any>(null);
-  const [error, setError] = useState('');
-
-  const fileUrl = fileId
-    ? `/api/files/${fileId}?token=${encodeURIComponent(localStorage.getItem('auth-token') || '')}`
-    : '';
+  const [showSpinner, setShowSpinner] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
-    if (!fileId) {
-      setError('No file specified');
-      return;
-    }
+    if (!fileId) { setErrorMsg('No file specified'); setShowSpinner(false); return; }
+    let cancelled = false;
+    const fileUrl = `/api/files/${fileId}?token=${encodeURIComponent(localStorage.getItem('auth-token') || '')}`;
+
+    (async () => {
+      try {
+        await loadScriptOnce(JW_LIBRARY);
+        if (cancelled || !window.jwplayer) return;
+
+        window.jwplayer.key = JW_KEY;
+        const player = window.jwplayer(PLAYER_DIV_ID);
+        player.setup({
+          file: fileUrl,
+          width: '100%',
+          aspectratio: '16:9',
+          autostart: true,
+          preload: 'metadata',
+          primary: 'html5',
+          controls: true,
+          playbackRateControls: true,
+          displaytitle: true,
+          skin: {
+            controlbar: { icons: '#fff', iconsActive: '#00DAB4' },
+            menus: { textActive: '#fff' },
+            tooltips: { text: '#000' },
+          },
+        });
+
+        player.on('ready', () => {
+          if (cancelled) return;
+          playerRef.current = player;
+          setupForwardButton(player);
+          setShowSpinner(false);
+        });
+
+        player.on('setupError', () => {
+          if (!cancelled) { setErrorMsg('Video setup failed.'); setShowSpinner(false); }
+        });
+
+        player.on('error', () => {
+          if (!cancelled) { setErrorMsg('Playback error.'); }
+        });
+
+        const onKey = (e: KeyboardEvent) => {
+          const tag = (e.target as HTMLElement)?.tagName;
+          if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+          const p = playerRef.current;
+          if (!p) return;
+          const st = p.getState();
+          if (st !== 'playing' && st !== 'paused') return;
+          switch (e.code) {
+            case 'Space': e.preventDefault(); st === 'playing' ? p.pause() : p.play(); break;
+            case 'ArrowRight': e.preventDefault(); p.seek(p.getPosition() + 10); break;
+            case 'ArrowLeft': e.preventDefault(); p.seek(Math.max(0, p.getPosition() - 10)); break;
+          }
+        };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+      } catch (e) {
+        if (!cancelled) { setErrorMsg(e instanceof Error ? e.message : 'Failed to load player'); setShowSpinner(false); }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (playerRef.current) { try { playerRef.current.remove(); } catch {} playerRef.current = null; }
+    };
   }, [fileId]);
-
-  const handleReady = (player: any) => {
-    playerRef.current = player;
-    setupForwardButton(player);
-    setupKeyboardShortcuts(player);
-  };
-
-  if (error) {
-    return (
-      <div className="grid min-h-[70vh] place-items-center text-center">
-        <div>
-          <p className="text-lg font-semibold text-destructive">{error}</p>
-          <Button variant="outline" className="mt-4" onClick={() => navigate('/files')}>
-            <ArrowLeft className="h-4 w-4" /> Back to Files
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="mx-auto max-w-5xl animate-fade-in">
@@ -52,27 +117,25 @@ export default function VideoPlayer() {
         <h1 className="truncate text-lg font-semibold">Video Player</h1>
       </div>
 
-      <div className="overflow-hidden rounded-2xl bg-black">
-        <JWPlayer
-          file={fileUrl}
-          library={JW_LIBRARY}
-          config={{
-            key: JW_KEY,
-            aspectratio: '16:9',
-            autostart: true,
-            preload: 'metadata',
-            primary: 'html5',
-            playbackRateControls: true,
-            skin: {
-              controlbar: { icons: '#fff', iconsActive: '#00DAB4' },
-              menus: { textActive: '#fff' },
-              tooltips: { text: '#000' },
-            },
-          }}
-          didMountCallback={({ player }: { player: any }) => handleReady(player)}
-          onSetupError={() => setError('Video setup failed. The file may not be a supported video format.')}
-          onError={() => setError('Playback error occurred.')}
-        />
+      <div className="relative overflow-hidden rounded-2xl bg-black" style={{ aspectRatio: '16 / 9' }}>
+        <div id={PLAYER_DIV_ID} className="absolute inset-0" />
+
+        {showSpinner && !errorMsg && (
+          <div className="absolute inset-0 grid place-items-center">
+            <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          </div>
+        )}
+
+        {errorMsg && (
+          <div className="absolute inset-0 grid place-items-center text-center">
+            <div>
+              <p className="text-lg font-semibold text-destructive">{errorMsg}</p>
+              <Button variant="outline" className="mt-4" onClick={() => navigate('/files')}>
+                <ArrowLeft className="h-4 w-4" /> Back to Files
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted-foreground">
@@ -120,28 +183,4 @@ function setupForwardButton(player: any) {
     const nextBtn = container.querySelector<HTMLElement>('.jw-display-icon-next');
     if (nextBtn) nextBtn.style.display = 'none';
   }, 1000);
-}
-
-function setupKeyboardShortcuts(player: any) {
-  const onKey = (e: KeyboardEvent) => {
-    const tag = (e.target as HTMLElement)?.tagName;
-    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-    const state = player.getState?.();
-    if (state !== 'playing' && state !== 'paused') return;
-    switch (e.code) {
-      case 'Space':
-        e.preventDefault();
-        if (state === 'playing') player.pause(); else player.play();
-        break;
-      case 'ArrowRight':
-        e.preventDefault();
-        player.seek(player.getPosition() + 10);
-        break;
-      case 'ArrowLeft':
-        e.preventDefault();
-        player.seek(Math.max(0, player.getPosition() - 10));
-        break;
-    }
-  };
-  document.addEventListener('keydown', onKey);
 }
