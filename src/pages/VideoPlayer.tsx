@@ -48,10 +48,25 @@ export default function VideoPlayer() {
         await loadScriptOnce(JW_LIBRARY);
         if (cancelled || !window.jwplayer) return;
 
+        // Fetch headers to dynamically determine the file's Content-Type (e.g. video/mp4, video/x-matroska, etc)
+        let mimeType = 'mp4';
+        try {
+          const headRes = await fetch(fileUrl, { method: 'HEAD' });
+          const contentType = headRes.headers.get('content-type');
+          if (contentType) {
+             mimeType = contentType;
+          }
+        } catch (err) {
+          console.warn('Could not fetch headers, falling back to mp4', err);
+        }
+
+        if (cancelled) return;
+
         window.jwplayer.key = JW_KEY;
         const player = window.jwplayer(PLAYER_DIV_ID);
         player.setup({
           file: fileUrl,
+          type: mimeType,
           width: '100%',
           aspectratio: '16:9',
           autostart: true,
