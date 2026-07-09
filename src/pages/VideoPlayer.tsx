@@ -10,7 +10,6 @@ declare global {
 }
 
 const JW_SCRIPTS = [
-  'https://cdn.jsdelivr.net/npm/jwplayer@8.32.0/jwplayer.js',
   'https://content.jwplatform.com/libraries/SAHhwvZq.js',
 ];
 const JW_KEY = 'zTEbSn/eAplL0RLXT030FzOcek6qXmtrxju6Jg==';
