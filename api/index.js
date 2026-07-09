@@ -875,6 +875,15 @@ export default async function handler(req, res) {
         if (!deleted) return res.status(404).json({ error: 'File not found' });
         return res.json({ message: 'File deleted' });
       }
+      if (slug.split('/')[2] === 'download-url' && method === 'GET') {
+        const user = await requireUser(req, res);
+        if (!user) return;
+        const uid = userId(user);
+        const row = (await d1Query('SELECT * FROM uploaded_files WHERE id = ? AND userId = ? LIMIT 1;', [fileId, uid]))[0];
+        if (!row) return res.status(404).json({ error: 'File not found' });
+        const token = req.headers.authorization?.replace('Bearer ', '') || query.token || '';
+        return res.json({ url: `/api/files/${fileId}?token=${encodeURIComponent(token)}`, expiresInSeconds: 0 });
+      }
       const row = (await d1Query('SELECT * FROM uploaded_files WHERE id = ? LIMIT 1;', [fileId]))[0];
       const bucket = getFileBucket();
       if (!row || !bucket) return res.status(404).json({ error: 'File not found' });
@@ -886,13 +895,44 @@ export default async function handler(req, res) {
         const isShared = await isFileShared(fileId);
         if (!isShared) return res.status(403).json({ error: 'Access denied' });
       }
+      const rangeHeader = req.headers.range || '';
+      const fileSize = Number(row.size || 0);
+
+      if (rangeHeader) {
+        const match = /bytes=(\d*)-(\d*)/.exec(rangeHeader);
+        if (match) {
+          let start = match[1] ? parseInt(match[1], 10) : 0;
+          let end = match[2] ? parseInt(match[2], 10) : fileSize - 1;
+          if (!match[1] && match[2]) {
+            start = Math.max(0, fileSize - parseInt(match[2], 10));
+            end = fileSize - 1;
+          }
+          if (start >= fileSize || end >= fileSize) {
+            res.status(416);
+            res.setHeader('Content-Range', `bytes */${fileSize}`);
+            return res.end('');
+          }
+          const length = end - start + 1;
+          const partial = await bucket.get(row.objectKey, { range: { offset: start, length } });
+          if (!partial) return res.status(404).json({ error: 'File not found' });
+          res.status(206);
+          res.setHeader('Content-Type', row.mimeType || 'application/octet-stream');
+          res.setHeader('Content-Length', String(length));
+          res.setHeader('Content-Range', `bytes ${start}-${end}/${fileSize}`);
+          res.setHeader('Accept-Ranges', 'bytes');
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          return res.stream(partial.body);
+        }
+      }
+
       const object = await bucket.get(row.objectKey);
       if (!object) return res.status(404).json({ error: 'File not found' });
-      const body = await object.arrayBuffer();
       res.setHeader('Content-Type', row.mimeType || 'application/octet-stream');
+      res.setHeader('Content-Length', String(fileSize));
+      res.setHeader('Accept-Ranges', 'bytes');
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       res.setHeader('Content-Disposition', `inline; filename="${safeFileName(row.name)}"`);
-      return res.end(new Uint8Array(body));
+      return res.stream(object.body);
     }
 
     if (slug === 'files' && method === 'GET') {

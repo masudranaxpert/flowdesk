@@ -158,6 +158,8 @@ export const api = {
       request<{ message: string }>(`/files/${id}`, { method: 'DELETE' }),
     rename: (id: string, name: string) =>
       request<UploadedFile>(`/files/${id}`, { method: 'PUT', body: JSON.stringify({ name }) }),
+    getDownloadUrl: (id: string) =>
+      request<{ url: string; expiresInSeconds: number }>(`/files/${id}/download-url`),
   },
   docNotes: {
     list: (categoryId: string, chapterId: string) =>

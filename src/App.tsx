@@ -23,6 +23,7 @@ const DocReaderPage = lazy(() => import('./pages/DocReader'));
 const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const VideoPlayer = lazy(() => import('./pages/VideoPlayer'));
 
 function PageFallback() {
   return <Spinner />;
@@ -75,6 +76,7 @@ export default function App() {
               <Route path="/chatbot" element={<ChatbotPage />} />
               <Route path="/routine" element={<RoutinePage />} />
               <Route path="/files" element={<FileSharePage />} />
+              <Route path="/player/:fileId" element={<VideoPlayer />} />
               <Route path="/hisab" element={<HisabPage />} />
               <Route path="/passwords" element={<PasswordsPage />} />
               <Route path="/docs" element={<DocsPage />} />

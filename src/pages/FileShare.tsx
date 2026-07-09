@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type DragEvent, type KeyboardEvent } from 'react';
-import { Check, Download, FileArchive, FileText, Image as ImageIcon, Link2, Pencil, Search, Trash2, UploadCloud, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Check, Download, FileArchive, FileText, Image as ImageIcon, Link2, Pencil, Play, Search, Trash2, UploadCloud, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { EmptyState, PaginationControls, SearchInput, Spinner } from '../components/UI';
@@ -49,6 +50,8 @@ export default function FileSharePage() {
   const [uploading, setUploading] = useState<Array<{ name: string; status: string }>>([]);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 250);
@@ -186,6 +189,25 @@ export default function FileSharePage() {
     }
   };
 
+  const downloadFile = async (file: UploadedFile) => {
+    setDownloadingId(file.id);
+    try {
+      const { url } = await api.files.getDownloadUrl(file.id);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.name;
+      a.target = '_blank';
+      a.rel = 'noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Download failed');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
   return (
     <div className="space-y-5 animate-fade-in">
       <section className="surface rounded-3xl p-4 sm:p-5">
@@ -257,6 +279,7 @@ export default function FileSharePage() {
           {items.map((file) => {
             const Icon = fileIcon(file);
             const isImage = file.mimeType?.startsWith('image/');
+            const isVideo = file.mimeType?.startsWith('video/');
             const isRenaming = renamingId === file.id;
             return (
               <Card key={file.id} className="interactive-card overflow-hidden rounded-2xl">
@@ -318,13 +341,20 @@ export default function FileSharePage() {
                           <Pencil className="h-4 w-4" /> Rename
                         </Button>
                       )}
+                      {isVideo && (
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/player/${file.id}`)}>
+                          <Play className="h-4 w-4" /> Play
+                        </Button>
+                      )}
                       <Button variant="outline" size="sm" onClick={() => copyLink(file)}>
                         <Link2 className="h-4 w-4" /> Copy link
                       </Button>
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={authFileUrl(file)} download target="_blank" rel="noreferrer">
-                          <Download className="h-4 w-4" /> Open
-                        </a>
+                      <Button variant="outline" size="sm" onClick={() => downloadFile(file)} disabled={downloadingId === file.id}>
+                        {downloadingId === file.id ? (
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                        ) : (
+                          <Download className="h-4 w-4" />
+                        )} Open
                       </Button>
                       {!isRenaming && (
                         <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => deleteFile(file)}>
