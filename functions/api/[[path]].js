@@ -43,6 +43,7 @@ export async function onRequest(context) {
     'Content-Type': 'application/json',
   });
   let responseBody = '';
+  let streamBody = null;
 
   const res = {
     status(code) {
@@ -60,11 +61,21 @@ export async function onRequest(context) {
     end(data) {
       responseBody = data;
       return this;
+    },
+    stream(stream) {
+      streamBody = stream;
+      return this;
     }
   };
 
   try {
     await handler(req, res);
+    if (streamBody) {
+      return new Response(streamBody, {
+        status: statusCode,
+        headers,
+      });
+    }
     return new Response(responseBody, {
       status: statusCode,
       headers,
