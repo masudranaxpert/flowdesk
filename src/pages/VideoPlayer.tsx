@@ -1,135 +1,34 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import JWPlayer from '@jwplayer/jwplayer-react';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-declare global {
-  interface Window {
-    jwplayer?: any;
-  }
-}
-
-const JW_SCRIPTS = [
-  'https://content.jwplatform.com/libraries/SAHhwvZq.js',
-];
+const JW_LIBRARY = 'https://content.jwplatform.com/libraries/SAHhwvZq.js';
 const JW_KEY = 'zTEbSn/eAplL0RLXT030FzOcek6qXmtrxju6Jg==';
-const PLAYER_DIV_ID = 'jw-player-container';
-
-function loadScript(src: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) return resolve();
-    const el = document.createElement('script');
-    el.src = src;
-    el.onload = () => resolve();
-    el.onerror = () => reject(new Error(`Failed to load ${src}`));
-    document.head.appendChild(el);
-  });
-}
 
 export default function VideoPlayer() {
   const { fileId } = useParams<{ fileId: string }>();
   const navigate = useNavigate();
   const playerRef = useRef<any>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const fileUrl = fileId
+    ? `/api/files/${fileId}?token=${encodeURIComponent(localStorage.getItem('auth-token') || '')}`
+    : '';
+
   useEffect(() => {
-    if (!fileId) return;
-    let destroyed = false;
-    const token = localStorage.getItem('auth-token') || '';
-    const sourceUrl = `/api/files/${fileId}?token=${encodeURIComponent(token)}`;
-
-    (async () => {
-      try {
-        for (const src of JW_SCRIPTS) await loadScript(src);
-        if (destroyed) return;
-        const jw = window.jwplayer;
-        if (!jw) throw new Error('JWPlayer failed to initialize');
-        jw.key = JW_KEY;
-        playerRef.current = jw(PLAYER_DIV_ID).setup({
-          sources: [{ file: sourceUrl, type: 'mp4' }],
-          aspectratio: '16:9',
-          preload: 'metadata',
-          autostart: true,
-          controls: true,
-          primary: 'html5',
-          displaytitle: true,
-          playbackRateControls: true,
-          cast: {},
-          skin: {
-            controlbar: { icons: '#fff', iconsActive: 'var(--primary)' },
-            menus: { textActive: '#fff' },
-            tooltips: { text: '#000' },
-          },
-        });
-
-        playerRef.current.on('ready', () => {
-          setupForwardButton(playerRef.current);
-        });
-
-        playerRef.current.on('setupError', () => {
-          setError('Video setup failed. The file may not be a supported video format.');
-          setLoading(false);
-        });
-
-        playerRef.current.on('error', () => {
-          setError('Playback error occurred.');
-          setLoading(false);
-        });
-
-        setLoading(false);
-
-        const onKey = (e: KeyboardEvent) => {
-          const tag = (e.target as HTMLElement)?.tagName;
-          if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-          const p = playerRef.current;
-          if (!p) return;
-          const state = p.getState();
-          if (state !== 'playing' && state !== 'paused') return;
-          switch (e.code) {
-            case 'Space':
-              e.preventDefault();
-              if (state === 'playing') p.pause(); else p.play();
-              break;
-            case 'ArrowRight':
-              e.preventDefault();
-              p.seek(p.getPosition() + 10);
-              break;
-            case 'ArrowLeft':
-              e.preventDefault();
-              p.seek(Math.max(0, p.getPosition() - 10));
-              break;
-          }
-        };
-        document.addEventListener('keydown', onKey);
-
-        return () => {
-          document.removeEventListener('keydown', onKey);
-        };
-      } catch (e) {
-        if (!destroyed) {
-          setError(e instanceof Error ? e.message : 'Failed to load player');
-          setLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      destroyed = true;
-      if (playerRef.current) {
-        try { playerRef.current.remove(); } catch {}
-        playerRef.current = null;
-      }
-    };
+    if (!fileId) {
+      setError('No file specified');
+      return;
+    }
   }, [fileId]);
 
-  if (loading) {
-    return (
-      <div className="grid min-h-[70vh] place-items-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-    );
-  }
+  const handleReady = (player: any) => {
+    playerRef.current = player;
+    setupForwardButton(player);
+    setupKeyboardShortcuts(player);
+  };
 
   if (error) {
     return (
@@ -154,7 +53,26 @@ export default function VideoPlayer() {
       </div>
 
       <div className="overflow-hidden rounded-2xl bg-black">
-        <div id={PLAYER_DIV_ID} />
+        <JWPlayer
+          file={fileUrl}
+          library={JW_LIBRARY}
+          config={{
+            key: JW_KEY,
+            aspectratio: '16:9',
+            autostart: true,
+            preload: 'metadata',
+            primary: 'html5',
+            playbackRateControls: true,
+            skin: {
+              controlbar: { icons: '#fff', iconsActive: '#00DAB4' },
+              menus: { textActive: '#fff' },
+              tooltips: { text: '#000' },
+            },
+          }}
+          didMountCallback={({ player }: { player: any }) => handleReady(player)}
+          onSetupError={() => setError('Video setup failed. The file may not be a supported video format.')}
+          onError={() => setError('Playback error occurred.')}
+        />
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted-foreground">
@@ -169,7 +87,7 @@ export default function VideoPlayer() {
 
 function setupForwardButton(player: any) {
   setTimeout(() => {
-    const container = document.getElementById(PLAYER_DIV_ID);
+    const container = player.getContainer?.() as HTMLElement;
     if (!container) return;
 
     const rewindDisplay = container.querySelector<HTMLElement>('.jw-display-icon-rewind');
@@ -202,4 +120,28 @@ function setupForwardButton(player: any) {
     const nextBtn = container.querySelector<HTMLElement>('.jw-display-icon-next');
     if (nextBtn) nextBtn.style.display = 'none';
   }, 1000);
+}
+
+function setupKeyboardShortcuts(player: any) {
+  const onKey = (e: KeyboardEvent) => {
+    const tag = (e.target as HTMLElement)?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    const state = player.getState?.();
+    if (state !== 'playing' && state !== 'paused') return;
+    switch (e.code) {
+      case 'Space':
+        e.preventDefault();
+        if (state === 'playing') player.pause(); else player.play();
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        player.seek(player.getPosition() + 10);
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        player.seek(Math.max(0, player.getPosition() - 10));
+        break;
+    }
+  };
+  document.addEventListener('keydown', onKey);
 }
