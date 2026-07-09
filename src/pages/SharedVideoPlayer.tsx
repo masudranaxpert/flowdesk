@@ -31,36 +31,42 @@ function loadScriptOnce(src: string): Promise<void> {
   });
 }
 
-export default function VideoPlayer() {
-  const { fileId } = useParams<{ fileId: string }>();
+export default function SharedVideoPlayer() {
+  const { type, id, shareCode } = useParams();
   const navigate = useNavigate();
   const playerRef = useRef<any>(null);
   const [showSpinner, setShowSpinner] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
-    if (!fileId) { setErrorMsg('No file specified'); setShowSpinner(false); return; }
+    const endpoint = shareCode
+      ? `/api/share/${encodeURIComponent(shareCode)}`
+      : type && id
+        ? `/api/share/${encodeURIComponent(type)}/${encodeURIComponent(id)}`
+        : '';
+
+    if (!endpoint) {
+      setErrorMsg('No file specified');
+      setShowSpinner(false);
+      return;
+    }
+
     let cancelled = false;
-    const fileUrl = `/api/files/${fileId}?token=${encodeURIComponent(localStorage.getItem('auth-token') || '')}`;
 
     (async () => {
       try {
+        const response = await fetch(endpoint);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'Shared item not found');
+
+        const item = data.item;
+        if (!item || !item.url) throw new Error('Video URL not found');
+        
+        const fileUrl = item.url;
+        let mimeType = item.mimeType || 'mp4';
+
         await loadScriptOnce(JW_LIBRARY);
         if (cancelled || !window.jwplayer) return;
-
-        // Fetch headers to dynamically determine the file's Content-Type (e.g. video/mp4, video/x-matroska, etc)
-        let mimeType = 'mp4';
-        try {
-          const headRes = await fetch(fileUrl, { method: 'HEAD' });
-          const contentType = headRes.headers.get('content-type');
-          if (contentType) {
-             mimeType = contentType;
-          }
-        } catch (err) {
-          console.warn('Could not fetch headers, falling back to mp4', err);
-        }
-
-        if (cancelled) return;
 
         window.jwplayer.key = JW_KEY;
         const player = window.jwplayer(PLAYER_DIV_ID);
@@ -122,38 +128,39 @@ export default function VideoPlayer() {
       cancelled = true;
       if (playerRef.current) { try { playerRef.current.remove(); } catch {} playerRef.current = null; }
     };
-  }, [fileId]);
+  }, [type, id, shareCode]);
 
   return (
-    <div className="mx-auto max-w-5xl animate-fade-in">
-      <div className="mb-3 flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/files')}>
-          <ArrowLeft className="h-4 w-4" /> Back
-        </Button>
-        <h1 className="truncate text-lg font-semibold">Video Player</h1>
-      </div>
+    <div className="min-h-screen bg-background px-4 py-5 text-foreground sm:px-6">
+      <div className="mx-auto max-w-5xl animate-fade-in">
+        <div className="mb-3 flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-4 w-4" /> Back
+          </Button>
+          <h1 className="truncate text-lg font-semibold">Shared Video Player</h1>
+        </div>
 
-      <div className="relative overflow-hidden rounded-2xl bg-black" style={{ aspectRatio: '16 / 9' }}>
-        <div id={PLAYER_DIV_ID} className="absolute inset-0" />
+        <div className="relative overflow-hidden rounded-2xl bg-black" style={{ aspectRatio: '16 / 9' }}>
+          <div id={PLAYER_DIV_ID} className="absolute inset-0" />
 
-        {showSpinner && !errorMsg && (
-          <div className="absolute inset-0 grid place-items-center">
-            <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          </div>
-        )}
-
-        {errorMsg && (
-          <div className="absolute inset-0 grid place-items-center text-center">
-            <div>
-              <p className="text-lg font-semibold text-destructive">{errorMsg}</p>
-              <Button variant="outline" className="mt-4" onClick={() => navigate('/files')}>
-                <ArrowLeft className="h-4 w-4" /> Back to Files
-              </Button>
+          {showSpinner && !errorMsg && (
+            <div className="absolute inset-0 grid place-items-center">
+              <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             </div>
-          </div>
-        )}
-      </div>
+          )}
 
+          {errorMsg && (
+            <div className="absolute inset-0 grid place-items-center text-center">
+              <div>
+                <p className="text-lg font-semibold text-destructive">{errorMsg}</p>
+                <Button variant="outline" className="mt-4" onClick={() => navigate(-1)}>
+                  <ArrowLeft className="h-4 w-4" /> Go Back
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

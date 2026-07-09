@@ -24,6 +24,7 @@ const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const VideoPlayer = lazy(() => import('./pages/VideoPlayer'));
+const SharedVideoPlayer = lazy(() => import('./pages/SharedVideoPlayer'));
 
 function PageFallback() {
   return <Spinner />;
@@ -61,6 +62,8 @@ export default function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/share/:type/:id" element={<SharePage />} />
             <Route path="/share/:shareCode" element={<SharePage />} />
+            <Route path="/share/player/:shareCode" element={<SharedVideoPlayer />} />
+            <Route path="/share/player/:type/:id" element={<SharedVideoPlayer />} />
             
             <Route element={<ProtectedApp />}>
               <Route path="/" element={<Dashboard />} />
