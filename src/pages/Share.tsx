@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, ExternalLink, Download, FileText, FileArchive, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Download, FileText, FileArchive, Image as ImageIcon, Play } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CodeBlock from '../components/CodeBlock';
 import MarkdownView from '../components/MarkdownView';
@@ -172,11 +172,20 @@ export default function SharePage() {
                   </div>
                 )}
 
-                <Button asChild size="lg" className="px-8 py-6 text-base font-semibold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-transform rounded-2xl">
-                  <a href={item.url} download target="_blank" rel="noopener noreferrer">
-                    <Download className="mr-2 h-5 w-5" /> Download File
-                  </a>
-                </Button>
+                <div className="flex flex-wrap items-center justify-center gap-4">
+                  {item.mimeType?.startsWith('video/') && (
+                    <Button asChild size="lg" className="px-8 py-6 text-base font-semibold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-transform rounded-2xl bg-primary text-primary-foreground">
+                      <Link to={shareCode ? `/share/player/${shareCode}` : `/share/player/${type}/${id}`}>
+                        <Play className="mr-2 h-5 w-5 fill-current" /> Play Video
+                      </Link>
+                    </Button>
+                  )}
+                  <Button asChild size="lg" variant={item.mimeType?.startsWith('video/') ? "outline" : "default"} className="px-8 py-6 text-base font-semibold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-transform rounded-2xl">
+                    <a href={item.url} download target="_blank" rel="noopener noreferrer">
+                      <Download className="mr-2 h-5 w-5" /> Download File
+                    </a>
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
