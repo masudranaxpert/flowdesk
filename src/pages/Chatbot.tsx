@@ -226,6 +226,7 @@ function compactRoutine(item: any) {
     room: item.room,
     teacher: item.teacher,
     repeatWeekly: item.repeatWeekly,
+    notes: item.notes,
   };
 }
 
@@ -1066,7 +1067,7 @@ export default function ChatbotPage() {
                         {message.role === 'assistant' ? (
                           <div className="max-w-[92%] px-1 text-sm leading-7 text-foreground sm:max-w-[82%]">
                             {message.content ? (
-                              <div className="assistant-message">
+                              <div className="assistant-message min-w-0 break-words [&_a]:break-all">
                                 <MarkdownView>{message.content}</MarkdownView>
                                 {writingAction && sending && index === messages.length - 1 && (
                                   <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">

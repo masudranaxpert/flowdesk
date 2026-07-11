@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
@@ -146,6 +147,7 @@ export default function RoutinePage() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<RoutineForm>(emptyForm);
   const [formOpen, setFormOpen] = useState(false);
+  const [viewingEvent, setViewingEvent] = useState<RoutineItem | null>(null);
 
   const todayIndex = new Date().getDay();
   const todayDate = localDateString();
@@ -498,16 +500,27 @@ export default function RoutinePage() {
                   <p className="text-sm font-semibold">Upcoming events</p>
                   <div className="mt-3 grid min-w-0 gap-2 md:grid-cols-2">
                     {upcomingEvents.length === 0 ? <p className="text-sm text-muted-foreground">No upcoming events.</p> : upcomingEvents.map((item) => (
-                      <div key={item._id} className="flex min-w-0 items-start gap-3 rounded-2xl border border-border bg-muted/30 p-3">
+                      <div
+                        key={item._id}
+                        className="flex min-w-0 items-start gap-3 rounded-2xl border border-border bg-muted/30 p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => setViewingEvent(item)}
+                      >
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium">{item.title}</p>
-                          <p className="truncate text-xs text-muted-foreground">{item.date} - {timeLabel(item)}</p>
+                          <div className="flex items-center gap-2 mt-1 mb-1">
+                            {item.date && (
+                              <Badge variant="secondary" className="font-medium bg-primary/10 text-primary hover:bg-primary/15 border-transparent">
+                                {new Date(item.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).toLowerCase()}
+                              </Badge>
+                            )}
+                            <p className="truncate text-xs text-muted-foreground">{timeLabel(item)}</p>
+                          </div>
                           <div className="mt-2 flex min-w-0 flex-wrap gap-1.5">
                             {item.room && <Badge variant="secondary" className="h-6 max-w-full rounded-full bg-sky-500/15 px-2 text-xs font-semibold text-sky-300"><MapPin className="h-3 w-3 shrink-0" /> <span className="truncate">{item.room}</span></Badge>}
                             {item.notes && <Badge variant="secondary" className="h-6 max-w-full rounded-full bg-muted px-2 text-xs font-semibold text-muted-foreground"><span className="truncate">{item.notes}</span></Badge>}
                           </div>
                         </div>
-                        <Button variant="ghost" size="icon" className="shrink-0 text-destructive" onClick={() => remove(item._id)}>
+                        <Button variant="ghost" size="icon" className="shrink-0 text-destructive" onClick={(e) => { e.stopPropagation(); remove(item._id); }}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -519,6 +532,34 @@ export default function RoutinePage() {
           )}
         </div>
       </div>
+
+      <Dialog open={!!viewingEvent} onOpenChange={(open) => !open && setViewingEvent(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{viewingEvent?.title}</DialogTitle>
+            <DialogDescription>
+              {viewingEvent?.date && new Date(viewingEvent.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).toLowerCase()} - {viewingEvent && timeLabel(viewingEvent)}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {viewingEvent?.room && (
+              <div>
+                <h4 className="text-sm font-medium mb-1 flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" /> Location</h4>
+                <p className="text-sm text-muted-foreground">{viewingEvent.room}</p>
+              </div>
+            )}
+            {viewingEvent?.notes && (
+              <div>
+                <h4 className="text-sm font-medium mb-1">Notes</h4>
+                <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{viewingEvent.notes}</p>
+              </div>
+            )}
+            {!viewingEvent?.room && !viewingEvent?.notes && (
+              <p className="text-sm text-muted-foreground italic">No additional details for this event.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -125,8 +125,8 @@ For multiple items, use an actions array. Use this whenever the user asks for ma
   {"operation":"create","resource":"codes","data":{"title":"...","code":"...","language":"cpp","category":"general","tags":[]}},
   {"operation":"create","resource":"passwords","data":{"title":"...","url":"...","username":"...","password":"...","description":"...","category":"general","tags":[]}},
   {"operation":"create","resource":"questions","data":{"title":"...","problem":"...","solution":"...","code":"...","language":"cpp","difficulty":"medium","platform":"other","category":"general","tags":[]}},
-  {"operation":"create","resource":"routines","data":{"title":"...","type":"class","dayOfWeek":1,"startTime":"09:00","endTime":"10:00","repeatWeekly":true}},
-  {"operation":"create","resource":"routines","data":{"title":"...","type":"event","date":"2024-05-20","startTime":"15:00","endTime":"16:00","repeatWeekly":false}}
+  {"operation":"create","resource":"routines","data":{"title":"...","type":"class","dayOfWeek":1,"startTime":"09:00","endTime":"10:00","repeatWeekly":true,"notes":"..."}},
+  {"operation":"create","resource":"routines","data":{"title":"...","type":"event","date":"2024-05-20","startTime":"15:00","endTime":"16:00","repeatWeekly":false,"notes":"..."}}
 ]}
 \`\`\`
 For categories, always include the exact scope where it should appear:
@@ -152,7 +152,7 @@ For bulk updates with the same payload, prefer one update_many action with exact
 {"operation":"update_many","resource":"routines","ids":["existing-id-1","existing-id-2"],"data":{"room":"G1-00"}}
 \`\`\`
 For mixed bulk updates where each item needs different data, output 50+ update actions in the actions array when the user asked for many changes. Do not collapse mixed updates into one update action without ids.
-For routine updates, actionIndex.routines contains every available routine with id, title, subject, type, dayOfWeek, date, startTime, endTime, room, teacher, and repeatWeekly. Match routines using the PDF/user data plus title/subject and time/day/date, then include the exact id for each updated routine.
+For routine updates, actionIndex.routines contains every available routine with id, title, subject, type, dayOfWeek, date, startTime, endTime, room, teacher, notes, and repeatWeekly. Match routines using the PDF/user data plus title/subject and time/day/date, then include the exact id for each updated routine.
 If the user says to update all routines with the same title, include one update action for every matching existing routine id. If only some routines match the PDF rows, update only those exact matching ids.
 If a routine title appears many times and you cannot identify the exact existing ids from actionIndex, ask a clarifying question instead of producing ACTION_JSON.
 When an attached PDF or image contains routine data, use only rows you can read clearly. If room/day/time/title is uncertain, say which row is unclear and skip that action.
