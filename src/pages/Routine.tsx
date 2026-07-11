@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import MarkdownView from '../components/MarkdownView';
 
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
@@ -551,7 +552,9 @@ export default function RoutinePage() {
             {viewingEvent?.notes && (
               <div>
                 <h4 className="text-sm font-medium mb-1">Notes</h4>
-                <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{viewingEvent.notes}</p>
+                <div className="text-sm text-foreground [&_a]:text-primary [&_a]:underline [&_a]:break-all prose dark:prose-invert prose-sm max-w-none">
+                  <MarkdownView>{viewingEvent.notes}</MarkdownView>
+                </div>
               </div>
             )}
             {!viewingEvent?.room && !viewingEvent?.notes && (
