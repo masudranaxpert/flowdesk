@@ -210,7 +210,7 @@ def get_profile(user: dict = Depends(get_current_user)):
 
 ```mermaid
 flowchart TD
-    R[Request GET /me] --> EP[/me endpoint]
+    R[Request GET /me] --> EP["/me endpoint"]
     EP -->|Depends| GCU[get_current_user]
     GCU -->|Depends| VT[verify_token]
     VT -->|Header| AUTH[Authorization header]

@@ -107,7 +107,7 @@ sequenceDiagram
     participant S as Server
     Note over B: User logs in via HTTP
     B->>S: POST /login (credentials)
-    S-->>B: Set-Cookie: session=abc123; HttpOnly; Secure
+    S-->>B: Set-Cookie: session=abc123, HttpOnly, Secure
     Note over B: Cookie stored automatically
     Note over B: Later: open WebSocket
     B->>S: GET /ws (Upgrade: websocket) — cookie sent automatically

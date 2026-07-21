@@ -17,7 +17,7 @@ PyTorch 2.0+ ফ্রেমওয়ার্কের সবচেয়ে �
 
 ```mermaid
 flowchart TD
-    subgraph Eager Mode (Uncompiled - Slow Memory Access)
+    subgraph "Eager Mode (Uncompiled - Slow Memory Access)"
         E1[Read Tensor A & B from GPU VRAM] --> E2[Launch Add CUDA Kernel]
         E2 --> E3[Write Result X to VRAM]
         E3 --> E4[Read X & C from VRAM]
@@ -25,7 +25,7 @@ flowchart TD
         E5 --> E6[Write Final Output Y to VRAM]
     end
 
-    subgraph Compiled Mode (torch.compile - Single Memory Pass)
+    subgraph "Compiled Mode (torch.compile - Single Memory Pass)"
         C1[Read Tensor A, B, C from VRAM once] --> C2[Single Fused Triton Kernel: Add + ReLU]
         C2 --> C3[Write Final Output Y to VRAM once]
     end

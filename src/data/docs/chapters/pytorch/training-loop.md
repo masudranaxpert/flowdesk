@@ -6,10 +6,10 @@ PyTorch এ মডেল ট্রেইনিং করার পূর্ণ�
 
 ```mermaid
 flowchart TD
-    Start[1. Forward Pass: predictions = model(inputs)] --> Loss[2. Compute Loss: loss = criterion(preds, targets)]
-    Loss --> Zero[3. Zero Gradients: optimizer.zero_grad()]
-    Zero --> Back[4. Backward Pass: loss.backward()]
-    Back --> Step[5. Update Weights: optimizer.step()]
+    Start["1. Forward Pass: predictions = model(inputs)"] --> Loss["2. Compute Loss: loss = criterion(preds, targets)"]
+    Loss --> Zero["3. Zero Gradients: optimizer.zero_grad()"]
+    Zero --> Back["4. Backward Pass: loss.backward()"]
+    Back --> Step["5. Update Weights: optimizer.step()"]
 ```
 
 ---
