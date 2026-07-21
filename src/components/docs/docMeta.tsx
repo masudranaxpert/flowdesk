@@ -20,6 +20,8 @@ import {
   BookText,
   Zap,
   Radio,
+  Flame,
+  Boxes,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -44,6 +46,8 @@ const iconRegistry: Record<string, LucideIcon> = {
   BookText,
   Zap,
   Radio,
+  Flame,
+  Boxes,
 };
 
 export function docIcon(name: string): LucideIcon {
