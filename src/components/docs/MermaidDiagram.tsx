@@ -7,6 +7,7 @@ async function getMermaid() {
   if (!mermaidInitialized) {
     mermaid.initialize({
       startOnLoad: false,
+      suppressErrorRendering: true,
       theme: 'dark',
       themeVariables: {
         darkMode: true,

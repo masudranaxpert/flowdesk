@@ -59,11 +59,11 @@ engine = create_engine(
 
 ```mermaid
 flowchart TD
-    Start[Transaction শুরু] --> Step1[কাজ ১: রহিমের টাকা মাইনাস]
-    Step1 --> Step2[কাজ ২: করিমের টাকা প্লাস]
+    Start[Transaction শুরু] --> Step1["কাজ ১: রহিমের টাকা মাইনাস"]
+    Step1 --> Step2["কাজ ২: করিমের টাকা প্লাস"]
     Step2 --> Check{সব কাজ সফল?}
-    Check -->|হ্যাঁ (Success)| Commit[🟢 COMMIT: স্থায়ীভাবে DB তে Save]
-    Check -->|না (Error/Crash)| Rollback[🔴 ROLLBACK: আগের অবস্থায় Refund / Reset]
+    Check -->|হ্যাঁ Success| Commit["COMMIT: স্থায়ীভাবে DB তে Save"]
+    Check -->|না Error/Crash| Rollback["ROLLBACK: আগের অবস্থায় Refund / Reset"]
 ```
 
 ---
