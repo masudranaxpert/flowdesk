@@ -84,3 +84,31 @@ void solve_candy() {
 ### 🪟 প্রবলেম ২: Max Sum Subarray of Size K
 **প্রবলেম প্যাটার্ন:** একটি অ্যারে থেকে $K$ সাইজের এমন একটি সাব-অ্যারে বের করো যার যোগফল সর্বোচ্চ। 
 **লজিক:** আমরা স্লাইডিং উইন্ডো ব্যবহার করব। প্রথমে প্রথম $K$ টি উপাদানের উইন্ডোর হিসাব করব। তারপর উইন্ডো এক ঘর করে সরাব। নতুন ক্যারেক্টার ঢুকলে তার ভ্যালু যোগ করব, আর পুরোনো ক্যারেক্টার বের হলে তার ভ্যালু বিয়োগ করব। প্রতি ধাপে `max_sum` আপডেট করব।
+
+### 🔤 প্রবলেম ৩: Longest Substring Without Repeating Characters
+**প্রবলেম:** একটি স্ট্রিং দেওয়া আছে। সবচেয়ে বড় সেই সাব-স্ট্রিং বের করো যেখানে কোনো ক্যারেক্টার দুইবার নেই।
+
+**Thought Process (Variable Sliding Window):**
+১. আগের `K` সাইজের উইন্ডো ছিল **fixed**। এখন উইন্ডোর সাইজ **variable** — যতক্ষণ শর্ত মানছে, তত বড় হবে।
+২. দুইটা পয়েন্টার `left` আর `right` রাখব। `right` কে সামনে বাড়াব একটা একটা করে ক্যারেক্টার ঢুকাব উইন্ডোতে।
+৩. যদি নতুন ক্যারেক্টার আগে থেকে থাকে (ডুপ্লিকেট), তবে `left` কে সামনে সরাব যতক্ষণ না ডুপ্লিকেট বেরিয়ে যায়।
+৪. প্রতি স্টেপে উইন্ডোর সাইজ `right - left + 1` দিয়ে সর্বোচ্চ আপডেট করব।
+
+```cpp
+int longestUniqueSubstring(string& s) {
+    unordered_map<char, int> last_seen; // ক্যারেক্টার -> শেষ কোথায় দেখেছি
+    int left = 0, max_len = 0;
+    
+    for (int right = 0; right < s.size(); right++) {
+        // যদি ক্যারেক্টারটি আগে দেখা থাকে এবং সেটা উইন্ডোর ভেতরে
+        if (last_seen.count(s[right]) && last_seen[s[right]] >= left) {
+            left = last_seen[s[right]] + 1; // left কে ডুপ্লিকেটের পরের ঘরে নিয়ে যাও
+        }
+        last_seen[s[right]] = right;
+        max_len = max(max_len, right - left + 1);
+    }
+    return max_len;
+}
+```
+
+> **প্যাটার্ন চিনবে যেভাবে:** "Longest/Shortest subarray with condition" — এই টাইপের প্রশ্নে variable sliding window ব্যবহার করবে।
