@@ -88,3 +88,41 @@ DSU তে আনফ্রেন্ড (Union ভাঙা) করা খুব 
 আমরা প্রবলেমটাকে পেছন থেকে (Reverse) সলভ করব! 
 আনফ্রেন্ড করাকে যদি আমরা উল্টো দিক থেকে ভাবি, তবে সেটি হবে "নতুন করে ফ্রেন্ড হওয়া"। 
 আমরা একদম শেষের অবস্থা থেকে শুরু করব, আর একে একে ফ্রেন্ড বানাব (`union_sets`), যা DSU দিয়ে খুব সহজেই করা যায়!
+
+### 🌉 প্রবলেম ৩: Kruskal's MST (সবচেয়ে সস্তা সংযোগ)
+**প্রবলেম প্যাটার্ন:** $N$ টি শহরকে সড়ক দিয়ে যুক্ত করতে হবে যেন সবাই একে অপরের সাথে যুক্ত থাকে (Connected)। প্রতিটি সম্ভাব্য সড়কের কস্ট দেওয়া আছে। সর্বনিম্ন কত টাকায় কাজ সারা যায়?
+
+**Thought Process (Minimum Spanning Tree):**
+১. এটি ক্লাসিক **MST (Minimum Spanning Tree)** প্রবলেম। Kruskal এর মূল আইডিয়া হলো: **সবচেয়ে সস্তা এজ আগে নাও, কিন্তু cycle বানিয়ো না।**
+২. DSU এখানে "cycle চেক করার" জন্য কাজে লাগে — যদি একটি এজের দুই প্রান্তের নোড আগে থেকেই একই গ্রুপে থাকে, সেটা যোগ করলে cycle বানাবে, তাই বাদ দাও।
+৩. **ধাপ:**
+   - সব এজকে ওজন অনুসারে ছোট থেকে বড় সর্ট করো।
+   - প্রতিটি এজ $(u, v, w)$ এর জন্য: যদি `find(u) != find(v)` হয়, তবে `union(u, v)` করো এবং $w$ কে total এ যোগ করো।
+
+```cpp
+struct Edge {
+    int u, v;
+    long long w;
+    bool operator<(const Edge& o) const { return w < o.w; }
+};
+
+long long kruskal(int n, vector<Edge>& edges) {
+    sort(edges.begin(), edges.end());
+    make_set(n);
+    
+    long long total_cost = 0;
+    int edges_used = 0;
+    
+    for (auto& e : edges) {
+        if (find_set(e.u) != find_set(e.v)) {
+            union_sets(e.u, e.v);
+            total_cost += e.w;
+            edges_used++;
+            if (edges_used == n - 1) break; // MST তে ঠিক N-1 টা এজ
+        }
+    }
+    return total_cost;
+}
+```
+
+> **প্যাটার্ন চিনবে:** "সব নোডকে যুক্ত করতে সর্বনিম্ন কত কস্ট?" — MST। Kruskal + DSU সবচেয়ে সহজ ইমপ্লিমেন্টেশন।

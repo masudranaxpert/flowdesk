@@ -82,3 +82,44 @@ int dfs_flower(int r, int c, char color) {
     return size;
 }
 ```
+
+### 🔥 প্রবলেম ৩: Multi-Source BFS (একসাথে অনেক জায়গা থেকে ছড়ানো)
+**প্রবলেম প্যাটার্ন:** একটি গ্রিডে অনেকগুলো "উৎস" আছে (যেমন: অনেকগুলো আগুনের ঘর, বা অনেকগুলো নষ্ট কমলা)। প্রতিটি খালি ঘর থেকে **সবচেয়ে কাছের উৎসের দূরত্ব** বের করতে হবে।
+
+**Thought Process:**
+১. **সাধারণ ভুল:** প্রতিটি খালি ঘর থেকে BFS চালিয়ে নিকটতম উৎস খোঁজা — এটি $O(N \cdot M \cdot NM)$ হয়ে TLE খাবে।
+২. **চালাকি:** BFS পানির মতো ছড়ায়। তাই যদি আমরা **একসাথে সব উৎসকে** কিউতে ঢুকিয়ে দিই, তবে পানি সব উৎস থেকে একই সাথে ছড়াবে!
+৩. যখনই কোনো খালি ঘরে প্রথম পানি পৌঁছাবে, সেটাই তার নিকটতম উৎস থেকে দূরত্ব।
+৪. মোট কমপ্লেক্সিটি: $O(NM)$ — একটাই BFS!
+
+```cpp
+void multi_source_bfs(vector<vector<char>>& grid) {
+    int R = grid.size(), C = grid[0].size();
+    vector<vector<int>> dist(R, vector<int>(C, -1));
+    queue<pair<int, int>> q;
+
+    // সব উৎসকে একসাথে কিউতে ঢুকাও
+    for (int i = 0; i < R; i++) {
+        for (int j = 0; j < C; j++) {
+            if (grid[i][j] == 'S') { // 'S' = উৎস
+                q.push({i, j});
+                dist[i][j] = 0;
+            }
+        }
+    }
+
+    // এবার নরমাল BFS
+    while (!q.empty()) {
+        auto [x, y] = q.front(); q.pop();
+        for (int i = 0; i < 4; i++) {
+            int nx = x + dx[i], ny = y + dy[i];
+            if (nx >= 0 && nx < R && ny >= 0 && ny < C && dist[nx][ny] == -1 && grid[nx][ny] != '#') {
+                dist[nx][ny] = dist[x][y] + 1;
+                q.push({nx, ny});
+            }
+        }
+    }
+}
+```
+
+> **প্যাটার্ন চিনবে:** "প্রতিটি ঘর থেকে নিকটতম X এর দূরত্ব" বা "কত সময়ে সবাই infected হবে" — এইসব প্রশ্নে Multi-Source BFS।

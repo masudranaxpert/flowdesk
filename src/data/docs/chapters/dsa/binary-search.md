@@ -86,3 +86,41 @@ void solve_harbor() {
 ৩. $mid$ সংখ্যক এসি ধরে মোট বিল হিসাব করব। 
 ৪. যদি বিল বাজেটের চেয়ে কম বা সমান হয়, তবে আমরা আরও বেশি এসি বসানোর চেষ্টা করব (`low = mid + 1`)। 
 ৫. বেশি হয়ে গেলে এসি কমাব (`high = mid - 1`)।
+
+### 🐄 প্রবলেম ৩: Aggressive Cows (সর্বোচ্চ সর্বনিম্ন দূরত্ব)
+**প্রবলেম:** একটি সরল রেখায় $N$ টি স্টল (Stall) এর পজিশন দেওয়া আছে। কৃষকের $C$ টি গরু আছে যাদের প্রতিটিকে আলাদা আলাদা স্টলে রাখতে হবে। গরুগুলো আক্রমণাত্মক (Aggressive), তাই যেকোনো দুই গরুর মধ্যে ন্যূনতম দূরত্ব যত সম্ভব **সর্বোচ্চ (Maximum)** করতে হবে। সেই দূরত্বটি কত?
+
+**Thought Process:**
+১. **Monotonicity চেক:** দূরত্ব যত **ছোট** হবে, তত বেশি গরু বসানো যাবে। দূরত্ব যত **বড়** হবে, তত কম গরু বসানো যাবে। ক্লাসিক Binary Search on Answer!
+২. **সার্চ স্পেস:** `low = 1` (ন্যূনতম দূরত্ব), `high = max(pos) - min(pos)` (সর্বোচ্চ সম্ভাব্য দূরত্ব)।
+৩. **check(d):** প্রথম স্টলে ১ম গরু বসাও। এরপর প্রতিটি পরবর্তী স্টলে দেখো — শেষ যেখানে গরু বসিয়েছি, তার থেকে দূরত্ব $\ge d$ হলে সেখানে বসাও।
+৪. `check(mid)` true হলে দূরত্ব আরও বাড়ানোর চেষ্টা করব (`low = mid + 1`)।
+
+```cpp
+bool canPlace(vector<int>& stalls, int c, int d) {
+    int count = 1, last = stalls[0]; // ১ম গরু ১ম স্টলে
+    for (int i = 1; i < stalls.size(); i++) {
+        if (stalls[i] - last >= d) {
+            count++;
+            last = stalls[i];
+            if (count >= c) return true;
+        }
+    }
+    return false;
+}
+
+void solve_cows() {
+    sort(stalls.begin(), stalls.end());
+    int low = 1, high = stalls.back() - stalls.front(), ans = 0;
+    while (low <= high) {
+        int mid = low + (high - low) / 2;
+        if (canPlace(stalls, c, mid)) {
+            ans = mid;       // এই দূরত্বে হচ্ছে, সেভ করে রাখলাম
+            low = mid + 1;   // আরও বাড়ানোর চেষ্টা
+        } else {
+            high = mid - 1;  // দূরত্ব কমাতে হবে
+        }
+    }
+    cout << ans << "\n";
+}
+```

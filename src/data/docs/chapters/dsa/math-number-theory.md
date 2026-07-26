@@ -87,3 +87,26 @@ void solve() {
     cout << B / L << "\n";
 }
 ```
+
+### ⚡ প্রবলেম ৩: Modular Exponentiation (Fast Power)
+**প্রবলেম প্যাটার্ন:** $A^B \bmod M$ বের করতে হবে, যেখানে $B$ অনেক বড় (যেমন $10^{18}$)। সাধারণ লুপে $B$ বার গুণ করলে TLE খাবে।
+
+**Thought Process:**
+১. **মূল আইডিয়া:** $A^{10}$ বের করতে ১০ বার গুণ করার দরকার নেই! $A^{10} = A^5 \times A^5$। আর $A^5 = A^2 \times A^2 \times A$।
+২. অর্থাৎ পাওয়ারকে অর্ধেক অর্ধেক করে ভাগ করে ফেললে $O(\log B)$ সময়েই কাজ শেষ!
+৩. **Modular:** প্রতি স্টেপে $\bmod M$ নিতে হবে যাতে ওভারফ্লো না হয়। গুণ করার সময় `long long` ব্যবহার করবে।
+
+```cpp
+long long power(long long a, long long b, long long m) {
+    long long result = 1;
+    a %= m;
+    while (b > 0) {
+        if (b & 1) result = (result * a) % m; // পাওয়ার বিজোড় হলে ফলাফলে গুণ
+        a = (a * a) % m;                       // ভিত্তিকে বর্গ করো
+        b >>= 1;                               // পাওয়ার অর্ধেক করো
+    }
+    return result;
+}
+```
+
+> **কনটেস্ট টিপস:** ফের্মাটের ছোট থিওরেম ($a^{p-1} \equiv 1 \pmod{p}$) দিয়ে Modular Inverse বের করতে হলেও এই ফাংশনটাই লাগবে: `inverse(a) = power(a, p-2, p)`।
