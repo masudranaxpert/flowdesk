@@ -167,4 +167,9 @@ export const api = {
     save: (data: { categoryId: string; chapterId: string; sectionId: string; content: string }) =>
       request<{ message: string }>('/doc-notes', { method: 'PUT', body: JSON.stringify(data) }),
   },
+  docProgress: {
+    list: () => request<{ progress: Record<string, string[]> }>('/doc-progress'),
+    save: (data: { categoryId: string; readIds: string[] }) =>
+      request<{ message: string; readIds: string[] }>('/doc-progress', { method: 'PUT', body: JSON.stringify(data) }),
+  },
 };

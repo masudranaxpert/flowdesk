@@ -334,13 +334,21 @@ type DocContentProps = {
   body: string;
   categoryId: string;
   chapterId: string;
+  /** Whether section notes are enabled (login-gated). */
+  showNotes?: boolean;
 };
 
-export default function DocContent({ body, categoryId, chapterId }: DocContentProps) {
+export default function DocContent({ body, categoryId, chapterId, showNotes = true }: DocContentProps) {
   const [notes, setNotes] = useState<NotesMap>({});
   const [notesReady, setNotesReady] = useState(false);
 
   useEffect(() => {
+    // Skip fetching notes entirely when notes are disabled (public visitors).
+    if (!showNotes) {
+      setNotes({});
+      setNotesReady(true);
+      return;
+    }
     setNotesReady(false);
     setNotes({});
     let cancelled = false;
@@ -356,7 +364,7 @@ export default function DocContent({ body, categoryId, chapterId }: DocContentPr
         if (!cancelled) setNotesReady(true);
       });
     return () => { cancelled = true; };
-  }, [categoryId, chapterId]);
+  }, [categoryId, chapterId, showNotes]);
 
   const saveNote = useCallback(
     (sectionId: string, text: string) => {
@@ -379,8 +387,8 @@ export default function DocContent({ body, categoryId, chapterId }: DocContentPr
   );
 
   const components = useMemo(
-    () => makeDocComponents(notes, notesReady, saveNote),
-    [notes, notesReady, saveNote],
+    () => makeDocComponents(notes, showNotes && notesReady, saveNote),
+    [notes, notesReady, saveNote, showNotes],
   );
 
   return (

@@ -1,7 +1,8 @@
 import { BrowserRouter, Navigate, Routes, Route, Outlet } from 'react-router-dom';
 import { lazy, Suspense, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
-import Layout from './components/Layout';
+import Layout, { PublicDocsShell } from './components/Layout';
+import { useAuth } from './hooks/useAuth';
 import { Spinner } from './components/UI';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -38,6 +39,24 @@ function ProtectedApp() {
         <Outlet />
       </Suspense>
     </Layout>
+  );
+}
+
+/**
+ * Docs are public: anyone can read. Logged-in visitors get the full app Layout
+ * (with their notes/progress/search), logged-out visitors get the bare
+ * PublicDocsShell. Auth state is reactive, so logging in/out swaps the shell
+ * without a manual reload.
+ */
+function DocsLayout() {
+  const isAuthed = useAuth();
+  const Shell = isAuthed ? Layout : PublicDocsShell;
+  return (
+    <Shell>
+      <Suspense fallback={<PageFallback />}>
+        <Outlet />
+      </Suspense>
+    </Shell>
   );
 }
 
@@ -82,6 +101,10 @@ export default function App() {
               <Route path="/player/:fileId" element={<VideoPlayer />} />
               <Route path="/hisab" element={<HisabPage />} />
               <Route path="/passwords" element={<PasswordsPage />} />
+            </Route>
+
+            {/* Docs: public reading, full facilities when logged in */}
+            <Route element={<DocsLayout />}>
               <Route path="/docs" element={<DocsPage />} />
               <Route path="/docs/:categoryId" element={<DocsPage />} />
               <Route path="/docs/:categoryId/:chapterId" element={<DocReaderPage />} />
