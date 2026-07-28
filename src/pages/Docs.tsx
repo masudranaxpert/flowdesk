@@ -133,6 +133,14 @@ export default function Docs() {
   const isSearching = isAuthed && query.trim().length >= 2;
 
   useEffect(() => {
+    if (activeCategory) {
+      document.title = `${activeCategory.titleEn} — Docs | BookmarkVault`;
+    } else {
+      document.title = 'Docs — A to Z গাইড | BookmarkVault';
+    }
+  }, [activeCategory]);
+
+  useEffect(() => {
     if (!isSearching) return;
     function onClickOutside(e: MouseEvent) {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
