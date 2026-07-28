@@ -46,7 +46,10 @@ export default function DocReader() {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [chapterId]);
+    if (data) {
+      document.title = `${data.chapter.title} — ${data.category.titleEn} Docs | BookmarkVault`;
+    }
+  }, [chapterId, data]);
 
   useEffect(() => {
     localStorage.setItem('docs-sidebar-hidden', String(sidebarHidden));
