@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowRight, FileText, GraduationCap, Search, X } from 'lucide-react';
+import { ArrowRight, FileText, GraduationCap, Lock, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import {
   docLevelLabels,
 } from '@/data/docs';
 import { useDocProgress } from '@/hooks/useDocProgress';
+import { useAuth } from '@/hooks/useAuth';
 import { searchDocs, type DocSearchResult } from '@/data/docs/search';
 import { docIcon, docAccent } from '@/components/docs/docMeta';
 import { cn } from '@/lib/utils';
@@ -23,6 +24,7 @@ function categoryProgress(chapterCount: number, readIds: Set<string>, category: 
 function DocCategoryCard({ category }: { category: typeof docCategories[number] }) {
   const Icon = docIcon(category.icon);
   const accent = docAccent(category.accent);
+  const isAuthed = useAuth();
   const { readIds } = useDocProgress(category.id);
   const { read, total, percent } = categoryProgress(category.chapters.length, readIds, category);
 
@@ -41,16 +43,18 @@ function DocCategoryCard({ category }: { category: typeof docCategories[number] 
         </div>
       </div>
 
-      <div className="mt-4 flex items-center gap-2">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-          <div className={cn('h-full rounded-full transition-all', accent.bar)} style={{ width: `${percent}%` }} />
+      {isAuthed && (
+        <div className="mt-4 flex items-center gap-2">
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+            <div className={cn('h-full rounded-full transition-all', accent.bar)} style={{ width: `${percent}%` }} />
+          </div>
+          <span className="text-[11px] font-medium tabular-nums text-muted-foreground">{percent}%</span>
         </div>
-        <span className="text-[11px] font-medium tabular-nums text-muted-foreground">{percent}%</span>
-      </div>
+      )}
 
       <div className="mt-3 flex items-center justify-between">
         <Badge variant="secondary" className="rounded-full text-[11px]">
-          {read}/{total} চ্যাপ্টার
+          {isAuthed ? `${read}/${total}` : total} চ্যাপ্টার
         </Badge>
         <span className={cn('flex items-center gap-1 text-xs font-medium opacity-0 transition group-hover:opacity-100', accent.text)}>
           পড়া শুরু করি <ArrowRight className="h-3.5 w-3.5" />
@@ -118,6 +122,7 @@ function SearchResultRow({
 export default function Docs() {
   const { categoryId } = useParams();
   const navigate = useNavigate();
+  const isAuthed = useAuth();
   const activeCategory = categoryId ? docCategories.find((c) => c.id === categoryId) : undefined;
   const [query, setQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -125,7 +130,7 @@ export default function Docs() {
   const searchRef = useRef<HTMLDivElement>(null);
 
   const searchResults = useMemo(() => searchDocs(query, 8), [query]);
-  const isSearching = query.trim().length >= 2;
+  const isSearching = isAuthed && query.trim().length >= 2;
 
   useEffect(() => {
     if (!isSearching) return;
@@ -202,7 +207,8 @@ export default function Docs() {
               Python, NumPy, Pandas, Git/CI-CD, Linux, Docker, JWT-OAuth থেকে Machine Learning, NLP, Deep Learning পর্যন্ত — সব এক জায়গায়, সম্পূর্ণ বাংলায়, কোড উদাহরণ সহ। মোট <span className="font-semibold text-foreground">{totalChapters}</span> চ্যাপ্টার।
             </p>
           </div>
-          <div ref={searchRef} className="relative w-full sm:w-80">
+          {isAuthed ? (
+            <div ref={searchRef} className="relative w-full sm:w-80">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="docs-search-input"
@@ -245,8 +251,25 @@ export default function Docs() {
               </div>
             )}
           </div>
+          ) : null}
         </div>
       </section>
+
+      {!isAuthed && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
+              <Lock className="h-4 w-4" />
+            </span>
+            <p className="text-muted-foreground">
+              <span className="font-medium text-foreground">Login করলে</span> প্রতিটা চ্যাপ্টারে নিজের নোট, পড়ার প্রগ্রেস ও সার্চ সেভ থাকবে।
+            </p>
+          </div>
+          <Link to="/login">
+            <Button size="sm" className="shrink-0 rounded-full">Login করি</Button>
+          </Link>
+        </div>
+      )}
 
       {grouped.map(({ group, categories }) => (
         <section key={group} className="space-y-4">
@@ -270,6 +293,7 @@ export default function Docs() {
 function CategoryView({ category }: { category: typeof docCategories[number] }) {
   const Icon = docIcon(category.icon);
   const accent = docAccent(category.accent);
+  const isAuthed = useAuth();
   const { readIds } = useDocProgress(category.id);
   const readCount = category.chapters.filter((c) => readIds.has(c.id)).length;
   const percent = category.chapters.length ? Math.round((readCount / category.chapters.length) * 100) : 0;
@@ -293,22 +317,24 @@ function CategoryView({ category }: { category: typeof docCategories[number] }) 
               <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{category.description}</p>
             </div>
           </div>
-          <div className="w-full space-y-1.5 sm:w-56">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>প্রগ্রেস</span>
-              <span className="font-medium tabular-nums">{percent}%</span>
+          {isAuthed && (
+            <div className="w-full space-y-1.5 sm:w-56">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>প্রগ্রেস</span>
+                <span className="font-medium tabular-nums">{percent}%</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-muted/60">
+                <div className={cn('h-full rounded-full transition-all', accent.bar)} style={{ width: `${percent}%` }} />
+              </div>
+              <p className="text-[11px] text-muted-foreground">{readCount}/{category.chapters.length} চ্যাপ্টার পড়া হয়েছে</p>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-muted/60">
-              <div className={cn('h-full rounded-full transition-all', accent.bar)} style={{ width: `${percent}%` }} />
-            </div>
-            <p className="text-[11px] text-muted-foreground">{readCount}/{category.chapters.length} চ্যাপ্টার পড়া হয়েছে</p>
-          </div>
+          )}
         </div>
       </section>
 
       <div className="space-y-2.5">
         {category.chapters.map((chapter, index) => {
-          const done = readIds.has(chapter.id);
+          const done = isAuthed && readIds.has(chapter.id);
           return (
             <Link
               key={chapter.id}

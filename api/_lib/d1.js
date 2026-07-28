@@ -218,6 +218,12 @@ export async function ensureSchema() {
         method TEXT DEFAULT 'cash', notes TEXT DEFAULT '',
         createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL
       );`),
+      d1Query(`CREATE TABLE IF NOT EXISTS doc_progress (
+        id TEXT PRIMARY KEY, userId TEXT NOT NULL,
+        categoryId TEXT NOT NULL, readIds TEXT DEFAULT '[]',
+        createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL,
+        UNIQUE(userId, categoryId)
+      );`),
     ]);
 
     await Promise.all([
@@ -231,6 +237,7 @@ export async function ensureSchema() {
       d1Query(`CREATE INDEX IF NOT EXISTS idx_expenses_user_date ON expenses(userId, date);`),
       d1Query(`CREATE INDEX IF NOT EXISTS idx_share_links_code ON share_links(code);`),
       d1Query(`CREATE INDEX IF NOT EXISTS idx_doc_notes_user_chapter ON doc_notes(userId, categoryId, chapterId);`),
+      d1Query(`CREATE INDEX IF NOT EXISTS idx_doc_progress_user ON doc_progress(userId, categoryId);`),
       d1Query(`CREATE INDEX IF NOT EXISTS idx_transfers_user_date ON transfers(userId, date);`),
     ]);
 

@@ -1392,6 +1392,41 @@ export default async function handler(req, res) {
       }
     }
 
+    if (slug === 'doc-progress') {
+      const user = await requireUser(req, res);
+      if (!user) return;
+      const uid = userId(user);
+
+      if (method === 'GET') {
+        const rows = await d1Query(
+          'SELECT categoryId, readIds FROM doc_progress WHERE userId = ?;',
+          [uid]
+        );
+        const progress = {};
+        for (const row of rows) {
+          progress[row.categoryId] = fromJson(row.readIds, []);
+        }
+        return res.json({ progress });
+      }
+
+      if (method === 'PUT') {
+        const { categoryId, readIds } = req.body;
+        if (!categoryId) {
+          return res.status(400).json({ error: 'categoryId is required' });
+        }
+        const ids = Array.isArray(readIds) ? readIds.filter((x) => typeof x === 'string') : [];
+        const payload = JSON.stringify(ids);
+        const stamp = now();
+        await d1Query(
+          `INSERT INTO doc_progress (id, userId, categoryId, readIds, createdAt, updatedAt)
+           VALUES (?, ?, ?, ?, ?, ?)
+           ON CONFLICT(userId, categoryId) DO UPDATE SET readIds = excluded.readIds, updatedAt = excluded.updatedAt;`,
+          [newId(), uid, categoryId, payload, stamp, stamp]
+        );
+        return res.json({ message: 'Saved', readIds: ids });
+      }
+    }
+
     const parts = slug.split('/');
     const resource = parts[0];
     const itemId = parts[1] || null;

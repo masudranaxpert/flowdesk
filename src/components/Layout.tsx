@@ -36,6 +36,7 @@ import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { cn, fuzzyMatch } from '../lib/utils';
 import { searchDocs } from '@/data/docs/search';
+import { notifyAuthChange } from '@/hooks/useAuth';
 import type { Bookmark as BookmarkType, CodeSnippet, Notebook, Question, RoutineItem } from '../types';
 
 const navItems = [
@@ -205,6 +206,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   const logout = () => {
     localStorage.removeItem('auth-token');
     localStorage.removeItem('auth-user');
+    notifyAuthChange();
     navigate('/login');
   };
 
@@ -279,6 +281,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       toast.success(data.message || 'Account deleted successfully');
       localStorage.removeItem('auth-token');
       localStorage.removeItem('auth-user');
+      notifyAuthChange();
       navigate('/login');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to delete account');
@@ -536,3 +539,50 @@ export default function Layout({ children }: { children: ReactNode }) {
     </div>
   );
 }
+
+/**
+ * Bare chrome for public docs visitors (not logged in).
+ *
+ * Distraction-free reading: just a slim top bar with the logo, a theme toggle,
+ * and a "Login" CTA that surfaces the extra facilities (notes + progress).
+ * Logged-in visitors get the full `Layout` instead, so this is only shown when
+ * there is no auth token.
+ */
+export function PublicDocsShell({ children }: { children: ReactNode }) {
+  const [dark, setDark] = useState(() => localStorage.getItem('theme') !== 'light');
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark);
+    localStorage.setItem('theme', dark ? 'dark' : 'light');
+  }, [dark]);
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-20 border-b border-border/70 bg-background/80 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 w-full max-w-5xl items-center gap-3 px-4 sm:px-6">
+          <Link to="/docs" className="flex min-w-0 items-center gap-2.5">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-primary/30 bg-primary text-primary-foreground">
+              <ListTree className="h-4.5 w-4.5" />
+            </div>
+            <span className="truncate text-sm font-semibold tracking-tight">Docs</span>
+          </Link>
+
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => setDark((v) => !v)} aria-label="Toggle theme">
+              {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
+            <Button size="sm" className="gap-1.5 rounded-full" onClick={() => navigate('/login')}>
+              <Sparkles className="h-3.5 w-3.5" /> Login
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <main className="px-4 pb-24 pt-6 sm:px-6 lg:pb-10">
+        <div className="mx-auto w-full max-w-5xl">{children}</div>
+      </main>
+    </div>
+  );
+}
+

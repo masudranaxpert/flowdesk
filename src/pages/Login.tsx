@@ -3,6 +3,7 @@ import { type FormEvent, useState } from 'react';
 import { BookOpen, Code2, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
+import { notifyAuthChange } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -20,6 +21,7 @@ export default function Login() {
       const data = await api.auth.login({ email, password });
       localStorage.setItem('auth-token', data.token);
       localStorage.setItem('auth-user', JSON.stringify(data.user));
+      notifyAuthChange();
       location.href = '/';
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Login failed');
