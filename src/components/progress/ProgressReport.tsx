@@ -59,12 +59,12 @@ export function ProgressReport({ roadmap, onCopyFullReport }: ProgressReportProp
               key={phase.id}
               className="space-y-1.5 rounded-2xl bg-muted/30 border border-border/50 p-3"
             >
-              <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center justify-between text-xs sm:text-sm">
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-muted-foreground">#{idx + 1}</span>
-                  <span className="font-semibold text-foreground">{phase.title}</span>
+                  <span className="font-semibold text-foreground sm:text-base">{phase.title}</span>
                   {phase.isDone && (
-                    <Badge variant="secondary" className="h-4 text-[9px] bg-emerald-500/15 text-emerald-500">
+                    <Badge variant="secondary" className="h-4.5 text-[10px] sm:text-xs bg-emerald-500/15 text-emerald-500">
                       Completed
                     </Badge>
                   )}
@@ -79,7 +79,7 @@ export function ProgressReport({ roadmap, onCopyFullReport }: ProgressReportProp
                   style={{ width: `${phase.pct}%` }}
                 />
               </div>
-              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+              <div className="flex items-center justify-between text-[11px] sm:text-xs text-muted-foreground">
                 <span>
                   {phase.completed} of {phase.total} tasks finished
                 </span>
