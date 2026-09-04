@@ -84,15 +84,8 @@ export default function Progress() {
 
   // Dialogs
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [createTab, setCreateTab] = useState<'presets' | 'ai' | 'manual'>('presets');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [roadmapToDelete, setRoadmapToDelete] = useState<Roadmap | null>(null);
-
-  // New Roadmap Form states
-  const [manualTitle, setManualTitle] = useState('');
-  const [manualDuration, setManualDuration] = useState('12 Months');
-  const [aiPrompt, setAiPrompt] = useState('');
-  const [generatingAi, setGeneratingAi] = useState(false);
 
   // Add Phase dialog
   const [newPhaseOpen, setNewPhaseOpen] = useState(false);
@@ -553,9 +546,8 @@ export default function Progress() {
   };
 
   // AI Roadmap Generation
-  const handleGenerateAi = async () => {
-    if (!aiPrompt.trim()) return;
-    setGeneratingAi(true);
+  const handleGenerateAi = async (prompt: string) => {
+    if (!prompt.trim()) return;
     try {
       const aiSettingsData = await api.aiSettings.get().catch(() => defaultAiSettings as AiSettings);
       const systemInstruction = `You are a learning curriculum planner.
@@ -577,7 +569,7 @@ Return a STRICT valid JSON object (no markdown, no backticks) with this structur
 }`;
       const responseText = await runAiChat(
         aiSettingsData,
-        [{ role: 'user', content: aiPrompt }],
+        [{ role: 'user', content: prompt }],
         systemInstruction,
         []
       );
@@ -591,26 +583,24 @@ Return a STRICT valid JSON object (no markdown, no backticks) with this structur
       const created = await api.roadmaps.create(parsed);
       toast.success(`AI Roadmap "${parsed.title}" created successfully!`);
       setCreateModalOpen(false);
-      setAiPrompt('');
       await fetchRoadmaps();
       setSelectedId(created._id || created.id || '');
       setMainSection('roadmaps');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'AI generation failed');
-    } finally {
-      setGeneratingAi(false);
+      throw error;
     }
   };
 
   // Manual Roadmap Creation
-  const handleCreateManual = async () => {
-    if (!manualTitle.trim()) return;
+  const handleCreateManual = async (title: string, duration: string) => {
+    if (!title.trim()) return;
     try {
       const payload: Partial<Roadmap> = {
-        title: manualTitle.trim(),
+        title: title.trim(),
         description: 'Personal study roadmap',
         category: 'general',
-        duration: manualDuration,
+        duration,
         status: 'active',
         dailyHabits: [],
         phases: [
@@ -627,7 +617,6 @@ Return a STRICT valid JSON object (no markdown, no backticks) with this structur
       const created = await api.roadmaps.create(payload);
       toast.success('Roadmap created!');
       setCreateModalOpen(false);
-      setManualTitle('');
       await fetchRoadmaps();
       setSelectedId(created._id || created.id || '');
       setMainSection('roadmaps');
@@ -675,10 +664,7 @@ Return a STRICT valid JSON object (no markdown, no backticks) with this structur
 
           <Button
             size="sm"
-            onClick={() => {
-              setCreateTab('presets');
-              setCreateModalOpen(true);
-            }}
+            onClick={() => setCreateModalOpen(true)}
             className="gap-2 shadow-sm"
           >
             <Plus className="h-4 w-4" />
@@ -955,17 +941,8 @@ Return a STRICT valid JSON object (no markdown, no backticks) with this structur
       <CreateRoadmapModal
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
-        createTab={createTab}
-        setCreateTab={setCreateTab}
         onApplyPreset={handleApplyPreset}
-        aiPrompt={aiPrompt}
-        setAiPrompt={setAiPrompt}
-        generatingAi={generatingAi}
         onGenerateAi={handleGenerateAi}
-        manualTitle={manualTitle}
-        setManualTitle={setManualTitle}
-        manualDuration={manualDuration}
-        setManualDuration={setManualDuration}
         onCreateManual={handleCreateManual}
       />
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ArrowRight,
   BookOpen,
@@ -21,42 +21,53 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { presets } from './presets';
 
+// Precompute milestone counts to avoid runtime reduction during renders
+const PRESET_CARDS = presets.map((p) => ({
+  ...p,
+  totalMilestones: p.phases.reduce((acc, ph) => acc + (ph.tasks?.length || 0), 0),
+}));
+
 interface CreateRoadmapModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  createTab: 'presets' | 'ai' | 'manual';
-  setCreateTab: (tab: 'presets' | 'ai' | 'manual') => void;
   onApplyPreset: (preset: (typeof presets)[0]) => Promise<void>;
-  aiPrompt: string;
-  setAiPrompt: (prompt: string) => void;
-  generatingAi: boolean;
-  onGenerateAi: () => Promise<void>;
-  manualTitle: string;
-  setManualTitle: (title: string) => void;
-  manualDuration: string;
-  setManualDuration: (duration: string) => void;
-  onCreateManual: () => Promise<void>;
+  onGenerateAi: (prompt: string) => Promise<void>;
+  onCreateManual: (title: string, duration: string) => Promise<void>;
 }
 
 export function CreateRoadmapModal({
   open,
   onOpenChange,
-  createTab,
-  setCreateTab,
   onApplyPreset,
-  aiPrompt,
-  setAiPrompt,
-  generatingAi,
   onGenerateAi,
-  manualTitle,
-  setManualTitle,
-  manualDuration,
-  setManualDuration,
   onCreateManual,
 }: CreateRoadmapModalProps) {
+  const [createTab, setCreateTab] = useState<'presets' | 'ai' | 'manual'>('presets');
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [generatingAi, setGeneratingAi] = useState(false);
+  const [manualTitle, setManualTitle] = useState('');
+  const [manualDuration, setManualDuration] = useState('12 Months');
+
+  const handleGenerateSubmit = async () => {
+    if (!aiPrompt.trim() || generatingAi) return;
+    setGeneratingAi(true);
+    try {
+      await onGenerateAi(aiPrompt);
+      setAiPrompt('');
+    } finally {
+      setGeneratingAi(false);
+    }
+  };
+
+  const handleManualSubmit = async () => {
+    if (!manualTitle.trim()) return;
+    await onCreateManual(manualTitle, manualDuration);
+    setManualTitle('');
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-6 sm:p-7 rounded-3xl border border-border/80 bg-card/95 backdrop-blur-xl shadow-2xl">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-6 sm:p-7 rounded-3xl border border-border bg-card shadow-2xl">
         <DialogHeader className="space-y-1.5 pb-2">
           <DialogTitle className="flex items-center gap-2.5 text-base font-semibold">
             <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
@@ -114,10 +125,10 @@ export function CreateRoadmapModal({
         {/* Tab 1: Presets */}
         {createTab === 'presets' && (
           <div className="space-y-3 pt-1 animate-fade-in">
-            {presets.map((p, idx) => (
+            {PRESET_CARDS.map((p, idx) => (
               <div
                 key={idx}
-                className="group rounded-2xl border border-border/70 bg-card/60 p-4 transition-all hover:border-primary/50 hover:bg-muted/20"
+                className="group rounded-2xl border border-border bg-card/60 p-4 transition-all hover:border-primary/50 hover:bg-muted/20"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="space-y-1.5 min-w-0 flex-1">
@@ -140,7 +151,7 @@ export function CreateRoadmapModal({
                       <span className="flex items-center gap-1">
                         <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                         <span>
-                          {p.phases.reduce((acc, ph) => acc + ph.tasks.length, 0)} Milestones
+                          {p.totalMilestones} Milestones
                         </span>
                       </span>
                     </div>
@@ -198,7 +209,7 @@ export function CreateRoadmapModal({
             </div>
 
             <Button
-              onClick={onGenerateAi}
+              onClick={handleGenerateSubmit}
               disabled={generatingAi || !aiPrompt.trim()}
               className="w-full gap-2 rounded-xl cursor-pointer"
             >
@@ -245,7 +256,7 @@ export function CreateRoadmapModal({
             </div>
 
             <Button
-              onClick={onCreateManual}
+              onClick={handleManualSubmit}
               disabled={!manualTitle.trim()}
               className="w-full gap-2 rounded-xl cursor-pointer"
             >

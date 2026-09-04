@@ -235,7 +235,7 @@ export function DailyTracker({
                     >
                       {/* Tooltip on hover */}
                       <div
-                        className={`absolute bottom-[calc(100%+8px)] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-40 w-max max-w-[260px] sm:max-w-[290px] rounded-2xl bg-popover/95 backdrop-blur-md p-3 text-xs text-popover-foreground shadow-2xl border border-border ${tooltipAlignClass}`}
+                        className={`absolute bottom-[calc(100%+8px)] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-40 w-max max-w-[260px] sm:max-w-[290px] rounded-2xl bg-popover p-3 text-xs text-popover-foreground shadow-2xl border border-border ${tooltipAlignClass}`}
                       >
                         <div className="font-semibold text-foreground flex items-center gap-1.5">
                           <Calendar className="h-3.5 w-3.5 text-primary shrink-0" />
