@@ -1,5 +1,5 @@
 import { type ClipboardEvent, type DragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Bot, CheckCircle2, ChevronDown, FileImage, ImageOff, MessageSquare, Paperclip, Save, Send, Settings, ShieldAlert, Sparkles, X } from 'lucide-react';
+import { Bot, Check, CheckCircle2, ChevronDown, Copy, Edit3, Eye, EyeOff, FileImage, ImageOff, Key, MessageSquare, Paperclip, Power, PowerOff, Save, Send, Settings, ShieldAlert, Sparkles, Star, Trash2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../lib/api';
 import { fileToAiFile, runAiChat, type AiFile, type AiModelConfig, type AiSettings, type ChatMessage, defaultAiSettings } from '../lib/ai';
@@ -468,6 +468,8 @@ export default function ChatbotPage() {
     multimodal: true,
     active: false,
   });
+  const [copiedKeyModelId, setCopiedKeyModelId] = useState<string>('');
+  const [showDraftKey, setShowDraftKey] = useState(false);
 
   const loadSettings = useCallback(() => {
     setLoadingSettings(true);
@@ -694,14 +696,70 @@ export default function ChatbotPage() {
     if (selectedModelId && enabledModels.length > 0 && !enabledModels.some((model) => model.id === selectedModelId)) setSelectedModelId(enabledModels[0].id);
   }, [enabledModels, selectedModelId]);
 
-  const addModel = async () => {
-    if (!draftModel.label.trim() || !draftModel.apiKey.trim() || !draftModel.model.trim()) return toast.error('Label, API key and model are required');
-    const nextModel = { ...draftModel, id: crypto.randomUUID(), active: (settings.models || []).length === 0 };
-    const next = { ...settings, models: [...(settings.models || []), nextModel] };
+  const copyApiKey = async (model: AiModelConfig) => {
+    const key = model.apiKey || (model.provider === 'gemini' ? settings.geminiKey : model.provider === 'openrouter' ? settings.openRouterKey : settings.openAiKey);
+    if (!key) {
+      toast.error(`No API key saved for ${model.label}`);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(key);
+      setCopiedKeyModelId(model.id);
+      setTimeout(() => setCopiedKeyModelId(''), 2000);
+      toast.success(`Copied API key for ${model.label}`);
+    } catch {
+      toast.error('Failed to copy API key');
+    }
+  };
+
+  const savedKeyForCurrentProvider = useMemo(() => {
+    return (
+      (settings.models || []).find((m) => m.provider === draftModel.provider && m.apiKey)?.apiKey ||
+      (draftModel.provider === 'gemini' ? settings.geminiKey : draftModel.provider === 'openrouter' ? settings.openRouterKey : settings.openAiKey) ||
+      ''
+    );
+  }, [settings.models, settings.geminiKey, settings.openRouterKey, settings.openAiKey, draftModel.provider]);
+
+  const fillSavedKey = () => {
+    if (savedKeyForCurrentProvider) {
+      setDraftModel((prev) => ({ ...prev, apiKey: savedKeyForCurrentProvider }));
+      toast.success(`Filled saved ${draftModel.provider} API key`);
+    }
+  };
+
+  const editModel = (model: AiModelConfig) => {
+    setDraftModel({ ...model });
+    toast(`Loaded "${model.label}" into form`);
+  };
+
+  const cancelEditModel = () => {
+    setDraftModel({ id: '', label: '', provider: 'gemini', apiKey: '', model: 'gemma-3-27b-it', multimodal: true, active: false });
+  };
+
+  const saveOrUpdateModel = async () => {
+    if (!draftModel.label.trim() || !draftModel.apiKey.trim() || !draftModel.model.trim()) {
+      return toast.error('Label, API key and model are required');
+    }
+    const currentModels = settings.models || [];
+    const isEditing = Boolean(draftModel.id && currentModels.some((m) => m.id === draftModel.id));
+    let nextModels: AiModelConfig[];
+
+    if (isEditing) {
+      nextModels = currentModels.map((m) => (m.id === draftModel.id ? { ...draftModel } : m));
+    } else {
+      const nextModel = {
+        ...draftModel,
+        id: crypto.randomUUID(),
+        active: currentModels.length === 0,
+      };
+      nextModels = [...currentModels, nextModel];
+    }
+
+    const next = { ...settings, models: nextModels };
     setSettings(next);
     await api.aiSettings.update(next as any);
     setDraftModel({ id: '', label: '', provider: 'gemini', apiKey: '', model: 'gemma-3-27b-it', multimodal: true, active: false });
-    toast.success('Model added');
+    toast.success(isEditing ? 'Model updated successfully' : 'Model added successfully');
   };
 
   const toggleModel = async (id: string) => {
@@ -725,6 +783,9 @@ export default function ChatbotPage() {
   };
 
   const removeModel = async (id: string) => {
+    if (draftModel.id === id) {
+      cancelEditModel();
+    }
     const nextModels = (settings.models || []).filter((model) => model.id !== id);
     if (!nextModels.some((model) => model.active) && nextModels[0]) nextModels[0].active = true;
     const next = { ...settings, models: nextModels };
@@ -996,42 +1057,265 @@ export default function ChatbotPage() {
               <>
                 <div className="grid gap-4 lg:grid-cols-2">
                   <FormField label="Model label">
-                    <Input value={draftModel.label} onChange={(event) => setDraftModel({ ...draftModel, label: event.target.value })} placeholder="Gemma main, OpenRouter backup..." />
+                    <Input
+                      value={draftModel.label}
+                      onChange={(event) => setDraftModel({ ...draftModel, label: event.target.value })}
+                      placeholder="Gemma main, OpenRouter backup..."
+                    />
                   </FormField>
                   <FormField label="Provider">
-                    <Select value={draftModel.provider} onChange={(provider) => setDraftModel({ ...draftModel, provider: provider as AiSettings['provider'], model: provider === 'openrouter' ? 'google/gemma-3-27b-it' : provider === 'openai' ? 'gpt-4o-mini' : 'gemma-3-27b-it' })} options={providerOptions} />
+                    <Select
+                      value={draftModel.provider}
+                      onChange={(provider) => {
+                        const nextProvider = provider as AiSettings['provider'];
+                        const defaultModel =
+                          nextProvider === 'openrouter'
+                            ? 'google/gemma-3-27b-it'
+                            : nextProvider === 'openai'
+                            ? 'gpt-4o-mini'
+                            : 'gemma-3-27b-it';
+                        const existingKey =
+                          (settings.models || []).find((m) => m.provider === nextProvider && m.apiKey)?.apiKey || '';
+                        setDraftModel((prev) => ({
+                          ...prev,
+                          provider: nextProvider,
+                          model: defaultModel,
+                          apiKey: prev.apiKey || existingKey,
+                        }));
+                      }}
+                      options={providerOptions}
+                    />
                   </FormField>
-                  <FormField label="API key">
-                    <Input value={draftModel.apiKey} onChange={(event) => setDraftModel({ ...draftModel, apiKey: event.target.value })} type="password" placeholder="Provider API key" />
+                  <FormField
+                    label={
+                      <div className="flex items-center justify-between w-full">
+                        <span>API key</span>
+                        {savedKeyForCurrentProvider && (
+                          <button
+                            type="button"
+                            onClick={fillSavedKey}
+                            className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline cursor-pointer"
+                            title="Auto-fill with saved key for this provider"
+                          >
+                            <Sparkles className="h-3 w-3" /> Auto-fill saved {draftModel.provider} key
+                          </button>
+                        )}
+                      </div>
+                    }
+                  >
+                    <div className="relative flex items-center">
+                      <Input
+                        value={draftModel.apiKey}
+                        onChange={(event) => setDraftModel({ ...draftModel, apiKey: event.target.value })}
+                        type={showDraftKey ? 'text' : 'password'}
+                        placeholder="Provider API key"
+                        className="pr-16 font-mono text-xs"
+                      />
+                      <div className="absolute right-1 flex items-center gap-0.5">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                          onClick={() => setShowDraftKey((prev) => !prev)}
+                          title={showDraftKey ? 'Hide key' : 'Show key'}
+                        >
+                          {showDraftKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                        </Button>
+                        {draftModel.apiKey && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            onClick={() => {
+                              navigator.clipboard.writeText(draftModel.apiKey);
+                              toast.success('API key copied');
+                            }}
+                            title="Copy API key"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   </FormField>
                   <FormField label="Model name">
-                    <Input value={draftModel.model} onChange={(event) => setDraftModel({ ...draftModel, model: event.target.value })} placeholder="gemma-3-27b-it" />
+                    <Input
+                      value={draftModel.model}
+                      onChange={(event) => setDraftModel({ ...draftModel, model: event.target.value })}
+                      placeholder="gemma-3-27b-it"
+                    />
                   </FormField>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button variant={draftModel.multimodal ? 'default' : 'outline'} onClick={() => setDraftModel({ ...draftModel, multimodal: !draftModel.multimodal })}>
-                    {draftModel.multimodal ? <FileImage className="h-4 w-4" /> : <ImageOff className="h-4 w-4" />}
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant={draftModel.multimodal ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-8 gap-1.5 text-xs font-medium"
+                    onClick={() => setDraftModel({ ...draftModel, multimodal: !draftModel.multimodal })}
+                  >
+                    {draftModel.multimodal ? <FileImage className="h-3.5 w-3.5" /> : <ImageOff className="h-3.5 w-3.5" />}
                     {draftModel.multimodal ? 'File/Image active' : 'File/Image inactive'}
                   </Button>
-                  <Button onClick={addModel}>
-                    <Save className="h-4 w-4" /> Add Model
+                  <Button size="sm" className="h-8 gap-1.5 text-xs font-medium" onClick={saveOrUpdateModel}>
+                    <Save className="h-3.5 w-3.5" /> {draftModel.id ? 'Save Changes' : 'Add Model'}
                   </Button>
+                  {draftModel.id && (
+                    <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs" onClick={cancelEditModel}>
+                      <X className="h-3.5 w-3.5" /> Cancel Edit
+                    </Button>
+                  )}
                 </div>
 
                 <div className="grid gap-3">
-                  {(settings.models || []).map((model) => (
-                    <div key={model.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-muted/35 p-3 sm:flex-row sm:items-center">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold">{model.label}</p>
-                        <p className="truncate text-xs text-muted-foreground">{model.provider} - {model.model}</p>
+                  {(settings.models || []).map((model, index) => {
+                    const isPrimary = index === 0;
+                    const isBeingEdited = draftModel.id === model.id;
+                    const resolvedKey = model.apiKey || (model.provider === 'gemini' ? settings.geminiKey : model.provider === 'openrouter' ? settings.openRouterKey : settings.openAiKey);
+
+                    return (
+                      <div
+                        key={model.id}
+                        className={`group relative flex flex-col gap-3 rounded-2xl border p-3.5 transition-all sm:flex-row sm:items-center sm:justify-between ${
+                          isBeingEdited
+                            ? 'border-primary bg-primary/10 ring-1 ring-primary/40'
+                            : isPrimary
+                            ? 'border-amber-500/30 bg-amber-500/[0.04]'
+                            : 'border-border/70 bg-muted/30 hover:border-border hover:bg-muted/50'
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1 space-y-1.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="truncate text-sm font-semibold text-foreground">{model.label}</p>
+                            {isPrimary && (
+                              <Badge variant="outline" className="h-5 gap-1 px-2 text-[10px] font-semibold border-amber-500/40 text-amber-400 bg-amber-500/10">
+                                <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" /> Primary
+                              </Badge>
+                            )}
+                            <Badge
+                              variant="outline"
+                              className={`h-5 gap-1 px-2 text-[10px] font-medium ${
+                                model.active
+                                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                                  : 'border-muted text-muted-foreground'
+                              }`}
+                            >
+                              <span className={`h-1.5 w-1.5 rounded-full ${model.active ? 'bg-emerald-400 animate-pulse' : 'bg-muted-foreground'}`} />
+                              {model.active ? 'Enabled' : 'Disabled'}
+                            </Badge>
+                            <Badge variant={model.multimodal ? 'secondary' : 'outline'} className="h-5 gap-1 px-2 text-[10px]">
+                              {model.multimodal ? <FileImage className="h-2.5 w-2.5 text-primary" /> : <ImageOff className="h-2.5 w-2.5 text-muted-foreground" />}
+                              {model.multimodal ? 'files on' : 'files off'}
+                            </Badge>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <span className="font-mono text-xs">{model.provider} · {model.model}</span>
+                            {resolvedKey ? (
+                              <span className="inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground/80 bg-background/60 px-1.5 py-0.5 rounded border border-border/50">
+                                <Key className="h-3 w-3 text-muted-foreground/60" />
+                                {resolvedKey.length > 8 ? `${resolvedKey.slice(0, 4)}••••${resolvedKey.slice(-4)}` : '••••••••'}
+                              </span>
+                            ) : (
+                              <span className="text-[11px] text-destructive/80">(no key)</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                          {/* Copy Key Button */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className={`h-8 gap-1.5 px-2.5 text-xs font-medium border-border/80 transition-all ${
+                              copiedKeyModelId === model.id
+                                ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400'
+                                : 'hover:border-primary/50 hover:bg-primary/5'
+                            }`}
+                            onClick={() => copyApiKey(model)}
+                            title="Copy API key to clipboard"
+                          >
+                            {copiedKeyModelId === model.id ? (
+                              <>
+                                <Check className="h-3.5 w-3.5 text-emerald-400 animate-in zoom-in duration-150" />
+                                <span className="font-semibold text-emerald-400">Copied</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span>Copy Key</span>
+                              </>
+                            )}
+                          </Button>
+
+                          {/* Edit Button */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 gap-1.5 px-2.5 text-xs font-medium hover:bg-muted"
+                            onClick={() => editModel(model)}
+                            title="Edit model configuration"
+                          >
+                            <Edit3 className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span>Edit</span>
+                          </Button>
+
+                          {/* Primary toggle */}
+                          {!isPrimary && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="h-8 gap-1.5 px-2.5 text-xs font-medium hover:bg-secondary/80"
+                              onClick={() => setPrimaryModel(model.id)}
+                              title="Set as primary model"
+                            >
+                              <Star className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span>Set Primary</span>
+                            </Button>
+                          )}
+
+                          {/* Activate / Deactivate Toggle */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className={`h-8 gap-1.5 px-2.5 text-xs font-medium transition-colors ${
+                              model.active
+                                ? 'text-muted-foreground hover:text-foreground'
+                                : 'border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300'
+                            }`}
+                            onClick={() => toggleModel(model.id)}
+                            title={model.active ? 'Deactivate model' : 'Activate model'}
+                          >
+                            {model.active ? (
+                              <>
+                                <PowerOff className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span>Deactivate</span>
+                              </>
+                            ) : (
+                              <>
+                                <Power className="h-3.5 w-3.5 text-emerald-400" />
+                                <span>Activate</span>
+                              </>
+                            )}
+                          </Button>
+
+                          {/* Remove Button */}
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="h-8 gap-1.5 px-2.5 text-xs font-medium"
+                            onClick={() => removeModel(model.id)}
+                            title="Remove this model configuration"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            <span>Remove</span>
+                          </Button>
+                        </div>
                       </div>
-                      <Badge variant={model.multimodal ? 'secondary' : 'outline'} className="rounded-full">{model.multimodal ? 'files on' : 'files off'}</Badge>
-                      <Badge variant={model.active ? 'default' : 'outline'} className="rounded-full">{model.active ? 'Enabled' : 'Disabled'}</Badge>
-                      <Button variant="outline" onClick={() => toggleModel(model.id)}>{model.active ? 'Deactivate' : 'Activate'}</Button>
-                      <Button variant="secondary" onClick={() => setPrimaryModel(model.id)}>Set Primary</Button>
-                      <Button variant="destructive" onClick={() => removeModel(model.id)}>Remove</Button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </>
             )}
