@@ -185,7 +185,7 @@ export function FormField({
   children,
   description,
 }: {
-  label: string;
+  label: ReactNode;
   children: ReactNode;
   description?: string;
 }) {
