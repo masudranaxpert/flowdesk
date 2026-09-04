@@ -14,13 +14,14 @@ import {
   Layers3,
   LibraryBig,
   MapPin,
+  Milestone,
   Plus,
+  Sparkles,
   Target,
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { Spinner } from '../components/UI';
-import type { Stats } from '../types';
-import type { RoutineItem } from '../types';
+import type { Stats, RoutineItem, Roadmap } from '../types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -92,6 +93,7 @@ export default function Dashboard() {
     return cachedRoutines.filter((item) => !item.repeatWeekly && item.date >= today).slice(0, 3);
   });
   const [routines, setRoutines] = useState<RoutineItem[]>(cachedRoutines);
+  const [activeRoadmap, setActiveRoadmap] = useState<Roadmap | null>(null);
   const [routineOpen, setRoutineOpen] = useState(false);
   const [currentTimeStr, setCurrentTimeStr] = useState(() => new Date().toTimeString().slice(0, 5));
   const [scratchpad, setScratchpad] = useState(() => localStorage.getItem('dashboard-scratchpad') || '');
@@ -109,6 +111,10 @@ export default function Dashboard() {
       cachedRoutines = items;
       const today = localDateString();
       setUpcoming(items.filter((item) => !item.repeatWeekly && item.date >= today).slice(0, 3));
+    }).catch(() => {});
+    api.roadmaps.list().then((res) => {
+      const items: Roadmap[] = Array.isArray(res?.items) ? res.items : Array.isArray(res) ? res : [];
+      if (items.length > 0) setActiveRoadmap(items[0]);
     }).catch(() => {});
   }, []);
 
@@ -128,6 +134,23 @@ export default function Dashboard() {
     if (!stats || !stats.questions) return 0;
     return Math.round((stats.solved / stats.questions) * 100);
   }, [stats]);
+
+  const roadmapProgress = useMemo(() => {
+    if (!activeRoadmap) return { percentage: 0, completed: 0, total: 0 };
+    let total = 0;
+    let completed = 0;
+    (activeRoadmap.phases || []).forEach((p) => {
+      (p.tasks || []).forEach((t) => {
+        total += 1;
+        if (t.completed) completed += 1;
+      });
+    });
+    return {
+      total,
+      completed,
+      percentage: total > 0 ? Math.round((completed / total) * 100) : 0,
+    };
+  }, [activeRoadmap]);
 
   const today = new Date();
   const todayIndex = today.getDay();
@@ -306,6 +329,58 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* ── Active Learning Roadmap Card ── */}
+      {activeRoadmap ? (
+        <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-r from-card via-card to-primary/5 p-4 sm:p-5 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3.5">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
+                <Milestone className="h-6 w-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-primary">Active Learning Track</span>
+                  <span className="text-xs text-muted-foreground">· {activeRoadmap.duration}</span>
+                </div>
+                <h4 className="text-base font-semibold tracking-tight text-foreground">{activeRoadmap.title}</h4>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <span className="text-xl font-bold text-foreground">{roadmapProgress.percentage}%</span>
+                <span className="block text-[11px] text-muted-foreground">{roadmapProgress.completed}/{roadmapProgress.total} milestones</span>
+              </div>
+              <div className="w-24 hidden sm:block h-2.5 rounded-full bg-muted overflow-hidden">
+                <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${roadmapProgress.percentage}%` }} />
+              </div>
+              <Button size="sm" variant="outline" asChild className="gap-1.5 shrink-0">
+                <Link to="/progress">
+                  View Roadmap <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between rounded-3xl border border-dashed border-border bg-card/40 p-4">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
+              <Milestone className="h-5 w-5" />
+            </div>
+            <div>
+              <h5 className="text-sm font-semibold">Start a 12-Month Learning Roadmap</h5>
+              <p className="text-xs text-muted-foreground">Track Rust, DSA, systems, or data science goals step by step.</p>
+            </div>
+          </div>
+          <Button size="sm" asChild className="gap-1.5 shrink-0">
+            <Link to="/progress">
+              <Sparkles className="h-3.5 w-3.5" /> Start Track
+            </Link>
+          </Button>
+        </div>
+      )}
 
       <section className="surface overflow-hidden rounded-3xl p-4 sm:p-5">
         <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-center">

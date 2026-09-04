@@ -185,3 +185,49 @@ export interface UploadedFile {
   size: number;
   createdAt?: string;
 }
+
+export interface RoadmapTask {
+  id: string;
+  title: string;
+  completed: boolean;
+  completedAt?: string;
+  notes?: string;
+}
+
+export interface RoadmapPhase {
+  id: string;
+  title: string;
+  description?: string;
+  targetMonth?: number;
+  tasks: RoadmapTask[];
+}
+
+export interface DailyHabit {
+  id: string;
+  title: string;
+  targetMinutes?: number;
+}
+
+export interface DailyProgressLog {
+  date: string;
+  minutesSpent: number;
+  habitsDone: string[];
+  tasksDone?: string[];
+  notes?: string;
+}
+
+export interface Roadmap {
+  _id: string;
+  id?: string;
+  title: string;
+  description: string;
+  category: string;
+  duration: string;
+  dailyHabits: DailyHabit[];
+  phases: RoadmapPhase[];
+  dailyLogs: DailyProgressLog[];
+  status: 'active' | 'completed' | 'paused';
+  createdAt: string;
+  updatedAt: string;
+}
+

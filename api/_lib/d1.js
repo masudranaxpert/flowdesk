@@ -100,6 +100,9 @@ export function mapBase(row) {
     models: row.models === undefined ? undefined : fromJson(row.models),
     messages: row.messages === undefined ? undefined : fromJson(row.messages),
     attachments: row.attachments === undefined ? undefined : fromJson(row.attachments),
+    phases: row.phases === undefined ? undefined : fromJson(row.phases),
+    dailyHabits: row.dailyHabits === undefined ? undefined : fromJson(row.dailyHabits),
+    dailyLogs: row.dailyLogs === undefined ? undefined : fromJson(row.dailyLogs),
   };
 }
 
@@ -224,6 +227,16 @@ export async function ensureSchema() {
         createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL,
         UNIQUE(userId, categoryId)
       );`),
+      d1Query(`CREATE TABLE IF NOT EXISTS roadmaps (
+        id TEXT PRIMARY KEY, userId TEXT NOT NULL, title TEXT NOT NULL,
+        description TEXT DEFAULT '', category TEXT DEFAULT 'general',
+        duration TEXT DEFAULT '12 Months',
+        dailyHabits TEXT DEFAULT '[]',
+        phases TEXT DEFAULT '[]',
+        dailyLogs TEXT DEFAULT '[]',
+        status TEXT DEFAULT 'active',
+        createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL
+      );`),
     ]);
 
     await Promise.all([
@@ -238,6 +251,7 @@ export async function ensureSchema() {
       d1Query(`CREATE INDEX IF NOT EXISTS idx_share_links_code ON share_links(code);`),
       d1Query(`CREATE INDEX IF NOT EXISTS idx_doc_notes_user_chapter ON doc_notes(userId, categoryId, chapterId);`),
       d1Query(`CREATE INDEX IF NOT EXISTS idx_doc_progress_user ON doc_progress(userId, categoryId);`),
+      d1Query(`CREATE INDEX IF NOT EXISTS idx_roadmaps_user_created ON roadmaps(userId, createdAt);`),
       d1Query(`CREATE INDEX IF NOT EXISTS idx_transfers_user_date ON transfers(userId, date);`),
     ]);
 

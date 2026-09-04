@@ -39,7 +39,7 @@ function cleanHistoryMessages(messages: ChatMessage[]) {
 
 type AiAction = {
   operation: 'create' | 'update' | 'update_many' | 'delete' | 'delete_many' | 'delete_all';
-  resource: 'bookmarks' | 'notebooks' | 'codes' | 'questions' | 'routines' | 'categories' | 'passwords';
+  resource: 'bookmarks' | 'notebooks' | 'codes' | 'questions' | 'routines' | 'categories' | 'passwords' | 'roadmaps';
   id?: string;
   ids?: string[];
   data?: Record<string, any>;
@@ -68,6 +68,7 @@ type VaultContext = {
   routines: any[];
   categories: any[];
   passwords: any[];
+  roadmaps: any[];
 };
 
 const categoryScopes = ['all', 'bookmark', 'notebook', 'code', 'question', 'password'] as const;
@@ -95,6 +96,7 @@ const emptyVaultContext: VaultContext = {
   routines: [],
   categories: [],
   passwords: [],
+  roadmaps: [],
 };
 
 const resourceContextKey: Record<AiAction['resource'], keyof VaultContext> = {
@@ -105,6 +107,7 @@ const resourceContextKey: Record<AiAction['resource'], keyof VaultContext> = {
   routines: 'routines',
   categories: 'categories',
   passwords: 'passwords',
+  roadmaps: 'roadmaps',
 };
 
 function normalizeActions(value: unknown): AiAction[] {
@@ -198,6 +201,14 @@ function sanitizeActionData(resource: AiAction['resource'], data: Record<string,
       } else {
         delete next.difficulty;
       }
+    }
+  }
+  if (resource === 'roadmaps') {
+    if (operation === 'create') {
+      next.title = String(next.title || 'Learning Roadmap').trim();
+      if (!Array.isArray(next.phases)) next.phases = [];
+      if (!Array.isArray(next.dailyHabits)) next.dailyHabits = [];
+      if (!Array.isArray(next.dailyLogs)) next.dailyLogs = [];
     }
   }
   return next;
@@ -605,7 +616,7 @@ export default function ChatbotPage() {
   }, [pendingActionBatchId, updateActionBatch]);
 
   const refreshContext = useCallback(async () => {
-    const [bookmarks, notes, codes, questions, routines, categories, passwords] = await Promise.all([
+    const [bookmarks, notes, codes, questions, routines, categories, passwords, roadmaps] = await Promise.all([
       api.bookmarks.list(),
       api.notebooks.list(),
       api.codes.list(),
@@ -613,8 +624,10 @@ export default function ChatbotPage() {
       api.routines.list(),
       api.categories.list(),
       api.passwords.list(),
+      api.roadmaps.list().catch(() => []),
     ]);
     const passwordItems = Array.isArray((passwords as any).items) ? (passwords as any).items : passwords;
+    const roadmapItems = Array.isArray((roadmaps as any).items) ? (roadmaps as any).items : Array.isArray(roadmaps) ? roadmaps : [];
     const fullContext = {
       bookmarks: bookmarks.map((item: any) => ({ id: item._id, title: item.title, url: item.url, category: item.category, tags: item.tags })),
       notes: notes.map((item: any) => ({ id: item._id, title: item.title, category: item.category, preview: item.content?.slice?.(0, 500) || '' })),
@@ -623,6 +636,18 @@ export default function ChatbotPage() {
       routines: routines.map(compactRoutine),
       categories: categories.map((item: any) => ({ id: item._id, name: item.name, slug: item.slug, scope: item.scope })),
       passwords: passwordItems.map((item: any) => ({ id: item._id, title: item.title, url: item.url, username: item.username, password: item.password, category: item.category })),
+      roadmaps: roadmapItems.map((item: any) => ({
+        id: item._id || item.id,
+        title: item.title,
+        duration: item.duration,
+        category: item.category,
+        status: item.status,
+        phases: (item.phases || []).map((p: any) => ({
+          id: p.id,
+          title: p.title,
+          tasks: (p.tasks || []).map((t: any) => ({ id: t.id, title: t.title, completed: Boolean(t.completed) })),
+        })),
+      })),
     };
     const promptContext = {
       bookmarks: fullContext.bookmarks.slice(0, 80),
@@ -632,6 +657,7 @@ export default function ChatbotPage() {
       routines: fullContext.routines.slice(0, 200),
       categories: fullContext.categories.slice(0, 120),
       passwords: fullContext.passwords.slice(0, 50),
+      roadmaps: fullContext.roadmaps.slice(0, 20),
       actionIndex: {
         bookmarks: fullContext.bookmarks.slice(0, 200).map(({ id, title }: any) => ({ id, title })),
         notebooks: fullContext.notes.slice(0, 200).map(({ id, title }: any) => ({ id, title })),
@@ -640,6 +666,7 @@ export default function ChatbotPage() {
         routines: fullContext.routines.map(({ id, title, subject, type, dayOfWeek, date, startTime, endTime, room, teacher, repeatWeekly }: any) => ({ id, title, subject, type, dayOfWeek, date, startTime, endTime, room, teacher, repeatWeekly })),
         categories: fullContext.categories.slice(0, 200).map(({ id, name, slug, scope }: any) => ({ id, title: name, slug, scope })),
         passwords: fullContext.passwords.slice(0, 100).map(({ id, title }: any) => ({ id, title })),
+        roadmaps: fullContext.roadmaps.slice(0, 50).map(({ id, title, phases }: any) => ({ id, title, phases })),
       },
     };
     const prompt = JSON.stringify(promptContext, null, 2);
@@ -850,6 +877,7 @@ export default function ChatbotPage() {
       routines: api.routines,
       categories: api.categories,
       passwords: api.passwords,
+      roadmaps: api.roadmaps,
     };
     try {
       const validation = validateActions(pendingActions, vaultContext);

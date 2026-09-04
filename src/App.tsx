@@ -16,6 +16,7 @@ const NoteEditorPage = lazy(() => import('./pages/NoteEditor'));
 const SharePage = lazy(() => import('./pages/Share'));
 const ChatbotPage = lazy(() => import('./pages/Chatbot'));
 const RoutinePage = lazy(() => import('./pages/Routine'));
+const ProgressPage = lazy(() => import('./pages/Progress'));
 const FileSharePage = lazy(() => import('./pages/FileShare'));
 const HisabPage = lazy(() => import('./pages/Hisab'));
 const PasswordsPage = lazy(() => import('./pages/Passwords'));
@@ -97,6 +98,7 @@ export default function App() {
               <Route path="/categories" element={<CategoriesPage />} />
               <Route path="/chatbot" element={<ChatbotPage />} />
               <Route path="/routine" element={<RoutinePage />} />
+              <Route path="/progress" element={<ProgressPage />} />
               <Route path="/files" element={<FileSharePage />} />
               <Route path="/player/:fileId" element={<VideoPlayer />} />
               <Route path="/hisab" element={<HisabPage />} />
