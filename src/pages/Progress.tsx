@@ -20,6 +20,9 @@ import {
   BookOpen,
   Search,
   Share2,
+  BarChart3,
+  FileText,
+  Award,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -318,6 +321,7 @@ export default function Progress() {
   // Add phase dialog state
   const [newPhaseOpen, setNewPhaseOpen] = useState(false);
   const [newPhaseTitle, setNewPhaseTitle] = useState('');
+  const [activeTab, setActiveTab] = useState<'curriculum' | 'analytics'>('curriculum');
 
   // Fetch all roadmaps
   const fetchRoadmaps = useCallback(async () => {
@@ -566,6 +570,98 @@ export default function Progress() {
     });
     navigator.clipboard.writeText(md);
     toast.success('Roadmap copied to clipboard as Markdown!');
+  };
+
+  // Last 14 days daily study time logs for the bar chart
+  const last14Days = useMemo(() => {
+    const result = [];
+    const logsMap = new Map<string, DailyProgressLog>();
+    (currentRoadmap?.dailyLogs || []).forEach((log) => {
+      if (log.date) logsMap.set(log.date, log);
+    });
+
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = localDateString(d);
+      const log = logsMap.get(dateStr);
+      const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+      const dayNum = d.getDate();
+      result.push({
+        date: dateStr,
+        dayLabel: `${dayName} ${dayNum}`,
+        shortDay: dayName[0],
+        minutes: log?.minutesSpent || 0,
+        habitsCount: log?.habitsDone?.length || 0,
+        notes: log?.notes || '',
+      });
+    }
+    return result;
+  }, [currentRoadmap?.dailyLogs]);
+
+  const maxChartMinutes = useMemo(() => {
+    const max = Math.max(...last14Days.map((d) => d.minutes), 60);
+    return Math.ceil(max / 30) * 30;
+  }, [last14Days]);
+
+  const avgMinutes = useMemo(() => {
+    const logged = last14Days.filter((d) => d.minutes > 0);
+    return logged.length > 0 ? Math.round(logged.reduce((acc, d) => acc + d.minutes, 0) / logged.length) : 0;
+  }, [last14Days]);
+
+  const habitAdherence = useMemo(() => {
+    const totalLogs = currentRoadmap?.dailyLogs?.length || 0;
+    if (totalLogs === 0) return 0;
+    const habitsTotal = currentRoadmap?.dailyHabits?.length || 1;
+    const completedHabitChecks = (currentRoadmap?.dailyLogs || []).reduce((acc, l) => acc + (l.habitsDone?.length || 0), 0);
+    return Math.min(100, Math.round((completedHabitChecks / (totalLogs * habitsTotal)) * 100));
+  }, [currentRoadmap]);
+
+  const phaseStats = useMemo(() => {
+    if (!currentRoadmap?.phases) return [];
+    return currentRoadmap.phases.map((phase) => {
+      const total = phase.tasks?.length || 0;
+      const completed = phase.tasks?.filter((t) => t.completed).length || 0;
+      const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+      return {
+        id: phase.id,
+        title: phase.title,
+        targetMonth: phase.targetMonth,
+        total,
+        completed,
+        pct,
+        isDone: total > 0 && completed === total,
+      };
+    });
+  }, [currentRoadmap?.phases]);
+
+  const handleCopyFullReport = () => {
+    if (!currentRoadmap) return;
+    const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    let report = `=========================================\n`;
+    report += `PROGRESS & MASTERY REPORT: ${currentRoadmap.title.toUpperCase()}\n`;
+    report += `Generated: ${today}\n`;
+    report += `=========================================\n\n`;
+    report += `[KEY METRICS]\n`;
+    report += `- Overall Completion: ${stats.percentage}%\n`;
+    report += `- Milestones Completed: ${stats.completedTasks} / ${stats.totalTasks}\n`;
+    report += `- Total Study Time Logged: ${stats.totalHours} hours\n`;
+    report += `- Current Streak: ${stats.streak} days\n`;
+    report += `- Habit Consistency: ${habitAdherence}%\n`;
+    report += `- 14-Day Average Study: ${avgMinutes} mins/session\n\n`;
+    report += `[PHASE BREAKDOWN]\n`;
+    phaseStats.forEach((p) => {
+      report += `- ${p.title}: ${p.completed}/${p.total} tasks (${p.pct}%)${p.isDone ? ' [COMPLETED]' : ''}\n`;
+    });
+    if ((currentRoadmap.dailyLogs || []).length > 0) {
+      report += `\n[RECENT ACTIVITY LOGS]\n`;
+      currentRoadmap.dailyLogs.slice(0, 10).forEach((l) => {
+        report += `- ${l.date}: ${l.minutesSpent} mins ${l.notes ? `| Note: ${l.notes}` : ''}\n`;
+      });
+    }
+    report += `\n=========================================\n`;
+    navigator.clipboard.writeText(report);
+    toast.success('Full progress report copied to clipboard!');
   };
 
   // Filter phases by search query
@@ -897,8 +993,36 @@ Return a STRICT valid JSON object (without markdown code blocks) representing th
                   </div>
                 </Card>
 
-                {/* Phases & Tasks Accordion */}
-                <div className="space-y-4">
+                {/* Navigation Tabs: Milestones vs Progress Charts & Report */}
+                <div className="flex items-center gap-2 border-b border-border/60 pb-3">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('curriculum')}
+                    className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all ${
+                      activeTab === 'curriculum'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                    }`}
+                  >
+                    <Layers className="h-4 w-4" />
+                    Milestones & Curriculum ({currentRoadmap.phases?.length || 0})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('analytics')}
+                    className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all ${
+                      activeTab === 'analytics'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                    }`}
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                    Progress Charts & Report
+                  </button>
+                </div>
+
+                {activeTab === 'curriculum' ? (
+                  <div className="space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
                     <h4 className="text-base font-semibold tracking-tight flex items-center gap-2">
                       <Layers className="h-4 w-4 text-primary" />
@@ -1112,6 +1236,217 @@ Return a STRICT valid JSON object (without markdown code blocks) representing th
                     }))}
                   </div>
                 </div>
+                ) : (
+                  <div className="space-y-6 animate-fade-in">
+                  {/* 14-Day Consistency & Study Hours Chart */}
+                  <Card className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-4">
+                      <div>
+                        <h3 className="text-sm font-semibold tracking-tight flex items-center gap-2">
+                          <BarChart3 className="h-4 w-4 text-amber-500" />
+                          14-Day Study Consistency Chart
+                        </h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Daily study minutes logged over the last 2 weeks
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-[11px] gap-1">
+                          <Clock className="h-3 w-3" /> Avg: {avgMinutes}m / session
+                        </Badge>
+                        <Badge variant="outline" className="text-[11px] text-amber-500 border-amber-500/30">
+                          Goal: 60m / day
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* Chart Bars */}
+                    <div className="space-y-2">
+                      <div className="relative h-44 w-full flex items-end justify-between gap-1.5 pt-6 pb-2 px-1">
+                        {/* 60m Goal Reference Line */}
+                        <div
+                          className="absolute left-0 right-0 border-b border-dashed border-amber-500/40 pointer-events-none z-10 flex justify-end pr-1"
+                          style={{ bottom: `${Math.round((60 / maxChartMinutes) * 100)}%` }}
+                        >
+                          <span className="text-[9px] font-mono text-amber-500/80 -translate-y-full">
+                            60m Target
+                          </span>
+                        </div>
+
+                        {last14Days.map((item, idx) => {
+                          const heightPct = Math.min(100, Math.round((item.minutes / maxChartMinutes) * 100));
+                          const isToday = idx === last14Days.length - 1;
+
+                          return (
+                            <div
+                              key={item.date}
+                              className="group relative flex-1 flex flex-col items-center h-full justify-end"
+                            >
+                              {/* Tooltip on hover */}
+                              <div className="absolute -top-9 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 whitespace-nowrap rounded-md bg-popover px-2 py-1 text-[10px] font-medium text-popover-foreground shadow-md border border-border">
+                                {item.dayLabel}: <span className="font-bold text-amber-500">{item.minutes}m</span>
+                                {item.notes ? ` (${item.notes.slice(0, 20)}...)` : ''}
+                              </div>
+
+                              {/* Value label above bar if > 0 */}
+                              {item.minutes > 0 && (
+                                <span className="text-[9px] font-mono font-semibold text-muted-foreground mb-1">
+                                  {item.minutes}m
+                                </span>
+                              )}
+
+                              {/* Bar Pill */}
+                              <div
+                                className={`w-full max-w-[28px] rounded-t-md transition-all duration-300 ${
+                                  item.minutes > 0
+                                    ? isToday
+                                      ? 'bg-amber-500 shadow-sm shadow-amber-500/20'
+                                      : 'bg-primary hover:bg-primary/90'
+                                    : 'bg-muted/40'
+                                }`}
+                                style={{ height: item.minutes > 0 ? `${Math.max(8, heightPct)}%` : '4px' }}
+                              />
+
+                              {/* X-axis Day Label */}
+                              <span
+                                className={`mt-2 text-[10px] select-none ${
+                                  isToday
+                                    ? 'font-bold text-amber-500'
+                                    : 'text-muted-foreground'
+                                }`}
+                              >
+                                {item.dayLabel.split(' ')[0]}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-2 border-t border-border/40">
+                        <span>14 days ago</span>
+                        <span className="font-medium text-foreground">Today</span>
+                      </div>
+                    </div>
+                  </Card>
+
+                  {/* Phase-by-Phase Progress Breakdown */}
+                  <Card className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                      <div>
+                        <h3 className="text-sm font-semibold tracking-tight flex items-center gap-2">
+                          <Target className="h-4 w-4 text-primary" />
+                          Phase-by-Phase Progress Breakdown
+                        </h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Detailed milestones completion across all curriculum phases
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="text-xs font-semibold">
+                        {phaseStats.filter((p) => p.isDone).length} of {phaseStats.length} Phases Completed
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+                      {phaseStats.map((phase, idx) => (
+                        <div
+                          key={phase.id}
+                          className={`rounded-2xl border p-3.5 transition-all ${
+                            phase.isDone
+                              ? 'border-emerald-500/30 bg-emerald-500/5'
+                              : phase.pct > 0
+                              ? 'border-primary/30 bg-primary/5'
+                              : 'border-border/60 bg-muted/20'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="grid h-6 w-6 place-items-center rounded-lg bg-muted text-[11px] font-bold shrink-0">
+                                {idx + 1}
+                              </span>
+                              <span className="text-xs font-semibold truncate text-foreground">
+                                {phase.title}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-xs font-mono font-medium text-muted-foreground">
+                                {phase.completed}/{phase.total} ({phase.pct}%)
+                              </span>
+                              {phase.isDone ? (
+                                <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/30 text-[10px] gap-1">
+                                  <CheckCircle2 className="h-3 w-3" /> Done
+                                </Badge>
+                              ) : phase.pct > 0 ? (
+                                <Badge variant="secondary" className="text-[10px]">
+                                  In Progress
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                                  Pending
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-muted/60">
+                            <div
+                              className={`h-full rounded-full transition-all duration-300 ${
+                                phase.isDone ? 'bg-emerald-500' : 'bg-primary'
+                              }`}
+                              style={{ width: `${phase.pct}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+
+                  {/* Comprehensive Executive Report Card */}
+                  <Card className="rounded-3xl border border-primary/20 bg-gradient-to-br from-card via-card to-primary/5 p-6 shadow-sm space-y-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="grid h-8 w-8 place-items-center rounded-xl bg-primary/10 text-primary">
+                          <FileText className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-semibold tracking-tight">Executive Progress Report</h3>
+                          <p className="text-xs text-muted-foreground">Comprehensive overview of consistency and milestones</p>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleCopyFullReport}
+                        className="gap-1.5 text-xs rounded-xl"
+                      >
+                        <Share2 className="h-3.5 w-3.5" /> Copy Full Report
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className="rounded-2xl border border-border/60 bg-muted/30 p-3.5">
+                        <span className="text-[11px] text-muted-foreground uppercase font-semibold tracking-wider block">Total Logged</span>
+                        <span className="text-xl font-bold text-foreground mt-1 block">{stats.totalHours} hrs</span>
+                        <span className="text-[10px] text-muted-foreground">study sessions</span>
+                      </div>
+                      <div className="rounded-2xl border border-border/60 bg-muted/30 p-3.5">
+                        <span className="text-[11px] text-muted-foreground uppercase font-semibold tracking-wider block">Habit Adherence</span>
+                        <span className="text-xl font-bold text-emerald-500 mt-1 block">{habitAdherence}%</span>
+                        <span className="text-[10px] text-muted-foreground">commitment rate</span>
+                      </div>
+                      <div className="rounded-2xl border border-border/60 bg-muted/30 p-3.5">
+                        <span className="text-[11px] text-muted-foreground uppercase font-semibold tracking-wider block">Completed Tasks</span>
+                        <span className="text-xl font-bold text-primary mt-1 block">{stats.completedTasks} / {stats.totalTasks}</span>
+                        <span className="text-[10px] text-muted-foreground">{stats.percentage}% overall</span>
+                      </div>
+                      <div className="rounded-2xl border border-border/60 bg-muted/30 p-3.5">
+                        <span className="text-[11px] text-muted-foreground uppercase font-semibold tracking-wider block">Active Streak</span>
+                        <span className="text-xl font-bold text-amber-500 mt-1 block">{stats.streak} Days</span>
+                        <span className="text-[10px] text-muted-foreground">consecutive days</span>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+                )}
               </div>
 
               {/* Right 1 Column: Daily Habits, Time Logger, and Streak */}
