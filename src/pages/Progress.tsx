@@ -321,7 +321,8 @@ export default function Progress() {
   // Add phase dialog state
   const [newPhaseOpen, setNewPhaseOpen] = useState(false);
   const [newPhaseTitle, setNewPhaseTitle] = useState('');
-  const [activeTab, setActiveTab] = useState<'curriculum' | 'analytics'>('curriculum');
+  const [activeTab, setActiveTab] = useState<'curriculum' | 'checkin' | 'report'>('curriculum');
+  const [newHabitTitle, setNewHabitTitle] = useState('');
 
   // Fetch all roadmaps
   const fetchRoadmaps = useCallback(async () => {
@@ -725,6 +726,76 @@ export default function Progress() {
     }
   };
 
+  // Add custom habit to roadmap
+  const handleAddHabit = async () => {
+    if (!newHabitTitle.trim() || !currentRoadmap) return;
+    const newHabit: DailyHabit = {
+      id: `habit-${Date.now()}`,
+      title: newHabitTitle.trim(),
+    };
+    const updatedHabits = [...(currentRoadmap.dailyHabits || []), newHabit];
+    const nextRoadmap = { ...currentRoadmap, dailyHabits: updatedHabits };
+    setRoadmaps((prev) => prev.map((r) => ((r._id || r.id) === (currentRoadmap._id || currentRoadmap.id) ? nextRoadmap : r)));
+    setNewHabitTitle('');
+    try {
+      const id = currentRoadmap._id || currentRoadmap.id;
+      await api.roadmaps.update(id!, { dailyHabits: updatedHabits });
+      toast.success('Habit added');
+    } catch {
+      toast.error('Failed to add habit');
+    }
+  };
+
+  // Remove habit from roadmap
+  const handleDeleteHabit = async (habitId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!currentRoadmap) return;
+    const updatedHabits = (currentRoadmap.dailyHabits || []).filter((h) => h.id !== habitId);
+    const nextRoadmap = { ...currentRoadmap, dailyHabits: updatedHabits };
+    setRoadmaps((prev) => prev.map((r) => ((r._id || r.id) === (currentRoadmap._id || currentRoadmap.id) ? nextRoadmap : r)));
+    try {
+      const id = currentRoadmap._id || currentRoadmap.id;
+      await api.roadmaps.update(id!, { dailyHabits: updatedHabits });
+      toast.success('Habit removed');
+    } catch {
+      toast.error('Failed to remove habit');
+    }
+  };
+
+  // Import routines as habits
+  const handleImportFromRoutine = async () => {
+    if (!currentRoadmap) return;
+    try {
+      const routines = await api.routines.list();
+      const routineItems = Array.isArray(routines) ? routines : (routines as any).items || [];
+      if (routineItems.length === 0) {
+        toast('No routines found in your Routine page.');
+        return;
+      }
+      const existingTitles = new Set((currentRoadmap.dailyHabits || []).map((h) => h.title.toLowerCase()));
+      const newHabits: DailyHabit[] = [];
+      routineItems.forEach((r: any) => {
+        const title = (r.title || r.subject || '').trim();
+        if (title && !existingTitles.has(title.toLowerCase())) {
+          newHabits.push({ id: `habit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, title });
+          existingTitles.add(title.toLowerCase());
+        }
+      });
+      if (newHabits.length === 0) {
+        toast('All routines are already added to habits.');
+        return;
+      }
+      const updatedHabits = [...(currentRoadmap.dailyHabits || []), ...newHabits];
+      const nextRoadmap = { ...currentRoadmap, dailyHabits: updatedHabits };
+      setRoadmaps((prev) => prev.map((r) => ((r._id || r.id) === (currentRoadmap._id || currentRoadmap.id) ? nextRoadmap : r)));
+      const id = currentRoadmap._id || currentRoadmap.id;
+      await api.roadmaps.update(id!, { dailyHabits: updatedHabits });
+      toast.success(`Imported ${newHabits.length} habits from your Routine!`);
+    } catch {
+      toast.error('Could not import from Routine');
+    }
+  };
+
   // Apply a starter preset
   const handleApplyPreset = async (preset: (typeof presets)[0]) => {
     try {
@@ -947,82 +1018,100 @@ Return a STRICT valid JSON object (without markdown code blocks) representing th
             )}
           </div>
 
-          {currentRoadmap && (
-            <div className="grid gap-6 lg:grid-cols-3">
-              {/* Left 2 Columns: Overall Progress & Month-by-Month Phases */}
-              <div className="space-y-6 lg:col-span-2">
-                {/* Hero Overall Progress Card */}
-                <Card className="overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-card via-card to-primary/5 p-6 shadow-sm">
-                  <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Badge className="bg-primary/15 text-primary border-primary/20">
-                          {currentRoadmap.status.toUpperCase()}
-                        </Badge>
-                        <span className="text-xs text-muted-foreground">{currentRoadmap.duration}</span>
-                      </div>
-                      <h3 className="text-2xl font-bold tracking-tight">{currentRoadmap.title}</h3>
-                      {currentRoadmap.description && (
-                        <p className="max-w-md text-sm text-muted-foreground">{currentRoadmap.description}</p>
-                      )}
+           {currentRoadmap && (
+            <div className="space-y-6">
+              {/* Hero Overall Progress Card */}
+              <Card className="overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-card via-card to-primary/5 p-6 shadow-sm">
+                <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-primary/15 text-primary border-primary/20">
+                        {currentRoadmap.status.toUpperCase()}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">{currentRoadmap.duration}</span>
                     </div>
+                    <h3 className="text-2xl font-bold tracking-tight">{currentRoadmap.title}</h3>
+                    {currentRoadmap.description && (
+                      <p className="max-w-md text-sm text-muted-foreground">{currentRoadmap.description}</p>
+                    )}
+                  </div>
 
-                    {/* Circular / Large Percentage Display */}
-                    <div className="flex items-center gap-4 shrink-0">
-                      <div className="grid h-24 w-24 place-items-center rounded-3xl border-2 border-primary/30 bg-primary/10 text-primary shadow-inner">
-                        <div className="text-center">
-                          <span className="text-3xl font-extrabold tracking-tight">{stats.percentage}%</span>
-                          <span className="block text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Done</span>
-                        </div>
+                  {/* Circular / Large Percentage Display */}
+                  <div className="flex items-center gap-4 shrink-0">
+                    <div className="grid h-24 w-24 place-items-center rounded-3xl border-2 border-primary/30 bg-primary/10 text-primary shadow-inner">
+                      <div className="text-center">
+                        <span className="text-3xl font-extrabold tracking-tight">{stats.percentage}%</span>
+                        <span className="block text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Done</span>
                       </div>
                     </div>
                   </div>
-
-                  {/* Progress Bar & Sub Metrics */}
-                  <div className="mt-6 space-y-2">
-                    <div className="h-3 w-full overflow-hidden rounded-full bg-muted/60">
-                      <div
-                        className="h-full rounded-full bg-primary transition-all duration-500"
-                        style={{ width: `${stats.percentage}%` }}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{stats.completedTasks} of {stats.totalTasks} milestones completed</span>
-                      <span>{stats.totalHours} hours total logged</span>
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Navigation Tabs: Milestones vs Progress Charts & Report */}
-                <div className="flex items-center gap-2 border-b border-border/60 pb-3">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('curriculum')}
-                    className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all ${
-                      activeTab === 'curriculum'
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-                    }`}
-                  >
-                    <Layers className="h-4 w-4" />
-                    Milestones & Curriculum ({currentRoadmap.phases?.length || 0})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('analytics')}
-                    className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all ${
-                      activeTab === 'analytics'
-                        ? 'bg-primary text-primary-foreground shadow-sm'
-                        : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-                    }`}
-                  >
-                    <BarChart3 className="h-4 w-4" />
-                    Progress Charts & Report
-                  </button>
                 </div>
 
-                {activeTab === 'curriculum' ? (
-                  <div className="space-y-4">
+                {/* Progress Bar & Sub Metrics */}
+                <div className="mt-6 space-y-2">
+                  <div className="h-3 w-full overflow-hidden rounded-full bg-muted/60">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all duration-500"
+                      style={{ width: `${stats.percentage}%` }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{stats.completedTasks} of {stats.totalTasks} milestones completed</span>
+                    <span>{stats.totalHours} hours total logged</span>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Navigation Tabs */}
+              <div className="flex items-center gap-2 border-b border-border/60 pb-3 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('curriculum')}
+                  className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all cursor-pointer ${
+                    activeTab === 'curriculum'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                  }`}
+                >
+                  <Layers className="h-4 w-4" />
+                  Milestones & Curriculum ({currentRoadmap.phases?.length || 0})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('checkin')}
+                  className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all cursor-pointer ${
+                    activeTab === 'checkin'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                  }`}
+                >
+                  <CalendarDays className="h-4 w-4 text-amber-500" />
+                  Daily Check-in & Tracker
+                  {stats.streak > 0 && (
+                    <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-amber-500/20 text-amber-400">
+                      🔥 {stats.streak}d
+                    </Badge>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('report')}
+                  className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all cursor-pointer ${
+                    activeTab === 'report'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                  }`}
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  Progress Charts & Report
+                </button>
+              </div>
+
+              {/* TAB 1: Curriculum & Milestones (Full Width) */}
+              {activeTab === 'curriculum' && (
+                <div className="space-y-4 animate-fade-in">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
                     <h4 className="text-base font-semibold tracking-tight flex items-center gap-2">
                       <Layers className="h-4 w-4 text-primary" />
@@ -1080,255 +1169,470 @@ Return a STRICT valid JSON object (without markdown code blocks) representing th
                       </div>
                     ) : (
                       filteredPhases.map((phase) => {
-                      const isExpanded = expandedPhases[phase.id] !== false;
-                      const phaseCompleted = (phase.tasks || []).filter((t) => t.completed).length;
-                      const phaseTotal = (phase.tasks || []).length;
-                      const phasePct = phaseTotal > 0 ? Math.round((phaseCompleted / phaseTotal) * 100) : 0;
-                      const isFullyDone = phaseTotal > 0 && phaseCompleted === phaseTotal;
+                        const isExpanded = expandedPhases[phase.id] !== false;
+                        const phaseCompleted = (phase.tasks || []).filter((t) => t.completed).length;
+                        const phaseTotal = (phase.tasks || []).length;
+                        const phasePct = phaseTotal > 0 ? Math.round((phaseCompleted / phaseTotal) * 100) : 0;
+                        const isFullyDone = phaseTotal > 0 && phaseCompleted === phaseTotal;
 
-                      return (
-                        <Card
-                          key={phase.id}
-                          className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
-                            isFullyDone
-                              ? 'border-emerald-500/30 bg-emerald-500/5'
-                              : 'border-border bg-card'
-                          }`}
-                        >
-                          {/* Phase Header Bar */}
-                          <div
-                            onClick={() =>
-                              setExpandedPhases((prev) => ({
-                                ...prev,
-                                [phase.id]: !isExpanded,
-                              }))
-                            }
-                            className="flex cursor-pointer items-center justify-between p-4 sm:p-5 hover:bg-accent/40 transition-colors"
+                        return (
+                          <Card
+                            key={phase.id}
+                            className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+                              isFullyDone
+                                ? 'border-emerald-500/30 bg-emerald-500/5'
+                                : 'border-border bg-card'
+                            }`}
                           >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <button
-                                type="button"
-                                className="grid h-7 w-7 place-items-center rounded-lg bg-muted text-muted-foreground shrink-0"
-                              >
-                                {isExpanded ? (
-                                  <ChevronDown className="h-4 w-4" />
-                                ) : (
-                                  <ChevronRight className="h-4 w-4" />
-                                )}
-                              </button>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-sm font-semibold tracking-tight text-foreground">
-                                    {phase.title}
-                                  </span>
-                                  {isFullyDone && (
-                                    <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/25 text-[10px] gap-1">
-                                      <CheckCircle2 className="h-3 w-3" /> Completed
-                                    </Badge>
-                                  )}
-                                </div>
-                                {phase.description && (
-                                  <p className="truncate text-xs text-muted-foreground mt-0.5">
-                                    {phase.description}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-xs font-semibold text-muted-foreground">
-                                {phaseCompleted}/{phaseTotal} ({phasePct}%)
-                              </span>
-                              <div className="w-16 hidden sm:block h-2 rounded-full bg-muted overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full ${
-                                    isFullyDone ? 'bg-emerald-500' : 'bg-primary'
-                                  }`}
-                                  style={{ width: `${phasePct}%` }}
-                                />
-                              </div>
-                              {currentRoadmap.phases.length > 1 && (
+                            {/* Phase Header Bar */}
+                            <div
+                              onClick={() =>
+                                setExpandedPhases((prev) => ({
+                                  ...prev,
+                                  [phase.id]: !isExpanded,
+                                }))
+                              }
+                              className="flex cursor-pointer items-center justify-between p-4 sm:p-5 hover:bg-accent/40 transition-colors"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
                                 <button
                                   type="button"
-                                  onClick={(e) => handleDeletePhase(phase.id, e)}
-                                  className="text-muted-foreground/40 hover:text-destructive p-1 rounded-md hover:bg-destructive/10 transition-all ml-1"
-                                  title="Delete phase"
+                                  className="grid h-7 w-7 place-items-center rounded-lg bg-muted text-muted-foreground shrink-0"
                                 >
-                                  <Trash2 className="h-3.5 w-3.5" />
+                                  {isExpanded ? (
+                                    <ChevronDown className="h-4 w-4" />
+                                  ) : (
+                                    <ChevronRight className="h-4 w-4" />
+                                  )}
                                 </button>
-                              )}
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-sm font-semibold tracking-tight text-foreground">
+                                      {phase.title}
+                                    </span>
+                                    {isFullyDone && (
+                                      <Badge className="bg-emerald-500/15 text-emerald-400 border-emerald-500/25 text-[10px] gap-1">
+                                        <CheckCircle2 className="h-3 w-3" /> Completed
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {phase.description && (
+                                    <p className="truncate text-xs text-muted-foreground mt-0.5">
+                                      {phase.description}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-xs font-semibold text-muted-foreground">
+                                  {phaseCompleted}/{phaseTotal} ({phasePct}%)
+                                </span>
+                                <div className="w-16 hidden sm:block h-2 rounded-full bg-muted overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full ${
+                                      isFullyDone ? 'bg-emerald-500' : 'bg-primary'
+                                    }`}
+                                    style={{ width: `${phasePct}%` }}
+                                  />
+                                </div>
+                                {currentRoadmap.phases.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleDeletePhase(phase.id, e)}
+                                    className="text-muted-foreground/40 hover:text-destructive p-1 rounded-md hover:bg-destructive/10 transition-all ml-1"
+                                    title="Delete phase"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                              </div>
                             </div>
+
+                            {/* Phase Checklist Items */}
+                            {isExpanded && (
+                              <div className="border-t border-border/50 bg-background/50 px-4 py-3 sm:px-6 space-y-2">
+                                {(phase.tasks || []).map((task) => (
+                                  <div
+                                    key={task.id}
+                                    onClick={() => handleToggleTask(phase.id, task.id)}
+                                    className={`group flex cursor-pointer items-start justify-between gap-3 rounded-xl p-2.5 transition-all ${
+                                      task.completed
+                                        ? 'bg-emerald-500/10 text-muted-foreground'
+                                        : 'hover:bg-accent/60 text-foreground'
+                                    }`}
+                                  >
+                                    <div className="flex items-start gap-3 min-w-0">
+                                      <div
+                                        className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border transition-all ${
+                                          task.completed
+                                            ? 'border-emerald-500 bg-emerald-500 text-white'
+                                            : 'border-muted-foreground/40 group-hover:border-primary'
+                                        }`}
+                                      >
+                                        {task.completed && <CheckCircle2 className="h-3.5 w-3.5" />}
+                                      </div>
+                                      <span
+                                        className={`text-sm leading-snug select-none break-words ${
+                                          task.completed ? 'line-through opacity-80' : ''
+                                        }`}
+                                      >
+                                        {task.title}
+                                      </span>
+                                    </div>
+
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleDeleteTask(phase.id, task.id, e)}
+                                      className="opacity-0 group-hover:opacity-100 hover:text-destructive p-1 rounded-md hover:bg-destructive/10 transition-all shrink-0 text-muted-foreground"
+                                      title="Delete milestone"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                ))}
+
+                                {/* Add Task Input in Phase */}
+                                <div className="pt-2 flex items-center gap-2">
+                                  <Input
+                                    size={1}
+                                    placeholder="Add milestone topic to this phase..."
+                                    value={newTaskTitle[phase.id] || ''}
+                                    onChange={(e) =>
+                                      setNewTaskTitle((prev) => ({
+                                        ...prev,
+                                        [phase.id]: e.target.value,
+                                      }))
+                                    }
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') handleAddTask(phase.id);
+                                    }}
+                                    className="h-9 text-xs"
+                                  />
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={() => handleAddTask(phase.id)}
+                                    className="h-9 shrink-0 gap-1 text-xs"
+                                  >
+                                    <Plus className="h-3.5 w-3.5" /> Add
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </Card>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: Daily Check-in & Consistency Tracker */}
+              {activeTab === 'checkin' && (
+                <div className="grid gap-6 lg:grid-cols-3 animate-fade-in">
+                  {/* Left 2 Cols: 14-Day Consistency Chart & Recent History */}
+                  <div className="space-y-6 lg:col-span-2">
+                    {/* 14-Day Consistency & Study Hours Chart */}
+                    <Card className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-6">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-4">
+                        <div>
+                          <h3 className="text-sm font-semibold tracking-tight flex items-center gap-2">
+                            <BarChart3 className="h-4 w-4 text-amber-500" />
+                            14-Day Study Consistency Chart
+                          </h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Daily study minutes logged over the last 2 weeks
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-[11px] gap-1">
+                            <Clock className="h-3 w-3" /> Avg: {avgMinutes}m / session
+                          </Badge>
+                          <Badge variant="outline" className="text-[11px] text-amber-500 border-amber-500/30">
+                            Goal: 60m / day
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* Chart Bars */}
+                      <div className="space-y-2">
+                        <div className="relative h-44 w-full flex items-end justify-between gap-1.5 pt-6 pb-2 px-1">
+                          {/* 60m Goal Reference Line */}
+                          <div
+                            className="absolute left-0 right-0 border-b border-dashed border-amber-500/40 pointer-events-none z-10 flex justify-end pr-1"
+                            style={{ bottom: `${Math.round((60 / maxChartMinutes) * 100)}%` }}
+                          >
+                            <span className="text-[9px] font-mono text-amber-500/80 -translate-y-full">
+                              60m Target
+                            </span>
                           </div>
 
-                          {/* Phase Checklist Items */}
-                          {isExpanded && (
-                            <div className="border-t border-border/50 bg-background/50 px-4 py-3 sm:px-6 space-y-2">
-                              {(phase.tasks || []).map((task) => (
+                          {last14Days.map((item, idx) => {
+                            const heightPct = Math.min(100, Math.round((item.minutes / maxChartMinutes) * 100));
+                            const isToday = idx === last14Days.length - 1;
+
+                            return (
+                              <div
+                                key={item.date}
+                                className="group relative flex-1 flex flex-col items-center h-full justify-end"
+                              >
+                                {/* Tooltip on hover */}
+                                <div className="absolute -top-9 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 whitespace-nowrap rounded-md bg-popover px-2 py-1 text-[10px] font-medium text-popover-foreground shadow-md border border-border">
+                                  {item.dayLabel}: <span className="font-bold text-amber-500">{item.minutes}m</span>
+                                  {item.notes ? ` (${item.notes.slice(0, 20)}...)` : ''}
+                                </div>
+
+                                {/* Value label above bar if > 0 */}
+                                {item.minutes > 0 && (
+                                  <span className="text-[9px] font-mono font-semibold text-muted-foreground mb-1">
+                                    {item.minutes}m
+                                  </span>
+                                )}
+
+                                {/* Bar Pill */}
                                 <div
-                                  key={task.id}
-                                  onClick={() => handleToggleTask(phase.id, task.id)}
-                                  className={`group flex cursor-pointer items-start justify-between gap-3 rounded-xl p-2.5 transition-all ${
-                                    task.completed
-                                      ? 'bg-emerald-500/10 text-muted-foreground'
-                                      : 'hover:bg-accent/60 text-foreground'
+                                  className={`w-full max-w-[28px] rounded-t-md transition-all duration-300 ${
+                                    item.minutes > 0
+                                      ? isToday
+                                        ? 'bg-amber-500 shadow-sm shadow-amber-500/20'
+                                        : 'bg-primary hover:bg-primary/90'
+                                      : 'bg-muted/40'
+                                  }`}
+                                  style={{ height: item.minutes > 0 ? `${Math.max(8, heightPct)}%` : '4px' }}
+                                />
+
+                                {/* X-axis Day Label */}
+                                <span
+                                  className={`mt-2 text-[10px] select-none ${
+                                    isToday
+                                      ? 'font-bold text-amber-500'
+                                      : 'text-muted-foreground'
                                   }`}
                                 >
-                                  <div className="flex items-start gap-3 min-w-0">
+                                  {item.dayLabel.split(' ')[0]}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-2 border-t border-border/40">
+                          <span>14 days ago</span>
+                          <span className="font-medium text-foreground">Today</span>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Recent Daily Logs History */}
+                    <Card className="rounded-3xl border border-border bg-card p-5 shadow-sm space-y-3">
+                      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5" /> Recent Activity History
+                      </h4>
+                      {(currentRoadmap.dailyLogs || []).length === 0 ? (
+                        <p className="text-xs text-muted-foreground italic">No logged activity yet. Save your first check-in on the right!</p>
+                      ) : (
+                        <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                          {currentRoadmap.dailyLogs.slice(0, 10).map((log, idx) => (
+                            <div key={idx} className="flex items-start justify-between rounded-xl bg-muted/40 p-3 text-xs">
+                              <div>
+                                <span className="font-semibold text-foreground block">{log.date}</span>
+                                {log.notes && <p className="text-muted-foreground text-xs mt-0.5">{log.notes}</p>}
+                              </div>
+                              <Badge variant="secondary" className="text-xs">
+                                {log.minutesSpent} mins
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </Card>
+                  </div>
+
+                  {/* Right 1 Col: Streak & Today's Check-in */}
+                  <div className="space-y-6">
+                    {/* Streak & Consistency Card */}
+                    <Card className="rounded-3xl border border-border bg-card p-5 shadow-sm space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="grid h-10 w-10 place-items-center rounded-2xl bg-amber-500/15 text-amber-500">
+                            <Flame className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-semibold tracking-tight">Active Streak</h4>
+                            <p className="text-xs text-muted-foreground">Keep studying daily</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-2xl font-black text-amber-500">{stats.streak}</span>
+                          <span className="text-xs text-muted-foreground block">Days Streak</span>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Today's Daily Habit & Study Log Card */}
+                    <Card className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-5">
+                      <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                        <div className="flex items-center gap-2">
+                          <CalendarDays className="h-4 w-4 text-primary" />
+                          <h4 className="text-sm font-semibold tracking-tight">Today's Check-in</h4>
+                        </div>
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
+                      </div>
+
+                      {/* Daily Habits Checklist */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
+                            Daily Habits & Commitments
+                          </label>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="xs"
+                            onClick={handleImportFromRoutine}
+                            className="h-6 text-[11px] text-primary hover:text-primary/90 gap-1 px-1.5"
+                            title="Import subjects and schedules from your Routine page"
+                          >
+                            <Clock className="h-3 w-3" /> Sync from Routine
+                          </Button>
+                        </div>
+
+                        {(currentRoadmap.dailyHabits || []).length === 0 ? (
+                          <p className="text-xs text-muted-foreground italic bg-muted/20 p-3 rounded-xl border border-dashed border-border/60">
+                            No habits added yet. Add a custom habit below or sync from your Routine.
+                          </p>
+                        ) : (
+                          <div className="space-y-2">
+                            {currentRoadmap.dailyHabits.map((habit) => {
+                              const isDone = Boolean(todayHabitsDone[habit.id]);
+                              return (
+                                <div
+                                  key={habit.id}
+                                  className={`group flex items-center justify-between gap-3 rounded-xl border p-2.5 transition-all ${
+                                    isDone
+                                      ? 'border-emerald-500/30 bg-emerald-500/10 text-foreground'
+                                      : 'border-border bg-muted/40 hover:bg-muted/70 text-muted-foreground'
+                                  }`}
+                                >
+                                  <div
+                                    onClick={() =>
+                                      setTodayHabitsDone((prev) => ({
+                                        ...prev,
+                                        [habit.id]: !isDone,
+                                      }))
+                                    }
+                                    className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer select-none"
+                                  >
                                     <div
-                                      className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border transition-all ${
-                                        task.completed
+                                      className={`grid h-5 w-5 shrink-0 place-items-center rounded-md border transition-all ${
+                                        isDone
                                           ? 'border-emerald-500 bg-emerald-500 text-white'
                                           : 'border-muted-foreground/40 group-hover:border-primary'
                                       }`}
                                     >
-                                      {task.completed && <CheckCircle2 className="h-3.5 w-3.5" />}
+                                      {isDone && <CheckCircle2 className="h-3.5 w-3.5" />}
                                     </div>
-                                    <span
-                                      className={`text-sm leading-snug select-none break-words ${
-                                        task.completed ? 'line-through opacity-80' : ''
-                                      }`}
-                                    >
-                                      {task.title}
+                                    <span className={`text-xs font-medium leading-relaxed truncate ${isDone ? 'line-through opacity-80' : ''}`}>
+                                      {habit.title}
                                     </span>
                                   </div>
 
                                   <button
                                     type="button"
-                                    onClick={(e) => handleDeleteTask(phase.id, task.id, e)}
-                                    className="opacity-0 group-hover:opacity-100 hover:text-destructive p-1 rounded-md hover:bg-destructive/10 transition-all shrink-0 text-muted-foreground"
-                                    title="Delete milestone"
+                                    onClick={(e) => handleDeleteHabit(habit.id, e)}
+                                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive p-1 rounded hover:bg-destructive/10 transition-all shrink-0"
+                                    title="Delete habit"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </button>
                                 </div>
-                              ))}
+                              );
+                            })}
+                          </div>
+                        )}
 
-                              {/* Add Task Input in Phase */}
-                              <div className="pt-2 flex items-center gap-2">
-                                <Input
-                                  size={1}
-                                  placeholder="Add milestone topic to this phase..."
-                                  value={newTaskTitle[phase.id] || ''}
-                                  onChange={(e) =>
-                                    setNewTaskTitle((prev) => ({
-                                      ...prev,
-                                      [phase.id]: e.target.value,
-                                    }))
-                                  }
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleAddTask(phase.id);
-                                  }}
-                                  className="h-9 text-xs"
-                                />
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  onClick={() => handleAddTask(phase.id)}
-                                  className="h-9 shrink-0 gap-1 text-xs"
-                                >
-                                  <Plus className="h-3.5 w-3.5" /> Add
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </Card>
-                      );
-                    }))}
-                  </div>
-                </div>
-                ) : (
-                  <div className="space-y-6 animate-fade-in">
-                  {/* 14-Day Consistency & Study Hours Chart */}
-                  <Card className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-4">
-                      <div>
-                        <h3 className="text-sm font-semibold tracking-tight flex items-center gap-2">
-                          <BarChart3 className="h-4 w-4 text-amber-500" />
-                          14-Day Study Consistency Chart
-                        </h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Daily study minutes logged over the last 2 weeks
-                        </p>
+                        {/* Add Custom Habit Input */}
+                        <div className="flex items-center gap-2 pt-1">
+                          <Input
+                            placeholder="Add habit (e.g. 2 LeetCode problems)..."
+                            value={newHabitTitle}
+                            onChange={(e) => setNewHabitTitle(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleAddHabit();
+                            }}
+                            className="h-8 text-xs rounded-xl"
+                          />
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={handleAddHabit}
+                            className="h-8 text-xs rounded-xl shrink-0 gap-1"
+                          >
+                            <Plus className="h-3.5 w-3.5" /> Add
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-[11px] gap-1">
-                          <Clock className="h-3 w-3" /> Avg: {avgMinutes}m / session
-                        </Badge>
-                        <Badge variant="outline" className="text-[11px] text-amber-500 border-amber-500/30">
-                          Goal: 60m / day
-                        </Badge>
-                      </div>
-                    </div>
 
-                    {/* Chart Bars */}
-                    <div className="space-y-2">
-                      <div className="relative h-44 w-full flex items-end justify-between gap-1.5 pt-6 pb-2 px-1">
-                        {/* 60m Goal Reference Line */}
-                        <div
-                          className="absolute left-0 right-0 border-b border-dashed border-amber-500/40 pointer-events-none z-10 flex justify-end pr-1"
-                          style={{ bottom: `${Math.round((60 / maxChartMinutes) * 100)}%` }}
-                        >
-                          <span className="text-[9px] font-mono text-amber-500/80 -translate-y-full">
-                            60m Target
-                          </span>
+                      {/* Study Time Logger */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            Today's Study Time
+                          </label>
+                          <span className="text-xs font-bold text-primary">{todayMinutes} Minutes</span>
                         </div>
 
-                        {last14Days.map((item, idx) => {
-                          const heightPct = Math.min(100, Math.round((item.minutes / maxChartMinutes) * 100));
-                          const isToday = idx === last14Days.length - 1;
-
-                          return (
-                            <div
-                              key={item.date}
-                              className="group relative flex-1 flex flex-col items-center h-full justify-end"
+                        {/* Preset buttons */}
+                        <div className="grid grid-cols-4 gap-1.5">
+                          {[30, 45, 60, 120].map((mins) => (
+                            <Button
+                              key={mins}
+                              type="button"
+                              variant={todayMinutes === mins ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setTodayMinutes(mins)}
+                              className="h-8 text-xs font-semibold"
                             >
-                              {/* Tooltip on hover */}
-                              <div className="absolute -top-9 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 whitespace-nowrap rounded-md bg-popover px-2 py-1 text-[10px] font-medium text-popover-foreground shadow-md border border-border">
-                                {item.dayLabel}: <span className="font-bold text-amber-500">{item.minutes}m</span>
-                                {item.notes ? ` (${item.notes.slice(0, 20)}...)` : ''}
-                              </div>
-
-                              {/* Value label above bar if > 0 */}
-                              {item.minutes > 0 && (
-                                <span className="text-[9px] font-mono font-semibold text-muted-foreground mb-1">
-                                  {item.minutes}m
-                                </span>
-                              )}
-
-                              {/* Bar Pill */}
-                              <div
-                                className={`w-full max-w-[28px] rounded-t-md transition-all duration-300 ${
-                                  item.minutes > 0
-                                    ? isToday
-                                      ? 'bg-amber-500 shadow-sm shadow-amber-500/20'
-                                      : 'bg-primary hover:bg-primary/90'
-                                    : 'bg-muted/40'
-                                }`}
-                                style={{ height: item.minutes > 0 ? `${Math.max(8, heightPct)}%` : '4px' }}
-                              />
-
-                              {/* X-axis Day Label */}
-                              <span
-                                className={`mt-2 text-[10px] select-none ${
-                                  isToday
-                                    ? 'font-bold text-amber-500'
-                                    : 'text-muted-foreground'
-                                }`}
-                              >
-                                {item.dayLabel.split(' ')[0]}
-                              </span>
-                            </div>
-                          );
-                        })}
+                              {mins < 60 ? `${mins}m` : `${mins / 60}h`}
+                            </Button>
+                          ))}
+                        </div>
                       </div>
 
-                      <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-2 border-t border-border/40">
-                        <span>14 days ago</span>
-                        <span className="font-medium text-foreground">Today</span>
+                      {/* Notes / Reflection for today */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
+                          Notes / What did you learn?
+                        </label>
+                        <Textarea
+                          placeholder="e.g. Read about Rust ownership & completed 2 LeetCode problems."
+                          value={todayNotes}
+                          onChange={(e) => setTodayNotes(e.target.value)}
+                          rows={2}
+                          className="text-xs"
+                        />
                       </div>
-                    </div>
-                  </Card>
 
+                      {/* Save Log Button */}
+                      <Button
+                        onClick={handleSaveDailyLog}
+                        disabled={savingDailyLog}
+                        className="w-full gap-2 rounded-xl"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        {savingDailyLog ? 'Saving...' : 'Save Today\'s Progress'}
+                      </Button>
+                    </Card>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: Progress Charts & Full Report */}
+              {activeTab === 'report' && (
+                <div className="space-y-6 animate-fade-in">
                   {/* Phase-by-Phase Progress Breakdown */}
                   <Card className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-4">
                     <div className="flex items-center justify-between border-b border-border/60 pb-3">
@@ -1446,160 +1750,7 @@ Return a STRICT valid JSON object (without markdown code blocks) representing th
                     </div>
                   </Card>
                 </div>
-                )}
-              </div>
-
-              {/* Right 1 Column: Daily Habits, Time Logger, and Streak */}
-              <div className="space-y-6">
-                {/* Streak & Consistency Card */}
-                <Card className="rounded-3xl border border-border bg-card p-5 shadow-sm space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="grid h-10 w-10 place-items-center rounded-2xl bg-amber-500/15 text-amber-500">
-                        <Flame className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-semibold tracking-tight">Active Streak</h4>
-                        <p className="text-xs text-muted-foreground">Keep studying daily</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-2xl font-black text-amber-500">{stats.streak}</span>
-                      <span className="text-xs text-muted-foreground block">Days Streak</span>
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Today's Daily Habit & Study Log Card */}
-                <Card className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-5">
-                  <div className="flex items-center justify-between border-b border-border/60 pb-3">
-                    <div className="flex items-center gap-2">
-                      <CalendarDays className="h-4 w-4 text-primary" />
-                      <h4 className="text-sm font-semibold tracking-tight">Today's Check-in</h4>
-                    </div>
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </span>
-                  </div>
-
-                  {/* Daily Habits Checklist */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
-                      Daily Habits & Commitments
-                    </label>
-                    {(currentRoadmap.dailyHabits || []).length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic">No specific daily habits set.</p>
-                    ) : (
-                      currentRoadmap.dailyHabits.map((habit) => {
-                        const isDone = Boolean(todayHabitsDone[habit.id]);
-                        return (
-                          <div
-                            key={habit.id}
-                            onClick={() =>
-                              setTodayHabitsDone((prev) => ({
-                                ...prev,
-                                [habit.id]: !isDone,
-                              }))
-                            }
-                            className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-all ${
-                              isDone
-                                ? 'border-emerald-500/30 bg-emerald-500/10 text-foreground'
-                                : 'border-border bg-muted/40 hover:bg-muted/70 text-muted-foreground'
-                            }`}
-                          >
-                            <div
-                              className={`grid h-5 w-5 shrink-0 place-items-center rounded-md border ${
-                                isDone
-                                  ? 'border-emerald-500 bg-emerald-500 text-white'
-                                  : 'border-muted-foreground/40'
-                              }`}
-                            >
-                              {isDone && <CheckCircle2 className="h-3.5 w-3.5" />}
-                            </div>
-                            <span className="text-xs font-medium leading-relaxed select-none">
-                              {habit.title}
-                            </span>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-
-                  {/* Study Time Logger */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                        Today's Study Time
-                      </label>
-                      <span className="text-xs font-bold text-primary">{todayMinutes} Minutes</span>
-                    </div>
-
-                    {/* Preset buttons */}
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {[30, 45, 60, 120].map((mins) => (
-                        <Button
-                          key={mins}
-                          type="button"
-                          variant={todayMinutes === mins ? 'default' : 'outline'}
-                          size="sm"
-                          onClick={() => setTodayMinutes(mins)}
-                          className="h-8 text-xs font-semibold"
-                        >
-                          {mins < 60 ? `${mins}m` : `${mins / 60}h`}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Notes / Reflection for today */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
-                      Notes / What did you learn?
-                    </label>
-                    <Textarea
-                      placeholder="e.g. Read about Rust ownership & completed 2 LeetCode problems."
-                      value={todayNotes}
-                      onChange={(e) => setTodayNotes(e.target.value)}
-                      rows={2}
-                      className="text-xs"
-                    />
-                  </div>
-
-                  {/* Save Log Button */}
-                  <Button
-                    onClick={handleSaveDailyLog}
-                    disabled={savingDailyLog}
-                    className="w-full gap-2 rounded-xl"
-                  >
-                    <CheckCircle2 className="h-4 w-4" />
-                    {savingDailyLog ? 'Saving...' : 'Save Today\'s Progress'}
-                  </Button>
-                </Card>
-
-                {/* Recent Daily Logs History */}
-                <Card className="rounded-3xl border border-border bg-card p-5 shadow-sm space-y-3">
-                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5" /> Recent Activity History
-                  </h4>
-                  {(currentRoadmap.dailyLogs || []).length === 0 ? (
-                    <p className="text-xs text-muted-foreground italic">No logged activity yet. Save your first check-in above!</p>
-                  ) : (
-                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                      {currentRoadmap.dailyLogs.slice(0, 7).map((log, idx) => (
-                        <div key={idx} className="flex items-start justify-between rounded-xl bg-muted/40 p-2.5 text-xs">
-                          <div>
-                            <span className="font-semibold text-foreground block">{log.date}</span>
-                            {log.notes && <p className="text-muted-foreground text-[11px] truncate max-w-[180px]">{log.notes}</p>}
-                          </div>
-                          <Badge variant="secondary" className="text-[10px]">
-                            {log.minutesSpent} mins
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </Card>
-              </div>
+              )}
             </div>
           )}
         </>
