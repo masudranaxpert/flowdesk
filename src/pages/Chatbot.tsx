@@ -346,6 +346,34 @@ function actionDetails(action: AiAction, vault: VaultContext) {
   }
 
   const current = findVaultItem(action, vault);
+  if (action.resource === 'roadmaps') {
+    const lines: string[] = [];
+    if (payload.title && current?.title !== payload.title) {
+      lines.push(`title: ${displayValue(current?.title)} -> ${displayValue(payload.title)}`);
+    }
+    if (payload.description && current?.description !== payload.description) {
+      lines.push(`description: ${displayValue(current?.description)} -> ${displayValue(payload.description)}`);
+    }
+    const singlePhase = payload.phase || (Array.isArray(payload.phases) && payload.phases.length === 1 ? payload.phases[0] : null);
+    if (singlePhase) {
+      lines.push(`Phase to update: "${singlePhase.title || singlePhase.id || 'Milestone'}"`);
+      if (Array.isArray(singlePhase.tasks)) {
+        lines.push(`Tasks count: ${singlePhase.tasks.length} topics`);
+        const preview = singlePhase.tasks
+          .slice(0, 3)
+          .map((t: any) => (typeof t === 'string' ? t : t.title))
+          .filter(Boolean)
+          .join('; ');
+        if (preview) {
+          lines.push(`Preview: ${preview}${singlePhase.tasks.length > 3 ? ` (+${singlePhase.tasks.length - 3} more)` : ''}`);
+        }
+      }
+    } else if (Array.isArray(payload.phases)) {
+      lines.push(`Phases: ${payload.phases.length} milestones updated`);
+    }
+    if (lines.length > 0) return lines;
+  }
+
   if (!current) return entries.slice(0, 8).map(([key, value]) => `${key}: ${displayValue(value)}`);
   const changes = entries
     .filter(([key, value]) => displayValue(current[key]) !== displayValue(value))
@@ -984,7 +1012,57 @@ export default function ChatbotPage() {
         }
         if (operation === 'update') {
           if (!actionId) throw new Error(`Update ${resource} needs id`);
-          await target.update(actionId, payload);
+          let finalPayload = payload;
+          if (resource === 'roadmaps') {
+            const existingRoadmap = vaultContext.roadmaps.find((r) => String(r.id || r._id) === actionId);
+            if (existingRoadmap) {
+              const existingPhases = Array.isArray(existingRoadmap.phases) ? [...existingRoadmap.phases] : [];
+              const targetPhase = payload.phase || (Array.isArray(payload.phases) && payload.phases.length === 1 ? payload.phases[0] : null);
+              if (targetPhase && typeof targetPhase === 'object') {
+                const pId = targetPhase.id || payload.phaseId;
+                const pTitle = normalizeComparable(targetPhase.title);
+                const idx = existingPhases.findIndex(
+                  (ep) => (pId && ep.id === pId) || (pTitle && normalizeComparable(ep.title) === pTitle)
+                );
+                if (idx >= 0) {
+                  existingPhases[idx] = { ...existingPhases[idx], ...targetPhase };
+                } else {
+                  existingPhases.push(targetPhase);
+                }
+                finalPayload = { ...finalPayload, phases: existingPhases };
+                delete finalPayload.phase;
+                delete finalPayload.phaseId;
+              } else if (payload.phaseId) {
+                const idx = existingPhases.findIndex((ep) => ep.id === payload.phaseId);
+                if (idx >= 0) {
+                  existingPhases[idx] = {
+                    ...existingPhases[idx],
+                    ...(payload.tasks ? { tasks: payload.tasks } : {}),
+                    ...(payload.title ? { title: payload.title } : {}),
+                  };
+                  finalPayload = { ...finalPayload, phases: existingPhases };
+                  delete finalPayload.phaseId;
+                  delete finalPayload.tasks;
+                }
+              } else if (Array.isArray(payload.phases) && payload.phases.length > 0 && payload.phases.length < existingPhases.length) {
+                const merged = [...existingPhases];
+                for (const newP of payload.phases) {
+                  const pId = newP.id;
+                  const pTitle = normalizeComparable(newP.title);
+                  const idx = merged.findIndex(
+                    (ep) => (pId && ep.id === pId) || (pTitle && normalizeComparable(ep.title) === pTitle)
+                  );
+                  if (idx >= 0) {
+                    merged[idx] = { ...merged[idx], ...newP };
+                  } else {
+                    merged.push(newP);
+                  }
+                }
+                finalPayload = { ...finalPayload, phases: merged };
+              }
+            }
+          }
+          await target.update(actionId, finalPayload);
         }
         if (operation === 'delete') {
           if (!actionId) throw new Error(`Delete ${resource} needs id`);
