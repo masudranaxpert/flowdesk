@@ -12,6 +12,7 @@ import {
   Sparkles,
   Target,
   Trash2,
+  Upload,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -30,6 +31,7 @@ import { DailyTracker } from '../components/progress/DailyTracker';
 import { RoadmapCurriculum } from '../components/progress/RoadmapCurriculum';
 import { ProgressReport } from '../components/progress/ProgressReport';
 import { CreateRoadmapModal } from '../components/progress/CreateRoadmapModal';
+import { ImportRoadmapModal } from '../components/progress/ImportRoadmapModal';
 import { presets, localDateString } from '../components/progress/presets';
 
 const UNIFIED_HABITS_KEY = 'bookmark_unified_daily_habits';
@@ -84,6 +86,7 @@ export default function Progress() {
 
   // Dialogs
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [roadmapToDelete, setRoadmapToDelete] = useState<Roadmap | null>(null);
 
@@ -559,6 +562,70 @@ export default function Progress() {
     toast.success('Progress report copied to clipboard!');
   };
 
+  // Import curriculum phases into active roadmap
+  const handleImportToCurrent = async (importedPhases: RoadmapPhase[], mode: 'append' | 'replace') => {
+    if (!currentRoadmap) return;
+    try {
+      let updatedPhases: RoadmapPhase[];
+      if (mode === 'append') {
+        const startingMonth = (currentRoadmap.phases?.length || 0) + 1;
+        const adjusted = importedPhases.map((p, idx) => ({
+          ...p,
+          id: `phase-${Date.now()}-${idx}`,
+          targetMonth: (p.targetMonth || idx + 1) + startingMonth - 1,
+        }));
+        updatedPhases = [...(currentRoadmap.phases || []), ...adjusted];
+      } else {
+        updatedPhases = importedPhases;
+      }
+
+      const id = currentRoadmap._id || currentRoadmap.id;
+      await api.roadmaps.update(id!, { phases: updatedPhases });
+      const nextRoadmap = { ...currentRoadmap, phases: updatedPhases };
+      setRoadmaps((prev) =>
+        prev.map((r) => ((r._id || r.id) === id ? nextRoadmap : r))
+      );
+      toast.success(
+        mode === 'append'
+          ? `Appended ${importedPhases.length} phase(s) to "${currentRoadmap.title}"!`
+          : `Curriculum updated for "${currentRoadmap.title}"!`
+      );
+    } catch {
+      toast.error('Failed to import curriculum');
+    }
+  };
+
+  // Import as a brand new roadmap
+  const handleImportAsNewRoadmap = async (data: {
+    title: string;
+    description: string;
+    duration: string;
+    phases: RoadmapPhase[];
+  }) => {
+    try {
+      setLoading(true);
+      const payload: Partial<Roadmap> = {
+        title: data.title,
+        description: data.description,
+        category: 'imported',
+        duration: data.duration,
+        status: 'active',
+        dailyHabits: [],
+        phases: data.phases,
+        dailyLogs: [],
+      };
+      const created = await api.roadmaps.create(payload);
+      toast.success(`Created roadmap "${data.title}"!`);
+      await fetchRoadmaps();
+      setSelectedId(created._id || created.id || '');
+      setMainSection('roadmaps');
+      setRoadmapTab('curriculum');
+    } catch {
+      toast.error('Failed to create imported roadmap');
+      setLoading(false);
+    }
+  };
+
   // Preset Application
   const handleApplyPreset = async (preset: (typeof presets)[0]) => {
     try {
@@ -690,6 +757,16 @@ Return a STRICT valid JSON object (no markdown, no backticks) with this structur
           >
             <Bot className="h-4 w-4 text-primary" />
             Ask AI Chatbot
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setImportModalOpen(true)}
+            className="gap-2"
+          >
+            <Upload className="h-4 w-4 text-primary" />
+            Import Roadmap
           </Button>
 
           <Button
@@ -900,7 +977,7 @@ Return a STRICT valid JSON object (no markdown, no backticks) with this structur
                           style={{ width: `${stats.percentage}%` }}
                         />
                       </div>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
                         <span>{stats.completedTasks} of {stats.totalTasks} milestones completed</span>
                         <span>{currentRoadmap.phases?.length || 0} curriculum phases</span>
                       </div>
@@ -908,11 +985,11 @@ Return a STRICT valid JSON object (no markdown, no backticks) with this structur
                   </Card>
 
                   {/* Roadmap Sub-tabs (No daily check-in clutter!) */}
-                  <div className="flex items-center gap-2 border-b border-border/60 pb-3 flex-wrap">
+                  <div className="flex items-center gap-2.5 border-b border-border/60 pb-3 flex-wrap">
                     <button
                       type="button"
                       onClick={() => setRoadmapTab('curriculum')}
-                      className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all cursor-pointer ${
+                      className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
                         roadmapTab === 'curriculum'
                           ? 'bg-primary text-primary-foreground shadow-sm'
                           : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
@@ -925,7 +1002,7 @@ Return a STRICT valid JSON object (no markdown, no backticks) with this structur
                     <button
                       type="button"
                       onClick={() => setRoadmapTab('report')}
-                      className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all cursor-pointer ${
+                      className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
                         roadmapTab === 'report'
                           ? 'bg-primary text-primary-foreground shadow-sm'
                           : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
@@ -950,6 +1027,7 @@ Return a STRICT valid JSON object (no markdown, no backticks) with this structur
                       onDeletePhase={handleDeletePhase}
                       onOpenNewPhaseModal={() => setNewPhaseOpen(true)}
                       onExportMarkdown={handleExportMarkdown}
+                      onOpenImportModal={() => setImportModalOpen(true)}
                     />
                   )}
 
@@ -974,6 +1052,14 @@ Return a STRICT valid JSON object (no markdown, no backticks) with this structur
         onApplyPreset={handleApplyPreset}
         onGenerateAi={handleGenerateAi}
         onCreateManual={handleCreateManual}
+      />
+
+      <ImportRoadmapModal
+        open={importModalOpen}
+        onOpenChange={setImportModalOpen}
+        currentRoadmap={currentRoadmap}
+        onImportToCurrent={handleImportToCurrent}
+        onImportAsNewRoadmap={handleImportAsNewRoadmap}
       />
 
       {/* Add Phase Dialog */}
