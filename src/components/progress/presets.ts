@@ -7,64 +7,7 @@ export function localDateString(date = new Date()): string {
   return `${year}-${month}-${day}`;
 }
 
-export interface HabitTheme {
-  label: string;
-  badgeBg: string;
-  border: string;
-  dot: string;
-  hex: string;
-  colorName: 'purple' | 'amber' | 'sky' | 'emerald' | 'rose';
-}
 
-export const getHabitTheme = (title: string, index = 0): HabitTheme => {
-  const lower = title.toLowerCase();
-  if (lower.includes('english') || lower.includes('speak') || lower.includes('ielts') || lower.includes('eng') || lower.includes('vocab')) {
-    return {
-      label: 'English Speaking',
-      badgeBg: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
-      border: 'border-purple-500/40',
-      dot: 'bg-purple-500',
-      hex: '#a855f7',
-      colorName: 'purple',
-    };
-  }
-  if (lower.includes('code') || lower.includes('rust') || lower.includes('python') || lower.includes('study') || lower.includes('algo') || lower.includes('leet') || lower.includes('dsa') || lower.includes('solve')) {
-    return {
-      label: 'Coding & Study',
-      badgeBg: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
-      border: 'border-amber-500/40',
-      dot: 'bg-amber-500',
-      hex: '#f59e0b',
-      colorName: 'amber',
-    };
-  }
-  if (lower.includes('routine') || lower.includes('task') || lower.includes('class') || lower.includes('work') || lower.includes('meeting')) {
-    return {
-      label: 'Routine Task',
-      badgeBg: 'bg-sky-500/20 text-sky-300 border-sky-500/40',
-      border: 'border-sky-500/40',
-      dot: 'bg-sky-500',
-      hex: '#0ea5e9',
-      colorName: 'sky',
-    };
-  }
-  if (lower.includes('read') || lower.includes('book') || lower.includes('paper') || lower.includes('docs') || lower.includes('research')) {
-    return {
-      label: 'Reading & Docs',
-      badgeBg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
-      border: 'border-emerald-500/40',
-      dot: 'bg-emerald-500',
-      hex: '#10b981',
-      colorName: 'emerald',
-    };
-  }
-  const fallbackThemes: HabitTheme[] = [
-    { label: 'Daily Habit', badgeBg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40', border: 'border-emerald-500/40', dot: 'bg-emerald-500', hex: '#10b981', colorName: 'emerald' },
-    { label: 'Daily Habit', badgeBg: 'bg-rose-500/20 text-rose-300 border-rose-500/40', border: 'border-rose-500/40', dot: 'bg-rose-500', hex: '#f43f5e', colorName: 'rose' },
-    { label: 'Daily Habit', badgeBg: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40', border: 'border-indigo-500/40', dot: 'bg-indigo-500', hex: '#6366f1', colorName: 'purple' },
-  ];
-  return fallbackThemes[index % fallbackThemes.length];
-};
 
 /**
  * Built-in starter curriculum presets.
