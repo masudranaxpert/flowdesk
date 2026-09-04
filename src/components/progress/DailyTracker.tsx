@@ -200,121 +200,136 @@ export function DailyTracker({
 
           {/* Chart Canvas */}
           <div className="space-y-3">
-            <div className="relative h-44 w-full flex items-end justify-between gap-1 pt-6 pb-2 px-1">
+            <div className="relative w-full pt-4">
               {/* 60m Goal Reference Line */}
               <div
-                className="absolute left-0 right-0 border-b border-dashed border-border pointer-events-none z-10 flex justify-end pr-1"
-                style={{ bottom: `${Math.round((60 / maxChartMinutes) * 100)}%` }}
+                className="absolute left-0 right-0 border-b border-dashed border-border/70 pointer-events-none z-10 flex justify-end pr-1"
+                style={{
+                  bottom: `calc(24px + ${(Math.min(100, Math.round((60 / maxChartMinutes) * 100)) / 100) * 128}px)`,
+                }}
               >
                 <span className="text-[9px] font-mono text-muted-foreground -translate-y-full bg-card px-1.5 py-0.5 rounded border border-border/50">
                   Target (60m)
                 </span>
               </div>
 
-              {chartDaysData.map((item, idx) => {
-                const heightPct = Math.min(100, Math.round((item.minutes / maxChartMinutes) * 100));
-                const isToday = idx === chartDaysData.length - 1;
-                const isSelected = item.date === (selectedDayData?.date || selectedDayDate);
-                const isFarRight = idx >= chartDaysData.length - 5;
-                const isFarLeft = idx < 4;
-                const tooltipAlignClass = isFarRight
-                  ? 'right-0'
-                  : isFarLeft
-                  ? 'left-0'
-                  : 'left-1/2 -translate-x-1/2';
+              {/* Bar Columns Container */}
+              <div className="relative flex items-end justify-between gap-1 px-1">
+                {chartDaysData.map((item, idx) => {
+                  const heightPct = Math.min(100, Math.round((item.minutes / maxChartMinutes) * 100));
+                  const isToday = idx === chartDaysData.length - 1;
+                  const isSelected = item.date === (selectedDayData?.date || selectedDayDate);
+                  const isFarRight = idx >= chartDaysData.length - 5;
+                  const isFarLeft = idx < 4;
+                  const tooltipAlignClass = isFarRight
+                    ? 'right-0'
+                    : isFarLeft
+                    ? 'left-0'
+                    : 'left-1/2 -translate-x-1/2';
 
-                return (
-                  <div
-                    key={item.date}
-                    onClick={() => setSelectedDayDate(item.date)}
-                    className="group relative flex-1 flex flex-col items-center h-full justify-end cursor-pointer"
-                  >
-                    {/* Tooltip on hover */}
+                  return (
                     <div
-                      className={`absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-40 w-max max-w-[260px] sm:max-w-[290px] rounded-2xl bg-popover/95 backdrop-blur-md p-3 text-xs text-popover-foreground shadow-2xl border border-border ${tooltipAlignClass}`}
+                      key={item.date}
+                      onClick={() => setSelectedDayDate(item.date)}
+                      className="group relative flex-1 flex flex-col items-center cursor-pointer select-none"
                     >
-                      <div className="font-semibold text-foreground flex items-center gap-1.5">
-                        <Calendar className="h-3.5 w-3.5 text-primary shrink-0" />
-                        <span>{item.fullLabel}</span>
-                        {isToday && (
-                          <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-md">
-                            Today
+                      {/* Tooltip on hover */}
+                      <div
+                        className={`absolute bottom-[calc(100%+8px)] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-40 w-max max-w-[260px] sm:max-w-[290px] rounded-2xl bg-popover/95 backdrop-blur-md p-3 text-xs text-popover-foreground shadow-2xl border border-border ${tooltipAlignClass}`}
+                      >
+                        <div className="font-semibold text-foreground flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-primary shrink-0" />
+                          <span>{item.fullLabel}</span>
+                          {isToday && (
+                            <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-md">
+                              Today
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-primary font-semibold mt-1 flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5" />
+                          <span>Study: {item.minutes}m</span>
+                        </div>
+                        {item.completedHabits.length > 0 && (
+                          <div className="mt-2 border-t border-border/60 pt-1.5 space-y-1">
+                            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                              Completed Habits ({item.completedHabits.length})
+                            </div>
+                            {item.completedHabits.map((title, cIdx) => (
+                              <div key={cIdx} className="flex items-start gap-1.5 text-[11px] text-foreground">
+                                <Check className="h-3 w-3 text-emerald-500 shrink-0 mt-0.5" />
+                                <span className="leading-snug break-words">{title}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {item.notes && (
+                          <div className="mt-2 border-t border-border/60 pt-1.5">
+                            <p className="text-[10px] text-muted-foreground italic leading-relaxed break-words">
+                              "{item.notes}"
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 1. Value label above bar (fixed height h-5, never overlaps bar) */}
+                      <div className="h-5 flex items-end justify-center w-full pb-0.5">
+                        {item.minutes > 0 && (
+                          <span
+                            className={`text-[9px] font-mono leading-none transition-colors ${
+                              isSelected ? 'font-bold text-primary' : 'font-medium text-muted-foreground'
+                            }`}
+                          >
+                            {item.minutes}m
                           </span>
                         )}
                       </div>
-                      <div className="text-primary font-semibold mt-1 flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5" />
-                        <span>Study: {item.minutes}m</span>
+
+                      {/* 2. Bar Track (fixed height h-32 = 128px, bar strictly grows inside) */}
+                      <div className="h-32 w-full flex items-end justify-center px-0.5 relative">
+                        <div
+                          className={`w-full max-w-[18px] sm:max-w-[22px] rounded-t-sm transition-all duration-150 ${
+                            isSelected
+                              ? 'bg-primary ring-2 ring-primary/90 ring-offset-1 ring-offset-background shadow-md'
+                              : item.minutes > 0
+                              ? isToday
+                                ? 'bg-primary/90 shadow-sm ring-1 ring-primary/40'
+                                : 'bg-primary/75 group-hover:bg-primary'
+                              : item.completedHabits.length > 0
+                              ? 'bg-emerald-500/40 group-hover:bg-emerald-500/70 rounded-full h-2 w-2'
+                              : 'bg-muted/40 group-hover:bg-muted/70 rounded-full h-1.5 w-1.5'
+                          }`}
+                          style={{
+                            height:
+                              item.minutes > 0
+                                ? `${Math.max(6, heightPct)}%`
+                                : undefined,
+                          }}
+                        />
                       </div>
-                      {item.completedHabits.length > 0 && (
-                        <div className="mt-2 border-t border-border/60 pt-1.5 space-y-1">
-                          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                            Completed Habits ({item.completedHabits.length})
-                          </div>
-                          {item.completedHabits.map((title, cIdx) => (
-                            <div key={cIdx} className="flex items-start gap-1.5 text-[11px] text-foreground">
-                              <Check className="h-3 w-3 text-emerald-500 shrink-0 mt-0.5" />
-                              <span className="leading-snug break-words">{title}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {item.notes && (
-                        <div className="mt-2 border-t border-border/60 pt-1.5">
-                          <p className="text-[10px] text-muted-foreground italic leading-relaxed break-words">
-                            "{item.notes}"
-                          </p>
-                        </div>
-                      )}
+
+                      {/* 3. X-axis Day Label (fixed height h-6, border-t separator) */}
+                      <div className="h-6 w-full flex items-center justify-center border-t border-border/40 pt-1">
+                        <span
+                          className={`text-[9px] sm:text-[10px] font-mono select-none transition-colors ${
+                            isSelected
+                              ? 'font-bold text-primary underline underline-offset-2'
+                              : isToday
+                              ? 'font-bold text-foreground'
+                              : 'text-muted-foreground group-hover:text-foreground'
+                          }`}
+                        >
+                          {chartDaysRange === 30
+                            ? idx % 3 === 0 || isToday || isSelected
+                              ? item.dayNum
+                              : ''
+                            : item.shortDay}
+                        </span>
+                      </div>
                     </div>
-
-                    {/* Value label above bar if > 0 */}
-                    {item.minutes > 0 && (
-                      <span className="text-[8px] font-mono font-medium text-muted-foreground mb-1">
-                        {item.minutes}m
-                      </span>
-                    )}
-
-                    {/* Bar Pill */}
-                    <div
-                      className={`w-full max-w-[20px] rounded-t-sm transition-all duration-200 ${
-                        isSelected
-                          ? 'bg-primary ring-2 ring-primary ring-offset-2 ring-offset-background scale-110 shadow-md'
-                          : item.minutes > 0
-                          ? isToday
-                            ? 'bg-primary/90 shadow-sm ring-1 ring-primary/40'
-                            : 'bg-primary/75 group-hover:bg-primary'
-                          : item.completedHabits.length > 0
-                          ? 'bg-emerald-500/40 group-hover:bg-emerald-500/70 rounded-full h-2 w-2'
-                          : 'bg-muted/40 group-hover:bg-muted/70 rounded-full h-1 w-1.5'
-                      }`}
-                      style={{
-                        height:
-                          item.minutes > 0
-                            ? `${Math.max(8, heightPct)}%`
-                            : undefined,
-                      }}
-                    />
-
-                    {/* X-axis Day Label */}
-                    <span
-                      className={`mt-1.5 text-[9px] font-mono select-none transition-colors ${
-                        isSelected
-                          ? 'font-bold text-primary scale-110 underline underline-offset-2'
-                          : isToday
-                          ? 'font-bold text-foreground'
-                          : 'text-muted-foreground group-hover:text-foreground'
-                      }`}
-                    >
-                      {chartDaysRange === 30
-                        ? idx % 3 === 0 || isToday || isSelected
-                          ? item.dayNum
-                          : ''
-                        : item.shortDay}
-                    </span>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
 
             <div className="flex items-center justify-between text-xs text-muted-foreground pt-3 border-t border-border/50">

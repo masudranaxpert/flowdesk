@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
+  Check,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -223,7 +224,11 @@ export function RoadmapCurriculum({
                       phase.tasks.map((task) => (
                         <div
                           key={task.id}
-                          className="group flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-card p-3 transition-colors hover:border-primary/40 hover:bg-accent/40"
+                          className={`group flex items-center justify-between gap-3 rounded-xl border p-3 transition-colors ${
+                            task.completed
+                              ? 'border-emerald-500/25 bg-emerald-500/5 hover:bg-emerald-500/10'
+                              : 'border-border/60 bg-card hover:border-primary/40 hover:bg-accent/40'
+                          }`}
                         >
                           <div
                             onClick={() => onToggleTask(phase.id, task.id)}
@@ -232,11 +237,11 @@ export function RoadmapCurriculum({
                             <div
                               className={`grid h-5 w-5 shrink-0 place-items-center rounded-md border transition-colors ${
                                 task.completed
-                                  ? 'border-primary bg-primary text-primary-foreground'
+                                  ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm'
                                   : 'border-muted-foreground/40'
                               }`}
                             >
-                              {task.completed && <CheckCircle2 className="h-3.5 w-3.5" />}
+                              {task.completed && <Check className="h-3.5 w-3.5 stroke-[2.5]" />}
                             </div>
                             <span
                               className={`text-xs leading-relaxed select-none ${
