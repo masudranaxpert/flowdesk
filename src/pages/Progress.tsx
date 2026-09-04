@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   BarChart3,
   Bot,
+  CalendarCheck,
   CalendarDays,
+  Flame,
   Layers,
   Milestone,
   Plus,
@@ -629,38 +631,41 @@ Return a STRICT valid JSON object (no markdown, no backticks) with this structur
         </div>
       </PageHeader>
 
-      {/* Primary Section Switcher: Dedicated Daily Checker vs Learning Roadmaps */}
-      <div className="flex items-center gap-3 border-b border-border/60 pb-3 flex-wrap">
-        <button
-          type="button"
-          onClick={() => setMainSection('tracker')}
-          className={`flex items-center gap-2 rounded-2xl px-5 py-2.5 text-xs font-bold transition-all cursor-pointer ${
-            mainSection === 'tracker'
-              ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
-              : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-          }`}
-        >
-          <CalendarDays className="h-4 w-4" />
-          Dedicated Daily Checker
-          {unifiedStreak > 0 && (
-            <Badge variant="secondary" className="h-5 px-1.5 text-[10px] bg-black/15 text-black font-bold">
-              🔥 {unifiedStreak}d Streak
-            </Badge>
-          )}
-        </button>
+      {/* Primary Section Switcher */}
+      <div className="flex items-center justify-between border-b border-border/60 pb-3 flex-wrap gap-2">
+        <div className="inline-flex items-center gap-1.5 rounded-2xl bg-muted/50 p-1.5 border border-border/60">
+          <button
+            type="button"
+            onClick={() => setMainSection('tracker')}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all cursor-pointer ${
+              mainSection === 'tracker'
+                ? 'bg-card text-foreground shadow-sm border border-border'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
+            }`}
+          >
+            <CalendarCheck className="h-4 w-4 text-primary" />
+            Daily Checker
+            {unifiedStreak > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-500">
+                <Flame className="h-3 w-3" />
+                {unifiedStreak}d
+              </span>
+            )}
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setMainSection('roadmaps')}
-          className={`flex items-center gap-2 rounded-2xl px-5 py-2.5 text-xs font-bold transition-all cursor-pointer ${
-            mainSection === 'roadmaps'
-              ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
-              : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-          }`}
-        >
-          <Layers className="h-4 w-4" />
-          Learning Roadmaps ({roadmaps.length})
-        </button>
+          <button
+            type="button"
+            onClick={() => setMainSection('roadmaps')}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all cursor-pointer ${
+              mainSection === 'roadmaps'
+                ? 'bg-card text-foreground shadow-sm border border-border'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
+            }`}
+          >
+            <Layers className="h-4 w-4 text-primary" />
+            Learning Roadmaps ({roadmaps.length})
+          </button>
+        </div>
       </div>
 
       {/* SECTION 1: Dedicated Daily Checker */}

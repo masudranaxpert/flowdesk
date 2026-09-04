@@ -1,12 +1,15 @@
 import React, { useMemo, useState } from 'react';
 import {
   BarChart3,
-  CalendarDays,
+  Calendar,
+  CalendarCheck,
+  Check,
   CheckCircle2,
   Clock,
   Flame,
   History,
   Plus,
+  RefreshCw,
   Trash2,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -15,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import type { DailyHabit, DailyProgressLog } from '../../types';
-import { getHabitTheme, localDateString, type HabitTheme } from './presets';
+import { localDateString } from './presets';
 
 interface DailyTrackerProps {
   unifiedHabits: DailyHabit[];
@@ -56,7 +59,7 @@ export function DailyTracker({
 }: DailyTrackerProps) {
   const [newHabitTitle, setNewHabitTitle] = useState('');
 
-  // 30-Day or 14-Day daily study time & habit activity logs
+  // Daily study consistency data over 14 or 30 days
   const chartDaysData = useMemo(() => {
     const result = [];
     const logsMap = new Map<string, DailyProgressLog>();
@@ -64,9 +67,9 @@ export function DailyTracker({
       if (log.date) logsMap.set(log.date, log);
     });
 
-    const habitMap = new Map<string, { title: string; theme: HabitTheme }>();
-    unifiedHabits.forEach((h, idx) => {
-      habitMap.set(h.id, { title: h.title, theme: getHabitTheme(h.title, idx) });
+    const habitMap = new Map<string, string>();
+    unifiedHabits.forEach((h) => {
+      habitMap.set(h.id, h.title);
     });
 
     for (let i = chartDaysRange - 1; i >= 0; i--) {
@@ -78,26 +81,18 @@ export function DailyTracker({
       const dayNum = d.getDate();
       const monthShort = d.toLocaleDateString('en-US', { month: 'short' });
 
-      const completedHabitIds = log?.habitsDone || [];
-      const completedHabits = completedHabitIds
+      const completedHabitTitles = (log?.habitsDone || [])
         .map((hid) => habitMap.get(hid))
-        .filter(Boolean) as Array<{ title: string; theme: HabitTheme }>;
-
-      const hasEnglish = completedHabits.some((h) => h.theme.colorName === 'purple');
-      const hasCoding = completedHabits.some((h) => h.theme.colorName === 'amber');
-      const hasOther = completedHabits.some((h) => h.theme.colorName !== 'purple' && h.theme.colorName !== 'amber');
+        .filter(Boolean) as string[];
 
       result.push({
         date: dateStr,
         dayLabel: `${dayName} ${dayNum}`,
         fullLabel: `${monthShort} ${dayNum} (${dayName})`,
         dayNum,
-        shortDay: dayName[0],
+        shortDay: dayName.slice(0, 3),
         minutes: log?.minutesSpent || 0,
-        completedHabits,
-        hasEnglish,
-        hasCoding,
-        hasOther,
+        completedHabits: completedHabitTitles,
         notes: log?.notes || '',
       });
     }
@@ -111,7 +106,9 @@ export function DailyTracker({
 
   const avgMinutes = useMemo(() => {
     const logged = chartDaysData.filter((d) => d.minutes > 0);
-    return logged.length > 0 ? Math.round(logged.reduce((acc, d) => acc + d.minutes, 0) / logged.length) : 0;
+    return logged.length > 0
+      ? Math.round(logged.reduce((acc, d) => acc + d.minutes, 0) / logged.length)
+      : 0;
   }, [chartDaysData]);
 
   const handleAddSubmit = () => {
@@ -122,45 +119,44 @@ export function DailyTracker({
 
   return (
     <div className="grid gap-6 lg:grid-cols-3 animate-fade-in">
-      {/* Left 2 Cols: 30-Day Consistency Chart & Recent History */}
+      {/* Left 2 Cols: Consistency Chart & Recent Activity History */}
       <div className="space-y-6 lg:col-span-2">
-        {/* 30-Day / 14-Day Consistency & Study Hours Chart */}
+        {/* Consistency & Study Hours Chart */}
         <Card className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-4">
             <div>
               <div className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-amber-500" />
-                <h3 className="text-sm font-semibold tracking-tight">
-                  {chartDaysRange === 30 ? '30-Day Study & Habit Consistency' : '14-Day Study Consistency'}
-                </h3>
-                <Badge variant="outline" className="text-[10px] text-primary border-primary/30">
-                  Rolling {chartDaysRange} Days
+                <BarChart3 className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-semibold tracking-tight">Study Consistency</h3>
+                <Badge variant="outline" className="text-[10px] font-medium">
+                  Last {chartDaysRange} Days
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Dedicated daily tracking: distinct colors for English, Coding, and study consistency
+                Daily study session duration and completed habits
               </p>
             </div>
+
             <div className="flex items-center gap-2 flex-wrap">
               {/* Range Toggle */}
-              <div className="flex items-center rounded-xl bg-muted/60 p-0.5 border border-border">
+              <div className="flex items-center rounded-xl bg-muted/60 p-0.5 border border-border/60">
                 <button
                   type="button"
                   onClick={() => setChartDaysRange(30)}
-                  className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-all cursor-pointer ${
+                  className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all cursor-pointer ${
                     chartDaysRange === 30
-                      ? 'bg-card text-foreground shadow-sm'
+                      ? 'bg-card text-foreground shadow-sm font-semibold'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
-                  30 Days (1 Month)
+                  30 Days
                 </button>
                 <button
                   type="button"
                   onClick={() => setChartDaysRange(14)}
-                  className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-all cursor-pointer ${
+                  className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all cursor-pointer ${
                     chartDaysRange === 14
-                      ? 'bg-card text-foreground shadow-sm'
+                      ? 'bg-card text-foreground shadow-sm font-semibold'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
@@ -168,70 +164,30 @@ export function DailyTracker({
                 </button>
               </div>
 
-              <Badge variant="secondary" className="text-[11px] gap-1">
-                <Clock className="h-3 w-3" /> Avg: {avgMinutes}m / session
-              </Badge>
+              <div className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground bg-muted/40 px-2.5 py-1 rounded-xl border border-border/50">
+                <Clock className="h-3 w-3 text-primary" />
+                <span>Avg: {avgMinutes}m / session</span>
+              </div>
             </div>
           </div>
 
-          {/* Color Category Legend */}
-          <div className="flex items-center gap-2.5 flex-wrap text-[11px] text-muted-foreground bg-muted/30 p-2.5 rounded-2xl border border-border/50">
-            <span className="font-semibold text-foreground text-[10px] uppercase tracking-wider">Legend:</span>
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-300 border border-purple-500/30 font-medium">
-              <span className="h-2 w-2 rounded-full bg-purple-500" /> English Practice
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30 font-medium">
-              <span className="h-2 w-2 rounded-full bg-amber-500" /> Coding & Study
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-sky-500/15 text-sky-300 border border-sky-500/30 font-medium">
-              <span className="h-2 w-2 rounded-full bg-sky-500" /> Routine
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-gradient-to-r from-purple-500/30 to-amber-500/30 text-amber-300 border border-amber-500/40 font-medium">
-              <span className="h-2 w-2 rounded-full bg-gradient-to-r from-purple-500 to-amber-500" /> Both Completed
-            </span>
-            <span className="ml-auto inline-flex items-center gap-1 text-[10px] text-amber-500/80">
-              <span className="inline-block w-3 border-b border-dashed border-amber-500" /> 60m Target
-            </span>
-          </div>
-
-          {/* Chart Bars */}
-          <div className="space-y-2">
-            <div className="relative h-48 w-full flex items-end justify-between gap-1 pt-8 pb-2 px-0.5">
+          {/* Chart Canvas */}
+          <div className="space-y-3">
+            <div className="relative h-44 w-full flex items-end justify-between gap-1 pt-6 pb-2 px-1">
               {/* 60m Goal Reference Line */}
               <div
-                className="absolute left-0 right-0 border-b border-dashed border-amber-500/40 pointer-events-none z-10 flex justify-end pr-1"
+                className="absolute left-0 right-0 border-b border-dashed border-border pointer-events-none z-10 flex justify-end pr-1"
                 style={{ bottom: `${Math.round((60 / maxChartMinutes) * 100)}%` }}
               >
-                <span className="text-[9px] font-mono text-amber-500/80 -translate-y-full bg-card/80 px-1 rounded">
-                  60m Target
+                <span className="text-[9px] font-mono text-muted-foreground -translate-y-full bg-card px-1.5 py-0.5 rounded border border-border/50">
+                  Target (60m)
                 </span>
               </div>
 
               {chartDaysData.map((item, idx) => {
                 const heightPct = Math.min(100, Math.round((item.minutes / maxChartMinutes) * 100));
                 const isToday = idx === chartDaysData.length - 1;
-
-                // Determine bar background color based on habits
-                let barClass = 'bg-muted/40';
-                if (item.minutes > 0 || item.completedHabits.length > 0) {
-                  if (item.hasEnglish && item.hasCoding) {
-                    barClass = isToday
-                      ? 'bg-gradient-to-t from-purple-500 via-amber-400 to-amber-500 shadow-md shadow-amber-500/25 ring-2 ring-primary/40'
-                      : 'bg-gradient-to-t from-purple-500 to-amber-500 hover:brightness-110';
-                  } else if (item.hasEnglish) {
-                    barClass = isToday
-                      ? 'bg-purple-500 shadow-md shadow-purple-500/25 ring-2 ring-purple-500/50'
-                      : 'bg-purple-500/90 hover:bg-purple-500';
-                  } else if (item.hasCoding) {
-                    barClass = isToday
-                      ? 'bg-amber-500 shadow-md shadow-amber-500/25 ring-2 ring-amber-500/50'
-                      : 'bg-amber-500/90 hover:bg-amber-500';
-                  } else {
-                    barClass = isToday
-                      ? 'bg-primary shadow-md shadow-primary/25 ring-2 ring-primary/50'
-                      : 'bg-primary/90 hover:bg-primary';
-                  }
-                }
+                const hasActivity = item.minutes > 0 || item.completedHabits.length > 0;
 
                 return (
                   <div
@@ -239,125 +195,135 @@ export function DailyTracker({
                     className="group relative flex-1 flex flex-col items-center h-full justify-end"
                   >
                     {/* Tooltip on hover */}
-                    <div className="absolute -top-12 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-30 whitespace-nowrap rounded-xl bg-popover px-2.5 py-1.5 text-[10px] font-medium text-popover-foreground shadow-xl border border-border">
-                      <div className="font-bold text-foreground flex items-center gap-1">
+                    <div className="absolute -top-14 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-30 whitespace-nowrap rounded-xl bg-popover px-3 py-2 text-xs text-popover-foreground shadow-xl border border-border">
+                      <div className="font-semibold text-foreground flex items-center gap-1.5">
+                        <Calendar className="h-3 w-3 text-muted-foreground" />
                         {item.fullLabel} {isToday ? '(Today)' : ''}
                       </div>
-                      <div className="text-amber-400 font-semibold mt-0.5">
+                      <div className="text-primary font-medium mt-0.5 flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
                         Study: {item.minutes}m
                       </div>
-                      {item.completedHabits.length > 0 ? (
-                        <div className="flex flex-col gap-0.5 mt-1 border-t border-border/50 pt-1">
-                          {item.completedHabits.map((ch, cIdx) => (
-                            <span key={cIdx} className="flex items-center gap-1 text-[9px] text-muted-foreground">
-                              <span className={`h-1.5 w-1.5 rounded-full ${ch.theme.dot}`} />
-                              {ch.title}
-                            </span>
+                      {item.completedHabits.length > 0 && (
+                        <div className="mt-1 border-t border-border/50 pt-1 text-[11px] text-muted-foreground space-y-0.5">
+                          {item.completedHabits.map((title, cIdx) => (
+                            <div key={cIdx} className="flex items-center gap-1">
+                              <Check className="h-3 w-3 text-emerald-500 shrink-0" />
+                              <span className="truncate max-w-[160px]">{title}</span>
+                            </div>
                           ))}
                         </div>
-                      ) : (
-                        <span className="text-[9px] text-muted-foreground italic block">No habits checked</span>
                       )}
-                      {item.notes && <p className="text-[9px] text-muted-foreground italic truncate max-w-[150px] mt-0.5">"{item.notes}"</p>}
+                      {item.notes && (
+                        <p className="text-[10px] text-muted-foreground italic truncate max-w-[160px] mt-1">
+                          "{item.notes}"
+                        </p>
+                      )}
                     </div>
 
                     {/* Value label above bar if > 0 */}
                     {item.minutes > 0 && (
-                      <span className="text-[8px] font-mono font-semibold text-muted-foreground mb-0.5">
+                      <span className="text-[8px] font-mono font-medium text-muted-foreground mb-1">
                         {item.minutes}m
                       </span>
                     )}
 
                     {/* Bar Pill */}
                     <div
-                      className={`w-full max-w-[22px] rounded-t-md transition-all duration-300 ${barClass}`}
-                      style={{ height: item.minutes > 0 ? `${Math.max(8, heightPct)}%` : item.completedHabits.length > 0 ? '8px' : '4px' }}
+                      className={`w-full max-w-[20px] rounded-t-sm transition-all duration-200 ${
+                        item.minutes > 0
+                          ? isToday
+                            ? 'bg-primary shadow-sm ring-1 ring-primary/40'
+                            : 'bg-primary/75 group-hover:bg-primary'
+                          : item.completedHabits.length > 0
+                          ? 'bg-emerald-500/40 rounded-full h-2 w-2'
+                          : 'bg-muted/40 rounded-full h-1 w-1.5'
+                      }`}
+                      style={{
+                        height:
+                          item.minutes > 0
+                            ? `${Math.max(8, heightPct)}%`
+                            : undefined,
+                      }}
                     />
-
-                    {/* Micro activity dots underneath bar */}
-                    <div className="flex items-center justify-center gap-0.5 mt-1 h-2">
-                      {item.hasEnglish && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-purple-500 shrink-0" title="English practice" />
-                      )}
-                      {item.hasCoding && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" title="Coding & study" />
-                      )}
-                      {item.hasOther && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-sky-500 shrink-0" title="Other routine/habit" />
-                      )}
-                    </div>
 
                     {/* X-axis Day Label */}
                     <span
-                      className={`mt-1 text-[9px] font-mono select-none ${
+                      className={`mt-1.5 text-[9px] font-mono select-none ${
                         isToday
-                          ? 'font-bold text-amber-500'
+                          ? 'font-bold text-primary'
                           : 'text-muted-foreground'
                       }`}
                     >
-                      {chartDaysRange === 30 ? (idx % 3 === 0 || isToday ? item.dayNum : '') : item.shortDay}
+                      {chartDaysRange === 30
+                        ? idx % 3 === 0 || isToday
+                          ? item.dayNum
+                          : ''
+                        : item.shortDay}
                     </span>
                   </div>
                 );
               })}
             </div>
 
-            <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-2 border-t border-border/40">
+            <div className="flex items-center justify-between text-xs text-muted-foreground pt-3 border-t border-border/50">
               <span>{chartDaysRange} days ago</span>
-              <span className="text-[10px] italic">Hover bars to view exact English / Coding / Study details</span>
+              <span className="text-[11px] text-muted-foreground/80">Hover bars to view session details</span>
               <span className="font-semibold text-foreground">Today</span>
             </div>
           </div>
         </Card>
 
         {/* Recent Daily Logs History */}
-        <Card className="rounded-3xl border border-border bg-card p-5 shadow-sm space-y-3">
-          <div className="flex items-center justify-between">
+        <Card className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-border/60 pb-3">
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-              <History className="h-3.5 w-3.5" /> Recent Activity History (Last 30 Days)
+              <History className="h-3.5 w-3.5 text-primary" /> Recent Activity History
             </h4>
-            <span className="text-[10px] text-muted-foreground font-medium">
-              Auto-rolling 1 Month
-            </span>
+            <Badge variant="outline" className="text-[10px] font-medium">
+              Last 30 Days
+            </Badge>
           </div>
+
           {unifiedLogs.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic">No logged activity yet. Save your first check-in on the right!</p>
+            <p className="text-xs text-muted-foreground italic py-3 text-center">
+              No logged activity yet. Save your first check-in on the right!
+            </p>
           ) : (
             <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
               {unifiedLogs.slice(0, 15).map((log, idx) => {
-                const habitMap = new Map<string, { title: string; theme: HabitTheme }>();
-                unifiedHabits.forEach((h, hIdx) => {
-                  habitMap.set(h.id, { title: h.title, theme: getHabitTheme(h.title, hIdx) });
-                });
-                const completedHabits = (log.habitsDone || [])
+                const habitMap = new Map<string, string>();
+                unifiedHabits.forEach((h) => habitMap.set(h.id, h.title));
+                const completedTitles = (log.habitsDone || [])
                   .map((hid) => habitMap.get(hid))
-                  .filter(Boolean) as Array<{ title: string; theme: HabitTheme }>;
+                  .filter(Boolean) as string[];
 
                 return (
-                  <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-2xl bg-muted/30 border border-border/50 p-3 text-xs">
-                    <div className="space-y-1.5 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-foreground">{log.date}</span>
+                  <div
+                    key={idx}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl bg-muted/20 border border-border/50 p-3 text-xs"
+                  >
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-foreground flex items-center gap-1">
+                          <Calendar className="h-3 w-3 text-muted-foreground" />
+                          {log.date}
+                        </span>
                         {log.minutesSpent > 0 && (
-                          <Badge variant="secondary" className="text-[10px] font-mono">
-                            ⏱️ {log.minutesSpent}m
+                          <Badge variant="secondary" className="text-[10px] font-mono gap-1">
+                            <Clock className="h-3 w-3 text-primary" /> {log.minutesSpent}m
                           </Badge>
                         )}
+                        {completedTitles.length > 0 && (
+                          <span className="text-[11px] text-emerald-500 font-medium flex items-center gap-1">
+                            <Check className="h-3 w-3" />
+                            {completedTitles.length} habit{completedTitles.length > 1 ? 's' : ''} completed
+                          </span>
+                        )}
                       </div>
-                      {completedHabits.length > 0 && (
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          {completedHabits.map((ch, cIdx) => (
-                            <span
-                              key={cIdx}
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium border ${ch.theme.badgeBg}`}
-                            >
-                              <span className={`h-1.5 w-1.5 rounded-full ${ch.theme.dot}`} />
-                              {ch.theme.label}
-                            </span>
-                          ))}
-                        </div>
+                      {log.notes && (
+                        <p className="text-muted-foreground text-xs line-clamp-2">{log.notes}</p>
                       )}
-                      {log.notes && <p className="text-muted-foreground text-xs">{log.notes}</p>}
                     </div>
                   </div>
                 );
@@ -369,11 +335,11 @@ export function DailyTracker({
 
       {/* Right 1 Col: Streak & Today's Check-in */}
       <div className="space-y-6">
-        {/* Streak & Consistency Card */}
-        <Card className="rounded-3xl border border-border bg-card p-5 shadow-sm space-y-4">
+        {/* Streak Card */}
+        <Card className="rounded-3xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="grid h-10 w-10 place-items-center rounded-2xl bg-amber-500/15 text-amber-500">
+            <div className="flex items-center gap-3">
+              <div className="grid h-10 w-10 place-items-center rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
                 <Flame className="h-5 w-5" />
               </div>
               <div>
@@ -383,7 +349,7 @@ export function DailyTracker({
             </div>
             <div className="text-right">
               <span className="text-2xl font-black text-amber-500">{unifiedStreak}</span>
-              <span className="text-xs text-muted-foreground block">Days Streak</span>
+              <span className="text-[11px] text-muted-foreground block font-medium">Days</span>
             </div>
           </div>
         </Card>
@@ -392,11 +358,15 @@ export function DailyTracker({
         <Card className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-5">
           <div className="flex items-center justify-between border-b border-border/60 pb-3">
             <div className="flex items-center gap-2">
-              <CalendarDays className="h-4 w-4 text-primary" />
+              <CalendarCheck className="h-4 w-4 text-primary" />
               <h4 className="text-sm font-semibold tracking-tight">Today's Check-in</h4>
             </div>
             <span className="text-xs font-medium text-muted-foreground">
-              {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              {new Date().toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })}
             </span>
           </div>
 
@@ -404,36 +374,35 @@ export function DailyTracker({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
-                Daily Habits & Commitments
+                Daily Habits
               </label>
               <Button
                 type="button"
                 variant="ghost"
                 size="xs"
                 onClick={onImportFromRoutine}
-                className="h-6 text-[11px] text-primary hover:text-primary/90 gap-1 px-1.5 cursor-pointer"
-                title="Import subjects and schedules from your Routine page"
+                className="h-6 text-xs text-primary hover:text-primary/90 gap-1 px-2 cursor-pointer"
+                title="Sync subjects from Routine page"
               >
-                <Clock className="h-3 w-3" /> Sync from Routine
+                <RefreshCw className="h-3 w-3" /> Sync Routine
               </Button>
             </div>
 
             {unifiedHabits.length === 0 ? (
-              <p className="text-xs text-muted-foreground italic bg-muted/20 p-3 rounded-xl border border-dashed border-border/60">
-                No habits added yet. Add a custom habit below or sync from your Routine.
+              <p className="text-xs text-muted-foreground italic bg-muted/20 p-3 rounded-xl border border-dashed border-border/60 text-center">
+                No habits yet. Add one below or sync from Routine.
               </p>
             ) : (
               <div className="space-y-2">
-                {unifiedHabits.map((habit, idx) => {
+                {unifiedHabits.map((habit) => {
                   const isDone = Boolean(todayHabitsDone[habit.id]);
-                  const theme = getHabitTheme(habit.title, idx);
                   return (
                     <div
                       key={habit.id}
-                      className={`group flex items-center justify-between gap-3 rounded-2xl border p-2.5 transition-all ${
+                      className={`group flex items-center justify-between gap-3 rounded-xl border p-2.5 transition-all ${
                         isDone
-                          ? `${theme.badgeBg}`
-                          : 'border-border bg-muted/40 hover:bg-muted/70 text-muted-foreground'
+                          ? 'border-emerald-500/30 bg-emerald-500/5 text-foreground'
+                          : 'border-border/60 bg-muted/30 hover:bg-muted/50 text-muted-foreground'
                       }`}
                     >
                       <div
@@ -448,20 +417,19 @@ export function DailyTracker({
                         <div
                           className={`grid h-5 w-5 shrink-0 place-items-center rounded-md border transition-all ${
                             isDone
-                              ? `${theme.dot} text-white border-transparent`
+                              ? 'border-emerald-500 bg-emerald-500 text-white'
                               : 'border-muted-foreground/40 group-hover:border-primary'
                           }`}
                         >
-                          {isDone && <CheckCircle2 className="h-3.5 w-3.5" />}
+                          {isDone && <Check className="h-3.5 w-3.5 stroke-[2.5]" />}
                         </div>
-                        <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${theme.badgeBg}`}>
-                            {theme.label}
-                          </span>
-                          <span className={`text-xs font-medium leading-relaxed truncate ${isDone ? 'line-through opacity-80' : ''}`}>
-                            {habit.title}
-                          </span>
-                        </div>
+                        <span
+                          className={`text-xs font-medium leading-relaxed truncate ${
+                            isDone ? 'line-through text-muted-foreground' : 'text-foreground'
+                          }`}
+                        >
+                          {habit.title}
+                        </span>
                       </div>
 
                       <button
@@ -478,8 +446,8 @@ export function DailyTracker({
               </div>
             )}
 
-            {/* Add Custom Habit Input */}
-            <div className="flex items-center gap-2 pt-1">
+            {/* Add Habit input */}
+            <div className="flex gap-2 pt-1">
               <Input
                 placeholder="Add habit (e.g. 2 LeetCode problems)..."
                 value={newHabitTitle}
@@ -490,10 +458,11 @@ export function DailyTracker({
                 className="h-8 text-xs rounded-xl"
               />
               <Button
+                type="button"
                 size="sm"
-                variant="secondary"
+                variant="outline"
                 onClick={handleAddSubmit}
-                className="h-8 text-xs rounded-xl shrink-0 gap-1"
+                className="h-8 text-xs rounded-xl px-3 gap-1 shrink-0"
               >
                 <Plus className="h-3.5 w-3.5" /> Add
               </Button>
@@ -501,7 +470,7 @@ export function DailyTracker({
           </div>
 
           {/* Study Time Logger */}
-          <div className="space-y-2">
+          <div className="space-y-2 pt-2 border-t border-border/50">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Today's Study Time
@@ -509,7 +478,6 @@ export function DailyTracker({
               <span className="text-xs font-bold text-primary">{todayMinutes} Minutes</span>
             </div>
 
-            {/* Preset buttons */}
             <div className="grid grid-cols-4 gap-1.5">
               {[30, 45, 60, 120].map((mins) => (
                 <Button
@@ -518,7 +486,7 @@ export function DailyTracker({
                   variant={todayMinutes === mins ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setTodayMinutes(mins)}
-                  className="h-8 text-xs font-semibold"
+                  className="h-8 text-xs font-medium rounded-xl cursor-pointer"
                 >
                   {mins < 60 ? `${mins}m` : `${mins / 60}h`}
                 </Button>
@@ -526,7 +494,7 @@ export function DailyTracker({
             </div>
           </div>
 
-          {/* Notes / Reflection for today */}
+          {/* Notes / Reflection */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
               Notes / What did you learn?
@@ -536,18 +504,18 @@ export function DailyTracker({
               value={todayNotes}
               onChange={(e) => setTodayNotes(e.target.value)}
               rows={2}
-              className="text-xs"
+              className="text-xs rounded-xl"
             />
           </div>
 
-          {/* Save Log Button */}
+          {/* Save Daily Progress */}
           <Button
             onClick={onSaveDailyLog}
             disabled={savingDailyLog}
-            className="w-full gap-2 rounded-xl"
+            className="w-full gap-2 rounded-xl cursor-pointer"
           >
             <CheckCircle2 className="h-4 w-4" />
-            {savingDailyLog ? 'Saving...' : 'Save Today\'s Progress'}
+            {savingDailyLog ? 'Saving...' : "Save Today's Check-in"}
           </Button>
         </Card>
       </div>
