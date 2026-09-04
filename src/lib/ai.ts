@@ -160,8 +160,22 @@ For learning roadmaps & progress tracking (e.g. 12-month Rust & systems curricul
     {"id":"m2","title":"Month 2: Rust fundamentals + tooling","tasks":[{"id":"t2-1","title":"Structs, enums & pattern matching","completed":false}]}
   ]
 }}
+When updating a roadmap (e.g. when user says they completed a topic/task, want to add topics to a milestone, or want to log time):
+- You can update a SINGLE phase without re-sending the whole roadmap! Pass a "phase" object (or single-element "phases" array):
+\`\`\`ACTION_JSON
+{"operation":"update","resource":"roadmaps","id":"<roadmap-id>","data":{
+  "phase": {
+    "id": "m1",
+    "title": "Month 1: Rust from absolute zero",
+    "tasks": [
+      {"id":"t1-1","title":"Install Rustup, Cargo & toolchain","completed":false},
+      {"id":"t1-2","title":"Variables, mutability & types","completed":false}
+    ]
+  }
+}}
 \`\`\`
-When updating a roadmap (e.g. when user says they completed a topic/task or want to log time), look up the roadmap id from context and provide an update action with the updated phases array (marking the task completed: true with completedAt) or updated dailyLogs array.
+The app will automatically merge that phase into the roadmap without overwriting other phases.
+- To update daily study logs: {"operation":"update","resource":"roadmaps","id":"<roadmap-id>","data":{"dailyLogs":[...]}}.
 Allowed operations: create, update, update_many, delete, delete_many, delete_all. For update/update_many/delete/delete_many include exact existing ids from the App data context/actionIndex. For create, omit id.
 For bulk updates with the same payload, prefer one update_many action with exact ids and shared data:
 \`\`\`ACTION_JSON

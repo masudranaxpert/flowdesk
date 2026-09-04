@@ -117,6 +117,36 @@ export default function Progress() {
         }
       } catch {}
 
+      // Auto-sync Month 1 syllabus if it only had the initial 5 placeholder topics
+      const rustPresetM1 = presets[0]?.phases?.[0];
+      if (rustPresetM1) {
+        items = items.map((r) => {
+          if (r.category === 'rust' || r.title?.toLowerCase().includes('rust')) {
+            const m1Index = (r.phases || []).findIndex((p) => p.id === 'm1' || p.title?.includes('Month 1'));
+            if (m1Index >= 0 && (r.phases[m1Index].tasks?.length || 0) <= 5) {
+              const existingTasks = r.phases[m1Index].tasks || [];
+              const completedIds = new Set(existingTasks.filter((t) => t.completed).map((t) => t.id));
+              const mergedTasks = rustPresetM1.tasks.map((t) => ({
+                ...t,
+                completed: completedIds.has(t.id),
+              }));
+              const nextPhases = [...r.phases];
+              nextPhases[m1Index] = {
+                ...nextPhases[m1Index],
+                title: rustPresetM1.title,
+                description: rustPresetM1.description,
+                tasks: mergedTasks,
+              };
+              const updatedRoadmap = { ...r, phases: nextPhases };
+              const rid = r._id || r.id;
+              if (rid) api.roadmaps.update(rid, { phases: nextPhases }).catch(() => {});
+              return updatedRoadmap;
+            }
+          }
+          return r;
+        });
+      }
+
       setRoadmaps(items);
       if (items.length > 0) {
         setSelectedId((prev) => (items.some((r) => r._id === prev || r.id === prev) ? prev : items[0]._id || items[0].id || ''));
