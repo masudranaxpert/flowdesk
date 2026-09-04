@@ -8,7 +8,6 @@ import {
   Clock,
   Flame,
   GripVertical,
-  History,
   Plus,
   RefreshCw,
   Trash2,
@@ -63,6 +62,7 @@ export function DailyTracker({
   const [newHabitTitle, setNewHabitTitle] = useState('');
   const [draggedHabitIndex, setDraggedHabitIndex] = useState<number | null>(null);
   const [dragOverHabitIndex, setDragOverHabitIndex] = useState<number | null>(null);
+  const [selectedDayDate, setSelectedDayDate] = useState<string>(() => localDateString());
 
   const handleDropHabit = (targetIndex: number) => {
     if (draggedHabitIndex === null || draggedHabitIndex === targetIndex || !onReorderHabits) {
@@ -113,6 +113,7 @@ export function DailyTracker({
         minutes: log?.minutesSpent || 0,
         completedHabits: completedHabitTitles,
         notes: log?.notes || '',
+        isToday: i === 0,
       });
     }
     return result;
@@ -129,6 +130,13 @@ export function DailyTracker({
       ? Math.round(logged.reduce((acc, d) => acc + d.minutes, 0) / logged.length)
       : 0;
   }, [chartDaysData]);
+
+  const selectedDayData = useMemo(() => {
+    return (
+      chartDaysData.find((d) => d.date === selectedDayDate) ||
+      chartDaysData[chartDaysData.length - 1]
+    );
+  }, [chartDaysData, selectedDayDate]);
 
   const handleAddSubmit = () => {
     if (!newHabitTitle.trim()) return;
@@ -206,7 +214,7 @@ export function DailyTracker({
               {chartDaysData.map((item, idx) => {
                 const heightPct = Math.min(100, Math.round((item.minutes / maxChartMinutes) * 100));
                 const isToday = idx === chartDaysData.length - 1;
-                const hasActivity = item.minutes > 0 || item.completedHabits.length > 0;
+                const isSelected = item.date === (selectedDayData?.date || selectedDayDate);
                 const isFarRight = idx >= chartDaysData.length - 5;
                 const isFarLeft = idx < 4;
                 const tooltipAlignClass = isFarRight
@@ -218,7 +226,8 @@ export function DailyTracker({
                 return (
                   <div
                     key={item.date}
-                    className="group relative flex-1 flex flex-col items-center h-full justify-end"
+                    onClick={() => setSelectedDayDate(item.date)}
+                    className="group relative flex-1 flex flex-col items-center h-full justify-end cursor-pointer"
                   >
                     {/* Tooltip on hover */}
                     <div
@@ -269,13 +278,15 @@ export function DailyTracker({
                     {/* Bar Pill */}
                     <div
                       className={`w-full max-w-[20px] rounded-t-sm transition-all duration-200 ${
-                        item.minutes > 0
+                        isSelected
+                          ? 'bg-primary ring-2 ring-primary ring-offset-2 ring-offset-background scale-110 shadow-md'
+                          : item.minutes > 0
                           ? isToday
-                            ? 'bg-primary shadow-sm ring-1 ring-primary/40'
+                            ? 'bg-primary/90 shadow-sm ring-1 ring-primary/40'
                             : 'bg-primary/75 group-hover:bg-primary'
                           : item.completedHabits.length > 0
-                          ? 'bg-emerald-500/40 rounded-full h-2 w-2'
-                          : 'bg-muted/40 rounded-full h-1 w-1.5'
+                          ? 'bg-emerald-500/40 group-hover:bg-emerald-500/70 rounded-full h-2 w-2'
+                          : 'bg-muted/40 group-hover:bg-muted/70 rounded-full h-1 w-1.5'
                       }`}
                       style={{
                         height:
@@ -287,14 +298,16 @@ export function DailyTracker({
 
                     {/* X-axis Day Label */}
                     <span
-                      className={`mt-1.5 text-[9px] font-mono select-none ${
-                        isToday
-                          ? 'font-bold text-primary'
-                          : 'text-muted-foreground'
+                      className={`mt-1.5 text-[9px] font-mono select-none transition-colors ${
+                        isSelected
+                          ? 'font-bold text-primary scale-110 underline underline-offset-2'
+                          : isToday
+                          ? 'font-bold text-foreground'
+                          : 'text-muted-foreground group-hover:text-foreground'
                       }`}
                     >
                       {chartDaysRange === 30
-                        ? idx % 3 === 0 || isToday
+                        ? idx % 3 === 0 || isToday || isSelected
                           ? item.dayNum
                           : ''
                         : item.shortDay}
@@ -306,68 +319,87 @@ export function DailyTracker({
 
             <div className="flex items-center justify-between text-xs text-muted-foreground pt-3 border-t border-border/50">
               <span>{chartDaysRange} days ago</span>
-              <span className="text-[11px] text-muted-foreground/80">Hover bars to view session details</span>
+              <span className="text-[11px] text-muted-foreground font-medium">Click any day bar to view full details below</span>
               <span className="font-semibold text-foreground">Today</span>
             </div>
           </div>
-        </Card>
 
-        {/* Recent Daily Logs History */}
-        <Card className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-border/60 pb-3">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-              <History className="h-3.5 w-3.5 text-primary" /> Recent Activity History
-            </h4>
-            <Badge variant="outline" className="text-[10px] font-medium">
-              Last 30 Days
-            </Badge>
-          </div>
-
-          {unifiedLogs.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic py-3 text-center">
-              No logged activity yet. Save your first check-in on the right!
-            </p>
-          ) : (
-            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-              {unifiedLogs.slice(0, 15).map((log, idx) => {
-                const habitMap = new Map<string, string>();
-                unifiedHabits.forEach((h) => habitMap.set(h.id, h.title));
-                const completedTitles = (log.habitsDone || [])
-                  .map((hid) => habitMap.get(hid))
-                  .filter(Boolean) as string[];
-
-                return (
-                  <div
-                    key={idx}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl bg-muted/20 border border-border/50 p-3 text-xs"
-                  >
-                    <div className="space-y-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-foreground flex items-center gap-1">
-                          <Calendar className="h-3 w-3 text-muted-foreground" />
-                          {log.date}
-                        </span>
-                        {log.minutesSpent > 0 && (
-                          <Badge variant="secondary" className="text-[10px] font-mono gap-1">
-                            <Clock className="h-3 w-3 text-primary" /> {log.minutesSpent}m
-                          </Badge>
-                        )}
-                        {completedTitles.length > 0 && (
-                          <span className="text-[11px] text-emerald-500 font-medium flex items-center gap-1">
-                            <Check className="h-3 w-3" />
-                            {completedTitles.length} habit{completedTitles.length > 1 ? 's' : ''} completed
-                          </span>
-                        )}
-                      </div>
-                      {log.notes && (
-                        <p className="text-muted-foreground text-xs line-clamp-2">{log.notes}</p>
-                      )}
-                    </div>
+          {/* Selected Day Details Panel */}
+          <div className="border-t border-border/60 pt-5 space-y-4 animate-fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-muted/25 border border-border/50 rounded-2xl p-4">
+              <div className="flex items-center gap-3">
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
+                  <Calendar className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-semibold text-foreground tracking-tight">
+                      {selectedDayData.fullLabel}
+                    </h4>
+                    {selectedDayData.date === localDateString() && (
+                      <Badge variant="secondary" className="text-[10px] font-semibold bg-primary/15 text-primary border-primary/20">
+                        Today
+                      </Badge>
+                    )}
                   </div>
-                );
-              })}
+                  <span className="text-xs text-muted-foreground font-mono">
+                    {selectedDayData.date}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 rounded-xl bg-primary/10 text-primary border border-primary/20 px-3 py-1.5 text-xs font-semibold">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>{selectedDayData.minutes > 0 ? `${selectedDayData.minutes}m Studied` : '0m Studied'}</span>
+                </div>
+                {selectedDayData.completedHabits.length > 0 && (
+                  <div className="flex items-center gap-1.5 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-3 py-1.5 text-xs font-semibold">
+                    <Check className="h-3.5 w-3.5 stroke-[2.5]" />
+                    <span>{selectedDayData.completedHabits.length} Habit{selectedDayData.completedHabits.length > 1 ? 's' : ''} Done</span>
+                  </div>
+                )}
+              </div>
             </div>
-          )}
+
+            {/* Completed Habits for Selected Day */}
+            {selectedDayData.completedHabits.length > 0 ? (
+              <div className="space-y-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground block">
+                  Completed Habits on this Day
+                </label>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {selectedDayData.completedHabits.map((habitTitle, hIdx) => (
+                    <div
+                      key={hIdx}
+                      className="flex items-center gap-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-2.5 text-xs text-foreground"
+                    >
+                      <div className="grid h-5 w-5 place-items-center rounded-md bg-emerald-500 text-white shrink-0">
+                        <Check className="h-3 w-3 stroke-[2.5]" />
+                      </div>
+                      <span className="font-medium leading-relaxed">{habitTitle}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : selectedDayData.minutes === 0 && !selectedDayData.notes ? (
+              <div className="rounded-2xl border border-dashed border-border/70 bg-muted/10 p-4 text-center text-xs text-muted-foreground">
+                No study activity recorded on {selectedDayData.fullLabel}. Click any other bar above to inspect that day.
+              </div>
+            ) : null}
+
+            {/* Reflection / Notes for Selected Day */}
+            {selectedDayData.notes && (
+              <div className="space-y-1.5 rounded-2xl bg-muted/20 border border-border/50 p-4 text-xs">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground block">
+                  Notes & Reflection
+                </label>
+                <p className="text-muted-foreground text-xs leading-relaxed italic">
+                  "{selectedDayData.notes}"
+                </p>
+              </div>
+            )}
+          </div>
         </Card>
       </div>
 
