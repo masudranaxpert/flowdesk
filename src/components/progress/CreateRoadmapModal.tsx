@@ -1,13 +1,20 @@
 import React from 'react';
 import {
   ArrowRight,
+  BookOpen,
   Bot,
   CheckCircle2,
   Layers,
   Plus,
   Sparkles,
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -49,76 +56,100 @@ export function CreateRoadmapModal({
 }: CreateRoadmapModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-amber-500" />
-            Create Learning Roadmap
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-6 sm:p-7 rounded-3xl border border-border/80 bg-card/95 backdrop-blur-xl shadow-2xl">
+        <DialogHeader className="space-y-1.5 pb-2">
+          <DialogTitle className="flex items-center gap-2.5 text-base font-semibold">
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
+              <Sparkles className="h-4 w-4" />
+            </div>
+            <span>Create Learning Roadmap</span>
           </DialogTitle>
-          <DialogDescription>
-            Choose a starter curriculum preset, have AI generate one, or create custom milestones.
+          <DialogDescription className="text-xs text-muted-foreground">
+            Choose a starter curriculum preset, generate with AI, or build custom milestones.
           </DialogDescription>
         </DialogHeader>
 
-        {/* Modal Tab Buttons */}
-        <div className="flex border-b border-border/60 pb-2 gap-2 mt-2">
-          <Button
-            variant={createTab === 'presets' ? 'default' : 'ghost'}
-            size="sm"
+        {/* Modal Segmented Switcher */}
+        <div className="grid grid-cols-3 gap-1 rounded-2xl bg-muted/50 p-1 border border-border/60">
+          <button
+            type="button"
             onClick={() => setCreateTab('presets')}
-            className="text-xs"
+            className={`flex items-center justify-center gap-2 rounded-xl py-2 px-2 text-xs font-semibold transition-all cursor-pointer ${
+              createTab === 'presets'
+                ? 'bg-card text-foreground shadow-sm border border-border'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
+            }`}
           >
-            Recommended Presets
-          </Button>
-          <Button
-            variant={createTab === 'ai' ? 'default' : 'ghost'}
-            size="sm"
+            <BookOpen className="h-3.5 w-3.5 text-primary" />
+            <span className="truncate">Recommended</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setCreateTab('ai')}
-            className="text-xs gap-1.5"
+            className={`flex items-center justify-center gap-2 rounded-xl py-2 px-2 text-xs font-semibold transition-all cursor-pointer ${
+              createTab === 'ai'
+                ? 'bg-card text-foreground shadow-sm border border-border'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
+            }`}
           >
-            <Bot className="h-3.5 w-3.5" /> AI Auto-Planner
-          </Button>
-          <Button
-            variant={createTab === 'manual' ? 'default' : 'ghost'}
-            size="sm"
+            <Bot className="h-3.5 w-3.5 text-primary" />
+            <span className="truncate">AI Auto-Planner</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setCreateTab('manual')}
-            className="text-xs"
+            className={`flex items-center justify-center gap-2 rounded-xl py-2 px-2 text-xs font-semibold transition-all cursor-pointer ${
+              createTab === 'manual'
+                ? 'bg-card text-foreground shadow-sm border border-border'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
+            }`}
           >
-            Custom Manual
-          </Button>
+            <Plus className="h-3.5 w-3.5 text-primary" />
+            <span className="truncate">Custom Manual</span>
+          </button>
         </div>
 
         {/* Tab 1: Presets */}
         {createTab === 'presets' && (
-          <div className="space-y-4 pt-2">
+          <div className="space-y-3 pt-1 animate-fade-in">
             {presets.map((p, idx) => (
               <div
                 key={idx}
-                className="group relative rounded-2xl border border-border p-4 transition-all hover:border-primary/50 hover:bg-accent/30"
+                className="group rounded-2xl border border-border/70 bg-card/60 p-4 transition-all hover:border-primary/50 hover:bg-muted/20"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-semibold text-sm">{p.title}</h4>
-                      <Badge variant="outline" className="text-[10px]">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-1.5 min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-semibold text-sm text-foreground tracking-tight">
+                        {p.title}
+                      </h4>
+                      <Badge variant="outline" className="text-[10px] font-mono px-2 py-0.5">
                         {p.duration}
                       </Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground">{p.description}</p>
-                    <div className="flex items-center gap-4 text-[11px] text-muted-foreground pt-2">
+                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                      {p.description}
+                    </p>
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1">
                       <span className="flex items-center gap-1">
-                        <Layers className="h-3 w-3 text-amber-500" /> {p.phases.length} Phases
+                        <Layers className="h-3.5 w-3.5 text-primary" />
+                        <span>{p.phases.length} Phases</span>
                       </span>
                       <span className="flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3 text-emerald-500" />{' '}
-                        {p.phases.reduce((acc, ph) => acc + ph.tasks.length, 0)} Milestones
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                        <span>
+                          {p.phases.reduce((acc, ph) => acc + ph.tasks.length, 0)} Milestones
+                        </span>
                       </span>
                     </div>
                   </div>
+
                   <Button
                     size="sm"
                     onClick={() => onApplyPreset(p)}
-                    className="gap-1.5 shrink-0"
+                    className="gap-1.5 shrink-0 rounded-xl cursor-pointer"
                   >
                     Select <ArrowRight className="h-3.5 w-3.5" />
                   </Button>
@@ -130,9 +161,9 @@ export function CreateRoadmapModal({
 
         {/* Tab 2: AI Planner */}
         {createTab === 'ai' && (
-          <div className="space-y-4 pt-2">
+          <div className="space-y-4 pt-1 animate-fade-in">
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
                 What do you want to learn?
               </label>
               <Textarea
@@ -140,21 +171,40 @@ export function CreateRoadmapModal({
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
                 rows={4}
-                className="text-xs"
+                className="text-xs rounded-2xl resize-none"
               />
-              <p className="text-[11px] text-muted-foreground">
-                AI will design a comprehensive monthly curriculum with detailed milestones and tasks.
-              </p>
+              <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                <span className="text-[11px] text-muted-foreground font-medium">Quick ideas:</span>
+                {[
+                  'Full-Stack Next.js & Rust',
+                  'Python Data Science & ML',
+                  'Cloud DevOps & Kubernetes',
+                  'Advanced DSA & LeetCode',
+                ].map((idea) => (
+                  <button
+                    key={idea}
+                    type="button"
+                    onClick={() =>
+                      setAiPrompt(
+                        `Comprehensive curriculum to master ${idea} with milestones and practical projects.`
+                      )
+                    }
+                    className="rounded-lg bg-muted/60 hover:bg-muted px-2 py-0.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors border border-border/40 cursor-pointer"
+                  >
+                    {idea}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <Button
               onClick={onGenerateAi}
               disabled={generatingAi || !aiPrompt.trim()}
-              className="w-full gap-2"
+              className="w-full gap-2 rounded-xl cursor-pointer"
             >
               {generatingAi ? (
                 <>
-                  <Sparkles className="h-4 w-4 animate-spin text-amber-400" />
+                  <Sparkles className="h-4 w-4 animate-spin text-primary-foreground" />
                   Generating Comprehensive Curriculum...
                 </>
               ) : (
@@ -169,35 +219,35 @@ export function CreateRoadmapModal({
 
         {/* Tab 3: Custom Manual */}
         {createTab === 'manual' && (
-          <div className="space-y-4 pt-2">
+          <div className="space-y-4 pt-1 animate-fade-in">
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
                 Roadmap Title
               </label>
               <Input
                 placeholder="e.g. Full-Stack Next.js & Rust Systems"
                 value={manualTitle}
                 onChange={(e) => setManualTitle(e.target.value)}
-                className="h-9 text-xs"
+                className="h-10 text-xs rounded-xl"
               />
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">
                 Duration / Timeline
               </label>
               <Input
                 placeholder="e.g. 6 Months or 90 Days"
                 value={manualDuration}
                 onChange={(e) => setManualDuration(e.target.value)}
-                className="h-9 text-xs"
+                className="h-10 text-xs rounded-xl"
               />
             </div>
 
             <Button
               onClick={onCreateManual}
               disabled={!manualTitle.trim()}
-              className="w-full gap-2"
+              className="w-full gap-2 rounded-xl cursor-pointer"
             >
               <Plus className="h-4 w-4" />
               Create Custom Roadmap
