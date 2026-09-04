@@ -9,6 +9,7 @@ import {
   Layers,
   Milestone,
   Plus,
+  StickyNote,
   Sparkles,
   Target,
   Trash2,
@@ -24,12 +25,13 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import type { Roadmap, RoadmapPhase, DailyHabit, DailyProgressLog, RoutineItem } from '../types';
+import type { Roadmap, RoadmapPhase, RoadmapNote, DailyHabit, DailyProgressLog, RoutineItem } from '../types';
 
 // Subcomponents
 import { DailyTracker } from '../components/progress/DailyTracker';
 import { RoadmapCurriculum } from '../components/progress/RoadmapCurriculum';
 import { ProgressReport } from '../components/progress/ProgressReport';
+import { RoadmapNotes } from '../components/progress/RoadmapNotes';
 import { CreateRoadmapModal } from '../components/progress/CreateRoadmapModal';
 import { ImportRoadmapModal } from '../components/progress/ImportRoadmapModal';
 import { presets, localDateString } from '../components/progress/presets';
@@ -52,7 +54,7 @@ export default function Progress() {
 
   // Primary Section: Dedicated Daily Checker vs Learning Roadmaps
   const [mainSection, setMainSection] = useState<'tracker' | 'roadmaps'>('tracker');
-  const [roadmapTab, setRoadmapTab] = useState<'curriculum' | 'report'>('curriculum');
+  const [roadmapTab, setRoadmapTab] = useState<'curriculum' | 'report' | 'notes'>('curriculum');
 
   // Unified Daily Tracker state (independent of roadmap templates)
   const [unifiedHabits, setUnifiedHabits] = useState<DailyHabit[]>(() => {
@@ -154,24 +156,29 @@ export default function Progress() {
       if (items.length > 0) {
         setSelectedId((prev) => (items.some((r) => r._id === prev || r.id === prev) ? prev : items[0]._id || items[0].id || ''));
 
-        // Populate unifiedLogs from existing roadmaps if cache is currently empty
-        setUnifiedLogs((prevLogs) => {
-          if (prevLogs.length > 0) return prevLogs;
-          const map = new Map<string, DailyProgressLog>();
-          items.forEach((r) => {
-            (r.dailyLogs || []).forEach((l) => {
-              if (l.date && !map.has(l.date)) map.set(l.date, l);
-            });
+        // Sync daily habits from database primary roadmap
+        const primaryHabits = items[0]?.dailyHabits;
+        if (Array.isArray(primaryHabits) && primaryHabits.length > 0) {
+          setUnifiedHabits(primaryHabits);
+          try {
+            localStorage.setItem(UNIFIED_HABITS_KEY, JSON.stringify(primaryHabits));
+          } catch {}
+        }
+
+        // Aggregate and sync daily logs from database across roadmaps
+        const map = new Map<string, DailyProgressLog>();
+        items.forEach((r) => {
+          (r.dailyLogs || []).forEach((l) => {
+            if (l.date && !map.has(l.date)) map.set(l.date, l);
           });
-          const merged = Array.from(map.values());
-          if (merged.length > 0) {
-            try {
-              localStorage.setItem(UNIFIED_LOGS_KEY, JSON.stringify(merged));
-            } catch {}
-            return merged;
-          }
-          return prevLogs;
         });
+        const merged = Array.from(map.values()).sort((a, b) => b.date.localeCompare(a.date));
+        if (merged.length > 0) {
+          setUnifiedLogs(merged);
+          try {
+            localStorage.setItem(UNIFIED_LOGS_KEY, JSON.stringify(merged));
+          } catch {}
+        }
       }
     } catch {
       toast.error('Could not load roadmaps');
@@ -313,16 +320,31 @@ export default function Progress() {
       localStorage.setItem(UNIFIED_LOGS_KEY, JSON.stringify(updatedLogs));
     } catch {}
 
-    // Back up to backend if roadmap exists
-    if (roadmaps.length > 0) {
-      const primaryId = roadmaps[0]._id || roadmaps[0].id;
-      if (primaryId) {
-        api.roadmaps.update(primaryId, { dailyLogs: updatedLogs, dailyHabits: unifiedHabits }).catch(() => {});
+    // Persist directly to database
+    try {
+      if (roadmaps.length > 0) {
+        const targetId = (currentRoadmap?._id || currentRoadmap?.id) || (roadmaps[0]._id || roadmaps[0].id);
+        if (targetId) {
+          await api.roadmaps.update(targetId, { dailyLogs: updatedLogs, dailyHabits: unifiedHabits });
+        }
+      } else {
+        const created = await api.roadmaps.create({
+          title: 'General Learning & Daily Progress',
+          category: 'general',
+          duration: 'Ongoing',
+          dailyHabits: unifiedHabits,
+          dailyLogs: updatedLogs,
+          phases: [],
+        });
+        setRoadmaps([created]);
+        setSelectedId(created._id || created.id || '');
       }
+      toast.success('Daily check-in saved to database! Keep the streak alive 🔥');
+    } catch {
+      toast.error('Failed to sync check-in to database');
+    } finally {
+      setSavingDailyLog(false);
     }
-
-    toast.success('Daily check-in saved! Keep the streak alive 🔥');
-    setSavingDailyLog(false);
   };
 
   // Add custom habit to Dedicated Daily Checker
@@ -337,7 +359,7 @@ export default function Progress() {
       localStorage.setItem(UNIFIED_HABITS_KEY, JSON.stringify(updated));
     } catch {}
     if (roadmaps.length > 0) {
-      const primaryId = roadmaps[0]._id || roadmaps[0].id;
+      const primaryId = (currentRoadmap?._id || currentRoadmap?.id) || (roadmaps[0]._id || roadmaps[0].id);
       if (primaryId) api.roadmaps.update(primaryId, { dailyHabits: updated }).catch(() => {});
     }
     toast.success('Habit added to Daily Checker');
@@ -352,7 +374,7 @@ export default function Progress() {
       localStorage.setItem(UNIFIED_HABITS_KEY, JSON.stringify(updated));
     } catch {}
     if (roadmaps.length > 0) {
-      const primaryId = roadmaps[0]._id || roadmaps[0].id;
+      const primaryId = (currentRoadmap?._id || currentRoadmap?.id) || (roadmaps[0]._id || roadmaps[0].id);
       if (primaryId) api.roadmaps.update(primaryId, { dailyHabits: updated }).catch(() => {});
     }
     toast.success('Habit removed');
@@ -389,12 +411,62 @@ export default function Progress() {
         localStorage.setItem(UNIFIED_HABITS_KEY, JSON.stringify(updated));
       } catch {}
       if (roadmaps.length > 0) {
-        const primaryId = roadmaps[0]._id || roadmaps[0].id;
+        const primaryId = (currentRoadmap?._id || currentRoadmap?.id) || (roadmaps[0]._id || roadmaps[0].id);
         if (primaryId) api.roadmaps.update(primaryId, { dailyHabits: updated }).catch(() => {});
       }
       toast.success(`Imported ${newHabitsToAdd.length} tasks from Routine!`);
     } catch {
       toast.error('Could not sync from Routine');
+    }
+  };
+
+  // Add note to current roadmap (persisted directly to database)
+  const handleAddRoadmapNote = async (text: string) => {
+    if (!currentRoadmap) return;
+    const targetId = currentRoadmap._id || currentRoadmap.id;
+    if (!targetId) return;
+
+    const newNote: RoadmapNote = {
+      id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      text: text.trim(),
+      createdAt: new Date().toISOString(),
+    };
+
+    const updatedNotes = [newNote, ...(currentRoadmap.notes || [])];
+    const nextRoadmap = { ...currentRoadmap, notes: updatedNotes };
+
+    setRoadmaps((prev) =>
+      prev.map((r) => ((r._id || r.id) === targetId ? nextRoadmap : r))
+    );
+
+    try {
+      await api.roadmaps.update(targetId, { notes: updatedNotes });
+      toast.success('Note saved to database');
+    } catch {
+      toast.error('Failed to save note to database');
+      fetchRoadmaps();
+    }
+  };
+
+  // Delete note from current roadmap (persisted directly to database)
+  const handleDeleteRoadmapNote = async (noteId: string) => {
+    if (!currentRoadmap) return;
+    const targetId = currentRoadmap._id || currentRoadmap.id;
+    if (!targetId) return;
+
+    const updatedNotes = (currentRoadmap.notes || []).filter((n) => n.id !== noteId);
+    const nextRoadmap = { ...currentRoadmap, notes: updatedNotes };
+
+    setRoadmaps((prev) =>
+      prev.map((r) => ((r._id || r.id) === targetId ? nextRoadmap : r))
+    );
+
+    try {
+      await api.roadmaps.update(targetId, { notes: updatedNotes });
+      toast.success('Note deleted');
+    } catch {
+      toast.error('Failed to delete note from database');
+      fetchRoadmaps();
     }
   };
 
@@ -1011,6 +1083,19 @@ Return a STRICT valid JSON object (no markdown, no backticks) with this structur
                       <BarChart3 className="h-4 w-4" />
                       Progress Charts & Report
                     </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setRoadmapTab('notes')}
+                      className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+                        roadmapTab === 'notes'
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                      }`}
+                    >
+                      <StickyNote className="h-4 w-4" />
+                      Notes {currentRoadmap.notes?.length ? `(${currentRoadmap.notes.length})` : ''}
+                    </button>
                   </div>
 
                   {/* Sub-tab 1: Milestones & Curriculum */}
@@ -1036,6 +1121,15 @@ Return a STRICT valid JSON object (no markdown, no backticks) with this structur
                     <ProgressReport
                       roadmap={currentRoadmap}
                       onCopyFullReport={handleCopyFullReport}
+                    />
+                  )}
+
+                  {/* Sub-tab 3: Notes & Resources (Database-backed) */}
+                  {roadmapTab === 'notes' && (
+                    <RoadmapNotes
+                      roadmap={currentRoadmap}
+                      onAddNote={handleAddRoadmapNote}
+                      onDeleteNote={handleDeleteRoadmapNote}
                     />
                   )}
                 </div>

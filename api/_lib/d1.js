@@ -103,6 +103,7 @@ export function mapBase(row) {
     phases: row.phases === undefined ? undefined : fromJson(row.phases),
     dailyHabits: row.dailyHabits === undefined ? undefined : fromJson(row.dailyHabits),
     dailyLogs: row.dailyLogs === undefined ? undefined : fromJson(row.dailyLogs),
+    notes: row.phases !== undefined ? fromJson(row.notes, []) : row.notes,
   };
 }
 
@@ -235,6 +236,7 @@ export async function ensureSchema() {
         phases TEXT DEFAULT '[]',
         dailyLogs TEXT DEFAULT '[]',
         status TEXT DEFAULT 'active',
+        notes TEXT DEFAULT '[]',
         createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL
       );`),
     ]);
@@ -263,6 +265,7 @@ export async function ensureSchema() {
     ]);
 
     await d1Query(`ALTER TABLE codes ADD COLUMN attachments TEXT DEFAULT '[]';`).catch(() => {});
+    await d1Query(`ALTER TABLE roadmaps ADD COLUMN notes TEXT DEFAULT '[]';`).catch(() => {});
   })();
   return schemaPromise;
 }

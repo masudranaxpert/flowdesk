@@ -216,6 +216,12 @@ export interface DailyProgressLog {
   notes?: string;
 }
 
+export interface RoadmapNote {
+  id: string;
+  text: string;
+  createdAt: string;
+}
+
 export interface Roadmap {
   _id: string;
   id?: string;
@@ -227,7 +233,9 @@ export interface Roadmap {
   phases: RoadmapPhase[];
   dailyLogs: DailyProgressLog[];
   status: 'active' | 'completed' | 'paused';
+  notes?: RoadmapNote[];
   createdAt: string;
   updatedAt: string;
 }
+
 
