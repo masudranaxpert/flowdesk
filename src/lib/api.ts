@@ -1,4 +1,4 @@
-import type { AiSetting, AuthenticatorItem, Bookmark, Budget, Category, CodeSnippet, Expense, Notebook, PasswordItem, Question, RoutineItem, Stats, Transfer, UploadedFile } from '../types';
+import type { AiSetting, AuthenticatorItem, Bookmark, Budget, Category, CodeSnippet, Expense, Notebook, PasswordItem, Question, Roadmap, RoutineItem, Stats, Transfer, UploadedFile } from '../types';
 
 import { Capacitor } from '@capacitor/core';
 
@@ -171,5 +171,12 @@ export const api = {
     list: () => request<{ progress: Record<string, string[]> }>('/doc-progress'),
     save: (data: { categoryId: string; readIds: string[] }) =>
       request<{ message: string; readIds: string[] }>('/doc-progress', { method: 'PUT', body: JSON.stringify(data) }),
+  },
+  roadmaps: {
+    list: (params?: Record<string, string>) => request<any>(`/roadmaps${qs(params)}`),
+    get: (id: string) => request<Roadmap>(`/roadmaps/${id}`),
+    create: (data: Partial<Roadmap>) => request<Roadmap>('/roadmaps', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<Roadmap>) => request<Roadmap>(`/roadmaps/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => request<void>(`/roadmaps/${id}`, { method: 'DELETE' }),
   },
 };

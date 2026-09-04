@@ -108,6 +108,13 @@ const resources = {
     search: ['name', 'issuer', 'account'],
     sort: 'name ASC',
   },
+  roadmaps: {
+    table: 'roadmaps',
+    columns: ['title', 'description', 'category', 'duration', 'dailyHabits', 'phases', 'dailyLogs', 'status'],
+    defaults: { description: '', category: 'general', duration: '12 Months', dailyHabits: [], phases: [], dailyLogs: [], status: 'active' },
+    search: ['title', 'description', 'category'],
+    sort: 'createdAt DESC',
+  },
 };
 
 function userId(user) {
@@ -162,7 +169,7 @@ function cleanBoolColumn(column, value) {
 }
 
 function cleanJsonColumn(column, value) {
-  return ['tags', 'models', 'messages', 'attachments'].includes(column) ? toJson(Array.isArray(value) ? value : []) : value;
+  return ['tags', 'models', 'messages', 'attachments', 'phases', 'dailyHabits', 'dailyLogs'].includes(column) ? toJson(Array.isArray(value) || (typeof value === 'object' && value !== null) ? value : []) : value;
 }
 
 function cleanValue(column, value) {
@@ -374,6 +381,14 @@ function validateResourceData(resource, data, { partial = false } = {}) {
     }
     if (next.method !== undefined) next.method = String(next.method || 'cash').trim().toLowerCase() || 'cash';
     if (next.notes !== undefined) next.notes = String(next.notes || '').slice(0, 5000);
+  }
+  if (resource === 'roadmaps') {
+    if (!partial) next.title = String(next.title || '').trim() || 'Untitled roadmap';
+    if (next.duration !== undefined) next.duration = String(next.duration || '12 Months').trim();
+    if (next.status !== undefined) {
+      const s = String(next.status).toLowerCase();
+      next.status = ['active', 'completed', 'paused'].includes(s) ? s : 'active';
+    }
   }
   return next;
 }
@@ -1244,6 +1259,7 @@ export default async function handler(req, res) {
         { table: 'uploaded_files', cols: 'id, name AS title, mimeType AS subtitle', where: 'name LIKE ?', params: [term], type: 'File', to: '/files' },
         { table: 'expenses', cols: 'id, title, category AS subtitle', where: 'title LIKE ? OR category LIKE ? OR notes LIKE ?', params: [term, term, term], type: 'Expense', to: '/hisab' },
         { table: 'transfers', cols: 'id, person AS title, reason AS subtitle', where: 'person LIKE ? OR reason LIKE ? OR notes LIKE ?', params: [term, term, term], type: 'Transfer', to: '/hisab' },
+        { table: 'roadmaps', cols: 'id, title, duration AS subtitle', where: 'title LIKE ? OR description LIKE ? OR category LIKE ?', params: [term, term, term], type: 'Roadmap', to: '/progress' },
       ];
 
       const results = [];

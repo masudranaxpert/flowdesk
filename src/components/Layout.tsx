@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   ListTree,
   Menu,
+  Milestone,
   Moon,
   PanelLeft,
   PanelLeftClose,
@@ -42,6 +43,7 @@ import type { Bookmark as BookmarkType, CodeSnippet, Notebook, Question, Routine
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', hint: 'Overview' },
   { to: '/chatbot', icon: Bot, label: 'Chatbot', hint: 'AI' },
+  { to: '/progress', icon: Milestone, label: 'Progress', hint: 'Roadmaps' },
   { to: '/routine', icon: CalendarDays, label: 'Routine', hint: 'Planner' },
   { to: '/files', icon: Files, label: 'Files', hint: 'Share' },
   { to: '/hisab', icon: WalletCards, label: 'Hisab', hint: 'Budget' },
@@ -56,6 +58,7 @@ const navItems = [
 
 const quickActions = [
   { to: '/chatbot', label: 'Ask AI', icon: Bot },
+  { to: '/progress', label: 'Track progress', icon: Milestone },
   { to: '/files', label: 'Share file', icon: Files },
   { to: '/bookmarks', label: 'Save link', icon: Bookmark },
   { to: '/notebooks/new', label: 'Write note', icon: BookOpen },
@@ -63,6 +66,7 @@ const quickActions = [
 
 const searchTypeMeta: Record<string, { icon: typeof Bookmark; color: string }> = {
   Docs:     { icon: ListTree,    color: 'oklch(0.65 0.19 290)' },
+  Roadmap:  { icon: Milestone,   color: 'oklch(0.72 0.19 145)' },
   Bookmark: { icon: Bookmark,    color: 'oklch(0.65 0.18 250)' },
   Note:     { icon: BookOpen,    color: 'oklch(0.65 0.18 160)' },
   Code:     { icon: Code2,       color: 'oklch(0.70 0.18 50)' },
