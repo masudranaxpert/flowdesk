@@ -256,7 +256,7 @@ export function RoadmapCurriculum({
                               {task.completed && <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 stroke-[2.5]" />}
                             </div>
                             <span
-                              className={`roadmap-task-text text-sm sm:text-[15px] leading-relaxed tracking-wide select-none ${
+                              className={`roadmap-task-text text-xs sm:text-sm leading-relaxed tracking-wide select-none ${
                                 task.completed
                                   ? 'text-muted-foreground/60 line-through font-normal'
                                   : 'text-foreground/90 font-normal'
