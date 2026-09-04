@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  Copy,
   Layers,
   Plus,
   Search,
@@ -12,6 +13,7 @@ import {
   Upload,
   X,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,6 +51,14 @@ export function RoadmapCurriculum({
 }: RoadmapCurriculumProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [newTaskTitles, setNewTaskTitles] = useState<Record<string, string>>({});
+  const [copiedTaskId, setCopiedTaskId] = useState<string | null>(null);
+
+  const handleCopyTask = (taskId: string, title: string) => {
+    navigator.clipboard.writeText(title);
+    setCopiedTaskId(taskId);
+    toast.success('Topic copied to clipboard');
+    setTimeout(() => setCopiedTaskId(null), 1500);
+  };
 
   // Filter phases & tasks based on search keyword
   const filteredPhases = useMemo(() => {
@@ -256,7 +266,7 @@ export function RoadmapCurriculum({
                               {task.completed && <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4 stroke-[2.5]" />}
                             </div>
                             <span
-                              className={`roadmap-task-text text-xs sm:text-sm leading-relaxed tracking-wide select-none ${
+                              className={`roadmap-task-text text-sm sm:text-[15px] leading-relaxed tracking-wide select-none ${
                                 task.completed
                                   ? 'text-muted-foreground/60 line-through font-normal'
                                   : 'text-foreground/90 font-normal'
@@ -266,14 +276,34 @@ export function RoadmapCurriculum({
                             </span>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => onDeleteTask(phase.id, task.id)}
-                            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive p-1.5 rounded hover:bg-destructive/10 transition-all shrink-0"
-                            title="Delete task"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCopyTask(task.id, task.title);
+                              }}
+                              className="text-muted-foreground hover:text-foreground p-1.5 rounded hover:bg-muted/80 transition-all cursor-pointer"
+                              title="Copy topic"
+                            >
+                              {copiedTaskId === task.id ? (
+                                <Check className="h-4 w-4 text-emerald-500" />
+                              ) : (
+                                <Copy className="h-4 w-4" />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDeleteTask(phase.id, task.id);
+                              }}
+                              className="text-muted-foreground hover:text-destructive p-1.5 rounded hover:bg-destructive/10 transition-all shrink-0 cursor-pointer"
+                              title="Delete task"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </div>
                       ))
                     )}

@@ -110,8 +110,8 @@ const resources = {
   },
   roadmaps: {
     table: 'roadmaps',
-    columns: ['title', 'description', 'category', 'duration', 'dailyHabits', 'phases', 'dailyLogs', 'status'],
-    defaults: { description: '', category: 'general', duration: '12 Months', dailyHabits: [], phases: [], dailyLogs: [], status: 'active' },
+    columns: ['title', 'description', 'category', 'duration', 'dailyHabits', 'phases', 'dailyLogs', 'status', 'notes'],
+    defaults: { description: '', category: 'general', duration: '12 Months', dailyHabits: [], phases: [], dailyLogs: [], status: 'active', notes: [] },
     search: ['title', 'description', 'category'],
     sort: 'createdAt DESC',
   },
@@ -169,6 +169,9 @@ function cleanBoolColumn(column, value) {
 }
 
 function cleanJsonColumn(column, value) {
+  if (column === 'notes' && (Array.isArray(value) || (typeof value === 'object' && value !== null))) {
+    return toJson(value);
+  }
   return ['tags', 'models', 'messages', 'attachments', 'phases', 'dailyHabits', 'dailyLogs'].includes(column) ? toJson(Array.isArray(value) || (typeof value === 'object' && value !== null) ? value : []) : value;
 }
 
