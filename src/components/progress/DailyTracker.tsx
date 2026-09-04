@@ -207,6 +207,13 @@ export function DailyTracker({
                 const heightPct = Math.min(100, Math.round((item.minutes / maxChartMinutes) * 100));
                 const isToday = idx === chartDaysData.length - 1;
                 const hasActivity = item.minutes > 0 || item.completedHabits.length > 0;
+                const isFarRight = idx >= chartDaysData.length - 5;
+                const isFarLeft = idx < 4;
+                const tooltipAlignClass = isFarRight
+                  ? 'right-0'
+                  : isFarLeft
+                  ? 'left-0'
+                  : 'left-1/2 -translate-x-1/2';
 
                 return (
                   <div
@@ -214,29 +221,41 @@ export function DailyTracker({
                     className="group relative flex-1 flex flex-col items-center h-full justify-end"
                   >
                     {/* Tooltip on hover */}
-                    <div className="absolute -top-14 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-30 whitespace-nowrap rounded-xl bg-popover px-3 py-2 text-xs text-popover-foreground shadow-xl border border-border">
+                    <div
+                      className={`absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-40 w-max max-w-[260px] sm:max-w-[290px] rounded-2xl bg-popover/95 backdrop-blur-md p-3 text-xs text-popover-foreground shadow-2xl border border-border ${tooltipAlignClass}`}
+                    >
                       <div className="font-semibold text-foreground flex items-center gap-1.5">
-                        <Calendar className="h-3 w-3 text-muted-foreground" />
-                        {item.fullLabel} {isToday ? '(Today)' : ''}
+                        <Calendar className="h-3.5 w-3.5 text-primary shrink-0" />
+                        <span>{item.fullLabel}</span>
+                        {isToday && (
+                          <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-md">
+                            Today
+                          </span>
+                        )}
                       </div>
-                      <div className="text-primary font-medium mt-0.5 flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        Study: {item.minutes}m
+                      <div className="text-primary font-semibold mt-1 flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5" />
+                        <span>Study: {item.minutes}m</span>
                       </div>
                       {item.completedHabits.length > 0 && (
-                        <div className="mt-1 border-t border-border/50 pt-1 text-[11px] text-muted-foreground space-y-0.5">
+                        <div className="mt-2 border-t border-border/60 pt-1.5 space-y-1">
+                          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                            Completed Habits ({item.completedHabits.length})
+                          </div>
                           {item.completedHabits.map((title, cIdx) => (
-                            <div key={cIdx} className="flex items-center gap-1">
-                              <Check className="h-3 w-3 text-emerald-500 shrink-0" />
-                              <span className="truncate max-w-[160px]">{title}</span>
+                            <div key={cIdx} className="flex items-start gap-1.5 text-[11px] text-foreground">
+                              <Check className="h-3 w-3 text-emerald-500 shrink-0 mt-0.5" />
+                              <span className="leading-snug break-words">{title}</span>
                             </div>
                           ))}
                         </div>
                       )}
                       {item.notes && (
-                        <p className="text-[10px] text-muted-foreground italic truncate max-w-[160px] mt-1">
-                          "{item.notes}"
-                        </p>
+                        <div className="mt-2 border-t border-border/60 pt-1.5">
+                          <p className="text-[10px] text-muted-foreground italic leading-relaxed break-words">
+                            "{item.notes}"
+                          </p>
+                        </div>
                       )}
                     </div>
 
