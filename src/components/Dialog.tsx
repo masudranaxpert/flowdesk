@@ -19,7 +19,7 @@ interface DialogProps {
 export default function Dialog({ open, onOpenChange, title, description, children, maxWidth = 'max-w-lg' }: DialogProps) {
   return (
     <ShadcnDialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`${maxWidth} max-h-[88vh] overflow-y-auto rounded-3xl border-border bg-card/95 p-5 shadow-2xl shadow-black/25 backdrop-blur-xl sm:p-6`}>
+      <DialogContent className={`${maxWidth} max-h-[88vh] overflow-y-auto rounded-3xl border border-border bg-card p-5 shadow-2xl shadow-black/30 sm:p-6`}>
         <DialogHeader>
           <DialogTitle className="text-xl tracking-tight">{title}</DialogTitle>
           {description && <DialogDescription className="leading-6">{description}</DialogDescription>}

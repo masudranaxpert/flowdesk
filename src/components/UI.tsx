@@ -83,7 +83,7 @@ export function ConfirmDialog({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-fade-in" onClick={() => onOpenChange(false)}>
-      <div className="fixed inset-0 bg-black/65 backdrop-blur-sm" />
+      <div className="fixed inset-0 bg-black/65" />
       <Card
         className="relative w-full max-w-sm rounded-3xl p-6 shadow-2xl shadow-black/30 animate-scale-in"
         onClick={(event) => event.stopPropagation()}
