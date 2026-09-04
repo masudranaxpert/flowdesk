@@ -5,6 +5,7 @@ import {
   CalendarCheck,
   CalendarDays,
   Flame,
+  GripVertical,
   Layers,
   Milestone,
   Plus,
@@ -33,6 +34,7 @@ import { presets, localDateString } from '../components/progress/presets';
 
 const UNIFIED_HABITS_KEY = 'bookmark_unified_daily_habits';
 const UNIFIED_LOGS_KEY = 'bookmark_unified_daily_logs';
+const ROADMAPS_ORDER_KEY = 'bookmark_roadmaps_order';
 
 const DEFAULT_HABITS: DailyHabit[] = [
   { id: 'h1', title: 'English speaking happens every day' },
@@ -96,12 +98,32 @@ export default function Progress() {
   const [newPhaseOpen, setNewPhaseOpen] = useState(false);
   const [newPhaseTitle, setNewPhaseTitle] = useState('');
 
+  // Drag & drop state for roadmap tabs
+  const [draggedRoadmapIndex, setDraggedRoadmapIndex] = useState<number | null>(null);
+  const [dragOverRoadmapIndex, setDragOverRoadmapIndex] = useState<number | null>(null);
+
   // Fetch all roadmaps from API
   const fetchRoadmaps = useCallback(async () => {
     try {
       setLoading(true);
       const res = await api.roadmaps.list();
-      const items: Roadmap[] = Array.isArray(res.items) ? res.items : Array.isArray(res) ? res : [];
+      let items: Roadmap[] = Array.isArray(res.items) ? res.items : Array.isArray(res) ? res : [];
+
+      // Sort roadmaps by saved user preference if available
+      try {
+        const savedOrder = JSON.parse(localStorage.getItem(ROADMAPS_ORDER_KEY) || '[]');
+        if (Array.isArray(savedOrder) && savedOrder.length > 0) {
+          const orderMap = new Map<string, number>(savedOrder.map((id, index) => [id, index]));
+          items = [...items].sort((a, b) => {
+            const idA = a._id || a.id || '';
+            const idB = b._id || b.id || '';
+            const orderA = orderMap.has(idA) ? orderMap.get(idA)! : 999;
+            const orderB = orderMap.has(idB) ? orderMap.get(idB)! : 999;
+            return orderA - orderB;
+          });
+        }
+      } catch {}
+
       setRoadmaps(items);
       if (items.length > 0) {
         setSelectedId((prev) => (items.some((r) => r._id === prev || r.id === prev) ? prev : items[0]._id || items[0].id || ''));
@@ -131,6 +153,40 @@ export default function Progress() {
       setLoading(false);
     }
   }, []);
+
+  // Reorder roadmap pills via drag & drop
+  const handleDropRoadmap = (targetIndex: number) => {
+    if (draggedRoadmapIndex === null || draggedRoadmapIndex === targetIndex) {
+      setDraggedRoadmapIndex(null);
+      setDragOverRoadmapIndex(null);
+      return;
+    }
+    const updated = [...roadmaps];
+    const [moved] = updated.splice(draggedRoadmapIndex, 1);
+    updated.splice(targetIndex, 0, moved);
+    setRoadmaps(updated);
+    setDraggedRoadmapIndex(null);
+    setDragOverRoadmapIndex(null);
+
+    // Save custom order to localStorage
+    try {
+      const order = updated.map((r) => r._id || r.id || '');
+      localStorage.setItem(ROADMAPS_ORDER_KEY, JSON.stringify(order));
+    } catch {}
+    toast.success('Roadmap order updated');
+  };
+
+  // Reorder daily habits via drag & drop
+  const handleReorderHabits = (newHabits: DailyHabit[]) => {
+    setUnifiedHabits(newHabits);
+    try {
+      localStorage.setItem(UNIFIED_HABITS_KEY, JSON.stringify(newHabits));
+    } catch {}
+    if (roadmaps.length > 0) {
+      const primaryId = roadmaps[0]._id || roadmaps[0].id;
+      if (primaryId) api.roadmaps.update(primaryId, { dailyHabits: newHabits }).catch(() => {});
+    }
+  };
 
   useEffect(() => {
     fetchRoadmaps();
@@ -684,6 +740,7 @@ Return a STRICT valid JSON object (no markdown, no backticks) with this structur
           onSaveDailyLog={handleSaveDailyLog}
           onAddHabit={handleAddHabit}
           onDeleteHabit={handleDeleteHabit}
+          onReorderHabits={handleReorderHabits}
           onImportFromRoutine={handleImportFromRoutine}
           chartDaysRange={chartDaysRange}
           setChartDaysRange={setChartDaysRange}
@@ -719,26 +776,58 @@ Return a STRICT valid JSON object (no markdown, no backticks) with this structur
             <>
               {/* Roadmap Switcher Pills */}
               <div className="flex items-center justify-between gap-3 overflow-x-auto pb-1">
-                <div className="flex items-center gap-2">
-                  {roadmaps.map((item) => {
+                <div className="flex items-center gap-2 flex-wrap">
+                  {roadmaps.map((item, idx) => {
                     const id = item._id || item.id || '';
                     const isSelected = id === selectedId;
+                    const isDragging = draggedRoadmapIndex === idx;
+                    const isDragOver = dragOverRoadmapIndex === idx;
+
                     return (
-                      <button
+                      <div
                         key={id}
+                        draggable
+                        onDragStart={(e) => {
+                          setDraggedRoadmapIndex(idx);
+                          e.dataTransfer.effectAllowed = 'move';
+                          e.dataTransfer.setData('text/plain', String(idx));
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                          if (dragOverRoadmapIndex !== idx) setDragOverRoadmapIndex(idx);
+                        }}
+                        onDragLeave={() => {
+                          if (dragOverRoadmapIndex === idx) setDragOverRoadmapIndex(null);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          handleDropRoadmap(idx);
+                        }}
+                        onDragEnd={() => {
+                          setDraggedRoadmapIndex(null);
+                          setDragOverRoadmapIndex(null);
+                        }}
                         onClick={() => setSelectedId(id)}
-                        className={`flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-medium transition-all cursor-pointer ${
+                        className={`group flex items-center gap-2 rounded-2xl px-3.5 py-2 text-sm font-medium transition-all select-none cursor-grab active:cursor-grabbing ${
                           isSelected
                             ? 'bg-primary text-primary-foreground shadow-md'
                             : 'bg-card border border-border text-muted-foreground hover:bg-accent/70 hover:text-foreground'
+                        } ${isDragging ? 'opacity-40 scale-95' : ''} ${
+                          isDragOver ? 'ring-2 ring-primary border-primary scale-105 shadow-lg' : ''
                         }`}
+                        title="Drag and drop to change position, click to select"
                       >
+                        <GripVertical className="h-3.5 w-3.5 opacity-40 group-hover:opacity-100 shrink-0 transition-opacity" />
                         <Target className="h-4 w-4 shrink-0" />
                         <span className="max-w-[180px] truncate">{item.title}</span>
-                        <Badge variant={isSelected ? 'secondary' : 'outline'} className="ml-1 text-[10px] px-1.5 py-0">
+                        <Badge
+                          variant={isSelected ? 'secondary' : 'outline'}
+                          className="ml-1 text-[10px] px-1.5 py-0"
+                        >
                           {item.duration || 'Track'}
                         </Badge>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>

@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Clock,
   Flame,
+  GripVertical,
   History,
   Plus,
   RefreshCw,
@@ -34,6 +35,7 @@ interface DailyTrackerProps {
   onSaveDailyLog: () => Promise<void>;
   onAddHabit: (title: string) => void;
   onDeleteHabit: (habitId: string, e?: React.MouseEvent) => void;
+  onReorderHabits?: (newHabits: DailyHabit[]) => void;
   onImportFromRoutine: () => Promise<void>;
   chartDaysRange: 30 | 14;
   setChartDaysRange: (range: 30 | 14) => void;
@@ -53,11 +55,28 @@ export function DailyTracker({
   onSaveDailyLog,
   onAddHabit,
   onDeleteHabit,
+  onReorderHabits,
   onImportFromRoutine,
   chartDaysRange,
   setChartDaysRange,
 }: DailyTrackerProps) {
   const [newHabitTitle, setNewHabitTitle] = useState('');
+  const [draggedHabitIndex, setDraggedHabitIndex] = useState<number | null>(null);
+  const [dragOverHabitIndex, setDragOverHabitIndex] = useState<number | null>(null);
+
+  const handleDropHabit = (targetIndex: number) => {
+    if (draggedHabitIndex === null || draggedHabitIndex === targetIndex || !onReorderHabits) {
+      setDraggedHabitIndex(null);
+      setDragOverHabitIndex(null);
+      return;
+    }
+    const updated = [...unifiedHabits];
+    const [moved] = updated.splice(draggedHabitIndex, 1);
+    updated.splice(targetIndex, 0, moved);
+    onReorderHabits(updated);
+    setDraggedHabitIndex(null);
+    setDragOverHabitIndex(null);
+  };
 
   // Daily study consistency data over 14 or 30 days
   const chartDaysData = useMemo(() => {
@@ -394,17 +413,50 @@ export function DailyTracker({
               </p>
             ) : (
               <div className="space-y-2">
-                {unifiedHabits.map((habit) => {
+                {unifiedHabits.map((habit, idx) => {
                   const isDone = Boolean(todayHabitsDone[habit.id]);
+                  const isDragging = draggedHabitIndex === idx;
+                  const isDragOver = dragOverHabitIndex === idx;
+
                   return (
                     <div
                       key={habit.id}
-                      className={`group flex items-center justify-between gap-3 rounded-xl border p-2.5 transition-all ${
+                      draggable={Boolean(onReorderHabits)}
+                      onDragStart={(e) => {
+                        setDraggedHabitIndex(idx);
+                        e.dataTransfer.effectAllowed = 'move';
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        if (dragOverHabitIndex !== idx) setDragOverHabitIndex(idx);
+                      }}
+                      onDragLeave={() => {
+                        if (dragOverHabitIndex === idx) setDragOverHabitIndex(null);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        handleDropHabit(idx);
+                      }}
+                      onDragEnd={() => {
+                        setDraggedHabitIndex(null);
+                        setDragOverHabitIndex(null);
+                      }}
+                      className={`group flex items-center justify-between gap-2.5 rounded-xl border p-2.5 transition-all select-none ${
                         isDone
                           ? 'border-emerald-500/30 bg-emerald-500/5 text-foreground'
                           : 'border-border/60 bg-muted/30 hover:bg-muted/50 text-muted-foreground'
+                      } ${isDragging ? 'opacity-40 scale-95' : ''} ${
+                        isDragOver ? 'ring-2 ring-primary border-primary scale-[1.02]' : ''
                       }`}
                     >
+                      <div
+                        className="cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground transition-colors shrink-0"
+                        title="Drag to reorder habit"
+                      >
+                        <GripVertical className="h-3.5 w-3.5" />
+                      </div>
+
                       <div
                         onClick={() =>
                           setTodayHabitsDone((prev) => ({
