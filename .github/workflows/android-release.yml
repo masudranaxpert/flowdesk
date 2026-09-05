@@ -30,8 +30,8 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: set up JDK 21
-        uses: actions/setup-java@v3
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
@@ -44,11 +44,12 @@ jobs:
         run: cd android && ./gradlew assembleDebug
 
       - name: Rename APK
-        run: mv android/app/build/outputs/apk/debug/app-debug.apk Bookmark-${{ github.ref_name }}.apk
+        run: mv android/app/build/outputs/apk/debug/app-debug.apk FlowDesk-${{ github.ref_name }}.apk
 
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
-          files: Bookmark-${{ github.ref_name }}.apk
+          files: FlowDesk-${{ github.ref_name }}.apk
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

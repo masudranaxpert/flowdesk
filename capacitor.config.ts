@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.bookmark.vault',
+  appId: 'com.flowdesk.app',
   appName: 'FlowDesk',
   webDir: 'dist',
   server: {
