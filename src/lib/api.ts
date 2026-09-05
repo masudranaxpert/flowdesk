@@ -9,7 +9,7 @@ export const API_BASE = Capacitor.isNativePlatform() ? 'https://masud-rana.me/ap
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem('auth-token');
   const isFormData = options?.body instanceof FormData;
-  const res = await fetch(`\${API_BASE}${path}`, {
+  const res = await fetch(`${API_BASE}${path}`, {
     headers: { ...(isFormData ? {} : { 'Content-Type': 'application/json' }), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     ...options,
   });
