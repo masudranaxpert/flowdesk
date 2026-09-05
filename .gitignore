@@ -64,3 +64,8 @@ android/local.properties
 
 # MkDocs build output
 site/
+
+# Local wrangler dev harness
+.wrangler/
+.dev.vars
+wrangler.toml

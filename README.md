@@ -22,7 +22,7 @@ chapters of developer documentation** (DSA, Rust, Python, ML, and more) with
 interactive visualizations.
 
 <div align="center">
-  <img src="docs/assets/screenshots/gallery.png" alt="FlowDesk gallery — Docs library, chapter reader, and authentication" width="100%" />
+  <img src="docs/assets/screenshots/gallery.png" alt="FlowDesk — every module: dashboard, progress, hisab, docs, bookmarks, notebooks, code book, questions, routine, passwords, files, AI chat" width="100%" />
 </div>
 
 ## Highlights
