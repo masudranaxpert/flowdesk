@@ -8,8 +8,9 @@ function escapeHtml(value = '') {
 }
 
 async function sendEmail({ to, subject, text, html }) {
-  const apiKey = globalThis.APP_ENV?.RESEND_API_KEY || process.env.RESEND_API_KEY;
-  const from = globalThis.APP_ENV?.EMAIL_FROM || process.env.EMAIL_FROM || 'FlowDesk <onboarding@resend.dev>';
+  const env = globalThis.APP_ENV || globalThis.process?.env || {};
+  const apiKey = env.RESEND_API_KEY;
+  const from = env.EMAIL_FROM || 'FlowDesk <onboarding@resend.dev>';
 
   if (!apiKey) {
     console.warn(`Email skipped for ${to}: ${text}`);
