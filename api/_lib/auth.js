@@ -1,12 +1,12 @@
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
+const runtimeEnv = () => globalThis.APP_ENV || globalThis.process?.env || {};
+
 function getSecret() {
   const secret = String(
-    globalThis.APP_ENV?.AUTH_SECRET ||
-    globalThis.APP_ENV?.JWT_SECRET ||
-    process.env.AUTH_SECRET ||
-    process.env.JWT_SECRET ||
+    runtimeEnv().AUTH_SECRET ||
+    runtimeEnv().JWT_SECRET ||
     ''
   ).trim().replace(/^["']|["']$/g, '');
 

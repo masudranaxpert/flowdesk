@@ -1,3 +1,6 @@
+// Works on both runtimes: Cloudflare edge (APP_ENV) and Node (vite dev plugin).
+const runtimeEnv = () => globalThis.APP_ENV || globalThis.process?.env || {};
+
 let schemaPromise;
 let dbBinding = null;
 
@@ -6,29 +9,13 @@ export function setDbBinding(db) {
 }
 
 function getD1Url() {
-  return (
-    globalThis.APP_ENV?.D1_REST_URL ||
-    globalThis.APP_ENV?.D1_REST_ENDPOINT ||
-    globalThis.APP_ENV?.D1_URL ||
-    process.env.D1_REST_URL ||
-    process.env.D1_REST_ENDPOINT ||
-    process.env.D1_URL ||
-    ''
-  ).trim().replace(/^["']|["']$/g, '').replace(/\/$/, '');
+  const env = runtimeEnv();
+  return (env.D1_REST_URL || '').trim().replace(/^["']|["']$/g, '').replace(/\/$/, '');
 }
 
 function getD1Token() {
-  return (
-    globalThis.APP_ENV?.D1_REST_TOKEN ||
-    globalThis.APP_ENV?.D1_SECRET ||
-    globalThis.APP_ENV?.token ||
-    globalThis.APP_ENV?.TOKEN ||
-    process.env.D1_REST_TOKEN ||
-    process.env.D1_SECRET ||
-    process.env.token ||
-    process.env.TOKEN ||
-    ''
-  ).trim().replace(/^["']|["']$/g, '');
+  const env = runtimeEnv();
+  return (env.D1_REST_TOKEN || '').trim().replace(/^["']|["']$/g, '');
 }
 
 function assertConfig(url, token) {
@@ -113,7 +100,7 @@ export function mapRows(rows) {
 
 export async function ensureSchema() {
   if (schemaPromise) return schemaPromise;
-  if (process.env.SKIP_SCHEMA_ENSURE === 'true') {
+  if (String(runtimeEnv().SKIP_SCHEMA_ENSURE || '') === 'true') {
     schemaPromise = Promise.resolve();
     return schemaPromise;
   }
