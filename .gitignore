@@ -57,3 +57,10 @@ android/app/build/
 android/local.properties
 *.apk
 *.aab
+
+# Local build/dev helper scripts
+*.bat
+*.cmd
+
+# MkDocs build output
+site/

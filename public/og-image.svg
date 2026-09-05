@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0c0a09"/>
+      <stop offset="1" stop-color="#1c1917"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f59e0b"/>
+      <stop offset="1" stop-color="#fbbf24"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.85" cy="0.15" r="0.9">
+      <stop offset="0" stop-color="#f59e0b" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#f59e0b" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+
+  <!-- logo mark -->
+  <g transform="translate(96,96)">
+    <rect x="0" y="0" width="72" height="72" rx="18" fill="url(#accent)"/>
+    <path d="M22 20 h28 a4 4 0 0 1 4 4 v24 a4 4 0 0 1 -4 4 h-28 a4 4 0 0 1 -4 -4 v-24 a4 4 0 0 1 4 -4 z" fill="none" stroke="#1c1917" stroke-width="5"/>
+    <path d="M18 30 h36 M28 20 v-8 h16 v8" fill="none" stroke="#1c1917" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <text x="188" y="148" font-family="Segoe UI, -apple-system, sans-serif" font-size="52" font-weight="700" fill="#fafaf9">FlowDesk</text>
+
+  <!-- headline -->
+  <text x="96" y="304" font-family="Segoe UI, -apple-system, sans-serif" font-size="76" font-weight="800" fill="#fafaf9">Your personal knowledge</text>
+  <text x="96" y="392" font-family="Segoe UI, -apple-system, sans-serif" font-size="76" font-weight="800" fill="#fafaf9">memory system.</text>
+  <rect x="96" y="428" width="120" height="6" rx="3" fill="url(#accent)"/>
+
+  <!-- feature chips -->
+  <g font-family="Segoe UI, -apple-system, sans-serif" font-size="26" font-weight="600">
+    <g>
+      <rect x="96"  y="490" width="180" height="54" rx="27" fill="#292524" stroke="#44403c"/>
+      <text x="186" y="525" fill="#d6d3d1" text-anchor="middle">Notes</text>
+    </g>
+    <g>
+      <rect x="296" y="490" width="200" height="54" rx="27" fill="#292524" stroke="#44403c"/>
+      <text x="396" y="525" fill="#d6d3d1" text-anchor="middle">Bookmarks</text>
+    </g>
+    <g>
+      <rect x="516" y="490" width="190" height="54" rx="27" fill="#292524" stroke="#44403c"/>
+      <text x="611" y="525" fill="#d6d3d1" text-anchor="middle">Code Book</text>
+    </g>
+    <g>
+      <rect x="726" y="490" width="180" height="54" rx="27" fill="#292524" stroke="#44403c"/>
+      <text x="816" y="525" fill="#d6d3d1" text-anchor="middle">Routine</text>
+    </g>
+    <g>
+      <rect x="926" y="490" width="178" height="54" rx="27" fill="#292524" stroke="#44403c"/>
+      <text x="1015" y="525" fill="#fbbf24" text-anchor="middle">AI Chat</text>
+    </g>
+  </g>
+
+  <!-- corner url -->
+  <text x="1104" y="568" font-family="Consolas, monospace" font-size="24" fill="#78716c" text-anchor="end">github.com/masudranaxpert/flowdesk</text>
+</svg>

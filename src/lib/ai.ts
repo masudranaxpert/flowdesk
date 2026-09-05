@@ -90,7 +90,7 @@ export async function fileToAiFile(file: File): Promise<AiFile> {
 
 function buildSystemPrompt(context: string) {
   const today = new Date().toISOString().split('T')[0];
-  return `You are BookmarkVault AI. Help the user find, summarize, and organize their personal bookmarks, notes, code snippets, questions, routines, events, and passwords.
+  return `You are FlowDesk AI. Help the user find, summarize, and organize their personal bookmarks, notes, code snippets, questions, routines, events, and passwords.
 Today's date is: ${today}.
   
 Language behavior:
@@ -303,7 +303,7 @@ export async function runAiChat(settings: AiSettings, messages: ChatMessage[], c
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`,
-      ...(isOpenRouter ? { 'HTTP-Referer': window.location.origin, 'X-Title': 'BookmarkVault' } : {}),
+      ...(isOpenRouter ? { 'HTTP-Referer': window.location.origin, 'X-Title': 'FlowDesk' } : {}),
     },
     body: JSON.stringify({
       model: modelName,

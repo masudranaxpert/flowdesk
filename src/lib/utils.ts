@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { API_BASE } from './api';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -161,7 +162,7 @@ export async function copyShareUrl(type: 'notes' | 'codes' | 'questions' | 'book
   let url = getShareUrl(type, id);
   try {
     const token = localStorage.getItem('auth-token');
-    const response = await fetch('/api/shares', {
+    const response = await fetch(`${API_BASE}/shares`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify({ type, id }),

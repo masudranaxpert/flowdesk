@@ -134,9 +134,9 @@ export default function Docs() {
 
   useEffect(() => {
     if (activeCategory) {
-      document.title = `${activeCategory.titleEn} — Docs | BookmarkVault`;
+      document.title = `${activeCategory.titleEn} — Docs | FlowDesk`;
     } else {
-      document.title = 'Docs — A to Z গাইড | BookmarkVault';
+      document.title = 'Docs — A to Z গাইড | FlowDesk';
     }
   }, [activeCategory]);
 

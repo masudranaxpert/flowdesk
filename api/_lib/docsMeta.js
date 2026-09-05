@@ -375,7 +375,7 @@ export function getDocMeta(path) {
 
   if (parts.length === 1) {
     return {
-      title: 'Docs — A to Z গাইড | BookmarkVault',
+      title: 'Docs — A to Z গাইড | FlowDesk',
       description: 'Python, DSA, Rust, NumPy, Pandas, FastAPI, Docker, PyTorch, Linux, ML, Deep Learning... সম্পূর্ণ বাংলায় কোড সহ A to Z গাইড।',
     };
   }
@@ -386,7 +386,7 @@ export function getDocMeta(path) {
 
   if (parts.length === 2) {
     return {
-      title: `${category.titleEn} — Docs | BookmarkVault`,
+      title: `${category.titleEn} — Docs | FlowDesk`,
       description: category.description,
     };
   }
@@ -396,13 +396,13 @@ export function getDocMeta(path) {
   if (chapter) {
     const subtitleStr = chapter.subtitle ? `${chapter.subtitle} — ` : '';
     return {
-      title: `${chapter.title} — ${category.titleEn} Docs | BookmarkVault`,
+      title: `${chapter.title} — ${category.titleEn} Docs | FlowDesk`,
       description: `${subtitleStr}${category.description}`,
     };
   }
 
   return {
-    title: `${category.titleEn} — Docs | BookmarkVault`,
+    title: `${category.titleEn} — Docs | FlowDesk`,
     description: category.description,
   };
 }

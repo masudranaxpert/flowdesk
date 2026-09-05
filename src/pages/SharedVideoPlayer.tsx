@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { API_BASE } from '@/lib/api';
 
 declare global {
   interface Window {
@@ -40,9 +41,9 @@ export default function SharedVideoPlayer() {
 
   useEffect(() => {
     const endpoint = shareCode
-      ? `/api/share/${encodeURIComponent(shareCode)}`
+      ? `${API_BASE}/share/${encodeURIComponent(shareCode)}`
       : type && id
-        ? `/api/share/${encodeURIComponent(type)}/${encodeURIComponent(id)}`
+        ? `${API_BASE}/share/${encodeURIComponent(type)}/${encodeURIComponent(id)}`
         : '';
 
     if (!endpoint) {

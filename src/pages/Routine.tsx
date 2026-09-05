@@ -266,7 +266,7 @@ export default function RoutinePage() {
     const lines = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      'PRODID:-//BookmarkVault//Routine Calendar//EN',
+      'PRODID:-//FlowDesk//Routine Calendar//EN',
       'CALSCALE:GREGORIAN'
     ];
 
@@ -275,7 +275,7 @@ export default function RoutinePage() {
 
     items.forEach((item) => {
       lines.push('BEGIN:VEVENT');
-      lines.push(`UID:${item._id || Math.random().toString(36).substring(2)}@bookmarkvault`);
+      lines.push(`UID:${item._id || Math.random().toString(36).substring(2)}@flowdesk`);
       lines.push(`DTSTAMP:${nowStr}`);
       lines.push(`SUMMARY:${item.title}`);
       

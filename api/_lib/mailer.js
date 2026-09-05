@@ -9,7 +9,7 @@ function escapeHtml(value = '') {
 
 async function sendEmail({ to, subject, text, html }) {
   const apiKey = globalThis.APP_ENV?.RESEND_API_KEY || process.env.RESEND_API_KEY;
-  const from = globalThis.APP_ENV?.EMAIL_FROM || process.env.EMAIL_FROM || 'BookmarkVault <onboarding@resend.dev>';
+  const from = globalThis.APP_ENV?.EMAIL_FROM || process.env.EMAIL_FROM || 'FlowDesk <onboarding@resend.dev>';
 
   if (!apiKey) {
     console.warn(`Email skipped for ${to}: ${text}`);
@@ -50,11 +50,11 @@ export async function sendVerificationEmail({ to, name, code }) {
 
   return sendEmail({
     to,
-    subject: 'Verify your BookmarkVault email',
-    text: `Hi ${name || 'there'}, your BookmarkVault verification code is ${code}. It expires in 10 minutes.`,
+    subject: 'Verify your FlowDesk email',
+    text: `Hi ${name || 'there'}, your FlowDesk verification code is ${code}. It expires in 10 minutes.`,
     html: `
       <div style="font-family:Arial,sans-serif;line-height:1.6;color:#111">
-        <h2>Verify your BookmarkVault email</h2>
+        <h2>Verify your FlowDesk email</h2>
         <p>Hi ${safeName}, use this code to finish signup:</p>
         <div style="font-size:28px;font-weight:700;letter-spacing:6px;margin:20px 0">
           ${safeCode}
@@ -71,11 +71,11 @@ export async function sendResetPasswordEmail({ to, name, code }) {
 
   return sendEmail({
     to,
-    subject: 'Reset your BookmarkVault password',
-    text: `Hi ${name || 'there'}, your BookmarkVault password reset code is ${code}. It expires in 10 minutes.`,
+    subject: 'Reset your FlowDesk password',
+    text: `Hi ${name || 'there'}, your FlowDesk password reset code is ${code}. It expires in 10 minutes.`,
     html: `
       <div style="font-family:Arial,sans-serif;line-height:1.6;color:#111">
-        <h2>Reset your BookmarkVault password</h2>
+        <h2>Reset your FlowDesk password</h2>
         <p>Hi ${safeName}, use this code to reset your password:</p>
         <div style="font-size:28px;font-weight:700;letter-spacing:6px;margin:20px 0">
           ${safeCode}

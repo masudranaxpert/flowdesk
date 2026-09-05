@@ -50,7 +50,7 @@ export default function ForgotPassword() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
               <Sparkles className="h-4 w-4" />
-              BookmarkVault
+              FlowDesk
             </div>
             <h1 className="mt-8 max-w-xl text-5xl font-semibold tracking-tight">
               Regain access to your workspace.

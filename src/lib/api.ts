@@ -4,12 +4,12 @@ import { Capacitor } from '@capacitor/core';
 
 // For local development on Android, you might need your PC's IP address (e.g. http://192.168.x.x:5173/api)
 // For production, use your live domain (e.g. https://masud-rana.me/api)
-const BASE = Capacitor.isNativePlatform() ? 'https://masud-rana.me/api' : '/api';
+export const API_BASE = Capacitor.isNativePlatform() ? 'https://masud-rana.me/api' : '/api';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem('auth-token');
   const isFormData = options?.body instanceof FormData;
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(`\${API_BASE}${path}`, {
     headers: { ...(isFormData ? {} : { 'Content-Type': 'application/json' }), ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     ...options,
   });

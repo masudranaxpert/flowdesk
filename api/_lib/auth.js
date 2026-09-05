@@ -2,13 +2,19 @@ const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 function getSecret() {
-  return String(
+  const secret = String(
     globalThis.APP_ENV?.AUTH_SECRET ||
     globalThis.APP_ENV?.JWT_SECRET ||
     process.env.AUTH_SECRET ||
     process.env.JWT_SECRET ||
-    'bookmark-vault-dev-secret'
+    ''
   ).trim().replace(/^["']|["']$/g, '');
+
+  if (!secret) {
+    throw new Error('AUTH_SECRET is not configured. Set it as a secret/environment variable before starting the app.');
+  }
+
+  return secret;
 }
 
 function bytesToHex(bytes) {
@@ -192,14 +198,12 @@ export async function verifyToken(token) {
 
     const expectedSignature = await sign(payload);
 
-    if (expectedSignature !== suppliedSignature) return null;
+    if (!constantTimeEqual(expectedSignature, suppliedSignature)) return null;
 
     const data = JSON.parse(base64UrlToString(payload));
 
     if (!data.exp || Date.now() > data.exp) return null;
 
     return data;
-  } catch {
-    return null;
   }
 }

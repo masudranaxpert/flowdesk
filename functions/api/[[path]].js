@@ -24,10 +24,6 @@ export async function onRequest(context) {
     }
   }
 
-  if (!globalThis.process) {
-    globalThis.process = { env: {} };
-  }
-  Object.assign(process.env, env);
 
   const req = {
     method: request.method,
@@ -81,7 +77,8 @@ export async function onRequest(context) {
       headers,
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message || 'Internal Server Error' }), {
+    console.error('[api] unhandled error:', error);
+    return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

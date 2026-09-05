@@ -85,7 +85,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             <Sparkles className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <p className="truncate text-base font-semibold tracking-tight text-sidebar-foreground">BookmarkVault</p>
+            <p className="truncate text-base font-semibold tracking-tight text-sidebar-foreground">FlowDesk</p>
             <p className="truncate text-xs text-sidebar-foreground/55">Knowledge command center</p>
           </div>
         </Link>

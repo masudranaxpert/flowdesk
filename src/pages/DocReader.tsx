@@ -47,7 +47,7 @@ export default function DocReader() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (data) {
-      document.title = `${data.chapter.title} — ${data.category.titleEn} Docs | BookmarkVault`;
+      document.title = `${data.chapter.title} — ${data.category.titleEn} Docs | FlowDesk`;
     }
   }, [chapterId, data]);
 
