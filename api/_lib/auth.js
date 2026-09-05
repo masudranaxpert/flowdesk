@@ -205,5 +205,7 @@ export async function verifyToken(token) {
     if (!data.exp || Date.now() > data.exp) return null;
 
     return data;
+  } catch {
+    return null;
   }
 }
