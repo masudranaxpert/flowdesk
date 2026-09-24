@@ -81,11 +81,14 @@ const fieldMap: Record<string, DocSearchResult['matchField']> = {
   body: 'body',
 };
 
-export function searchDocs(query: string, limit = 8): DocSearchResult[] {
+export function searchDocs(query: string, limit = 8, categoryId?: string): DocSearchResult[] {
   const q = query.trim();
   if (q.length < 2) return [];
 
-  return fuse.search(q, { limit }).map(({ item, score, matches }) => {
+  const rawResults = fuse.search(q, { limit: categoryId ? 50 : limit });
+  const filtered = categoryId ? rawResults.filter(({ item }) => item.categoryId === categoryId).slice(0, limit) : rawResults;
+
+  return filtered.map(({ item, score, matches }) => {
     const match =
       matches?.find((m) => m.key === 'chapterTitle') ??
       matches?.find((m) => m.key === 'tags') ??

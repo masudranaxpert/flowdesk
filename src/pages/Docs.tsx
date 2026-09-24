@@ -130,7 +130,7 @@ export default function Docs() {
   const searchRef = useRef<HTMLDivElement>(null);
 
   const searchResults = useMemo(() => searchDocs(query, 8), [query]);
-  const isSearching = isAuthed && query.trim().length >= 2;
+  const isSearching = query.trim().length >= 2;
 
   useEffect(() => {
     if (activeCategory) {
@@ -215,8 +215,7 @@ export default function Docs() {
               Python, NumPy, Pandas, Git/CI-CD, Linux, Docker, JWT-OAuth থেকে Machine Learning, NLP, Deep Learning পর্যন্ত — সব এক জায়গায়, সম্পূর্ণ বাংলায়, কোড উদাহরণ সহ। মোট <span className="font-semibold text-foreground">{totalChapters}</span> চ্যাপ্টার।
             </p>
           </div>
-          {isAuthed ? (
-            <div ref={searchRef} className="relative w-full sm:w-80">
+          <div ref={searchRef} className="relative w-full sm:w-80">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="docs-search-input"
@@ -259,7 +258,6 @@ export default function Docs() {
               </div>
             )}
           </div>
-          ) : null}
         </div>
       </section>
 
@@ -305,9 +303,21 @@ function CategoryView({ category }: { category: typeof docCategories[number] }) 
   const { readIds } = useDocProgress(category.id);
   const readCount = category.chapters.filter((c) => readIds.has(c.id)).length;
   const percent = category.chapters.length ? Math.round((readCount / category.chapters.length) * 100) : 0;
+  const [search, setSearch] = useState('');
+
+  const filteredChapters = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return category.chapters;
+    return category.chapters.filter((ch) =>
+      ch.title.toLowerCase().includes(q) ||
+      (ch.subtitle && ch.subtitle.toLowerCase().includes(q)) ||
+      (ch.tags && ch.tags.some((t) => t.toLowerCase().includes(q))) ||
+      ch.id.toLowerCase().includes(q)
+    );
+  }, [category.chapters, search]);
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-6">
       <Link to="/docs" className="flex items-center gap-2 text-xs text-muted-foreground transition hover:text-foreground">
         <ArrowRight className="h-3.5 w-3.5 rotate-180" /> সব Docs
       </Link>
@@ -340,30 +350,85 @@ function CategoryView({ category }: { category: typeof docCategories[number] }) 
         </div>
       </section>
 
-      <div className="space-y-2.5">
-        {category.chapters.map((chapter, index) => {
-          const done = isAuthed && readIds.has(chapter.id);
-          return (
-            <Link
-              key={chapter.id}
-              to={`/docs/${category.id}/${chapter.id}`}
-              className="group flex items-center gap-4 rounded-2xl border border-border bg-card/50 p-4 transition hover:border-border/80 hover:bg-card"
+      {/* Category In-Topic Search Input */}
+      <div className="space-y-2">
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={`${category.titleEn} চ্যাপ্টার বা বিষয় খুঁজুন (যেমন: array, loop, memory)...`}
+            className="rounded-2xl border-border/80 bg-card/60 pl-10 pr-9 focus:bg-card focus:border-primary/50 transition h-11 text-sm"
+          />
+          {search ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-1.5 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              onClick={() => setSearch('')}
             >
-              <span className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-semibold tabular-nums ring-1', done ? 'bg-emerald-500/12 text-emerald-300 ring-emerald-500/30' : cn(accent.bg, accent.text, accent.ring))}>
-                {done ? '✓' : index + 1}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold">{chapter.title}</p>
-                {chapter.subtitle && <p className="truncate text-xs text-muted-foreground">{chapter.subtitle}</p>}
-              </div>
-              <div className="hidden items-center gap-2 sm:flex">
-                <Badge variant="outline" className="rounded-full text-[10px]">{docLevelLabels[chapter.level]}</Badge>
-                <span className="text-[11px] text-muted-foreground">{chapter.minutes} মিঃ</span>
-              </div>
-              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-foreground" />
-            </Link>
-          );
-        })}
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          ) : (
+            <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground">
+              {category.chapters.length} চ্যাপ্টার
+            </span>
+          )}
+        </div>
+
+        {search.trim() && (
+          <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
+            <span>
+              {filteredChapters.length > 0
+                ? `"${search}" এর সাথে মিলে এমন ${filteredChapters.length}টি চ্যাপ্টার পাওয়া গেছে:`
+                : `"${search}" এর সাথে মিলে এমন কোনো চ্যাপ্টার পাওয়া যায়নি`}
+            </span>
+            <button
+              onClick={() => setSearch('')}
+              className="font-medium text-primary hover:underline"
+            >
+              সব চ্যাপ্টার দেখুন
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-2.5">
+        {filteredChapters.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border bg-card/30 p-8 text-center">
+            <Search className="mx-auto h-8 w-8 text-muted-foreground/50" />
+            <p className="mt-2 text-sm font-medium">কোনো চ্যাপ্টার মেলেনি</p>
+            <p className="mt-1 text-xs text-muted-foreground">অন্য কীওয়ার্ড দিয়ে চেষ্টা করুন অথবা সার্চ ফিল্টার রিসেট করুন।</p>
+            <Button variant="outline" size="sm" className="mt-3 rounded-full" onClick={() => setSearch('')}>
+              সব চ্যাপ্টার দেখুন
+            </Button>
+          </div>
+        ) : (
+          filteredChapters.map((chapter, index) => {
+            const done = isAuthed && readIds.has(chapter.id);
+            const originalIndex = category.chapters.findIndex((c) => c.id === chapter.id);
+            return (
+              <Link
+                key={chapter.id}
+                to={`/docs/${category.id}/${chapter.id}`}
+                className="group flex items-center gap-4 rounded-2xl border border-border bg-card/50 p-4 transition hover:border-border/80 hover:bg-card"
+              >
+                <span className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-semibold tabular-nums ring-1', done ? 'bg-emerald-500/12 text-emerald-300 ring-emerald-500/30' : cn(accent.bg, accent.text, accent.ring))}>
+                  {done ? '✓' : (originalIndex >= 0 ? originalIndex + 1 : index + 1)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{highlightText(chapter.title, search)}</p>
+                  {chapter.subtitle && <p className="truncate text-xs text-muted-foreground">{highlightText(chapter.subtitle, search)}</p>}
+                </div>
+                <div className="hidden items-center gap-2 sm:flex">
+                  <Badge variant="outline" className="rounded-full text-[10px]">{docLevelLabels[chapter.level]}</Badge>
+                  <span className="text-[11px] text-muted-foreground">{chapter.minutes} মিঃ</span>
+                </div>
+                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-foreground" />
+              </Link>
+            );
+          })
+        )}
       </div>
     </div>
   );

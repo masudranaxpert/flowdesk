@@ -1,153 +1,212 @@
-# Java Arrays ও Memory Architecture
+# Java Arrays — একদম শুরু থেকে অ্যাডভান্সড
 
-Java-তে **অ্যারে (Array)** হলো সবচেয়ে মৌলিক ও বহুল ব্যবহৃত ডেটা স্ট্রাকচার। এটি একই ডেটা টাইপের একাধিক উপাদানকে একটি নির্দিষ্ট ক্রমে সংলগ্ন মেমোরিতে (Contiguous Memory) সংরক্ষণ করে। অন্যান্য অনেক ভাষার (যেমন C/C++) মতো Java-তে অ্যারে কোনো সাধারণ পয়েন্টার নয়, বরং **Java-তে প্রতিটি অ্যারে সরাসরি Heap মেমোরিতে অবস্থিত একটি First-class Object**।
+প্রোগ্রামিংয়ে প্রায়ই আমাদের একই ধরণের অনেকগুলো ডেটা একসাথে সংরক্ষণ করতে হয়। যেমন: ক্লাসের ৫০ জন শিক্ষার্থীর রোল নম্বর বা সপ্তাহের ৭ দিনের তাপমাত্রা। ৫০টি আলাদা ভ্যারিয়েবল (`roll1, roll2, roll3...`) তৈরি করা যেমন কঠিন, তেমনি তা পরিচালনা করাও অসম্ভব।
 
----
-
-## ১. অ্যারে কী ও এর মেমোরি আর্কিটেকচার
-
-Java-তে যেকোনো অ্যারে তৈরি করলে JVM ব্যাকগ্রাউন্ডে একটি স্পেশাল ইন্টারনাল ক্লাস তৈরি করে (যেমন `int[]` এর জন্য `[I`, `String[]` এর জন্য `[Ljava.lang.String;`)।
-
-```
-        Stack Memory                                 Heap Memory
-┌───────────────────────────┐           ┌─────────────────────────────────────────┐
-│                           │           │ Array Object Header (Mark Word, Klass)  │
-│  numbers (Reference)      │──────────►├─────────────────────────────────────────┤
-│  [Address: 0x7FFF12A0]    │           │ length = 4 (public final int)           │
-└───────────────────────────┘           ├───────────┬───────────┬───────────┬─────┤
-                                        │ [0] = 10  │ [1] = 25  │ [2] = 40  │ [3] │
-                                        └───────────┴───────────┴───────────┴─────┘
-                                        ◄──────── Contiguous Memory Block ────────►
-```
-
-### মেমোরি কাঠামোর মূল বৈশিষ্ট্য:
-1. **Contiguous Allocation**: উপাদানগুলো মেমোরিতে পাশাপাশি থাকে, ফলে ইনডেক্স দিয়ে $O(1)$ কনস্ট্যান্ট টাইমে রেন্ডম অ্যাক্সেস সম্ভব:
-   $$\text{Address}(arr[i]) = \text{BaseAddress} + (i \times \text{ElementSize})$$
-2. **Fixed Size**: একবার ইনিশিয়ালাইজ করার পর অ্যারের দৈর্ঘ্য বাড়ানো বা কমানো যায় না।
-3. **`length` প্রোপার্টি**: প্রতিটি অ্যারে অবজেক্টের নিজস্ব `length` ফিল্ড থাকে যা `public final int`। এটি কোনো মেথড নয় (অর্থাৎ `arr.length` লিখতে হয়, `arr.length()` নয়)।
+এই সমস্যার সবচেয়ে সহজ ও মৌলিক সমাধান হলো **অ্যারে (Array)**।
 
 ---
 
-## ২. 1D Array ঘোষণা, ইনস্ট্যানশিয়েশন ও ইনিশিয়ালাইজেশন
+## ১. অ্যারে কী? (বাস্তব উপমা)
 
-Java-তে অ্যারে ৩ ধাপে বা এক লাইনে তৈরি করা যায়:
+অ্যারেকে কল্পনা করতে পারো একটি **ডিমের ট্রে** বা **ঔষধের সাপ্তাহিক বক্সের** মতো। 
+- বক্সের প্রতিটি ঘরে কেবল একটি নির্দিষ্ট ধরণের জিনিসই রাখা যায়।
+- ঘরগুলো মেমোরিতে একটার পর একটা পাশাপাশি (ধারাবাহিকভাবে) সাজানো থাকে।
+- প্রতিটি ঘরের একটি নির্দিষ্ট নম্বর বা পরিচিতি থাকে, যাকে প্রোগ্রামিংয়ের ভাষায় বলা হয় **ইনডেক্স (Index)**।
+
+```
+  ইনডেক্স:       [0]      [1]      [2]      [3]      [4]
+             ┌────────┬────────┬────────┬────────┬────────┐
+  মান (Value): │   10   │   25   │   40   │   55   │   90   │
+             └────────┴────────┴────────┴────────┴────────┘
+  মেমোরি:     0x100    0x104    0x108    0x10C    0x110  (ধারাবাহিক মেমোরি)
+```
+
+> [!NOTE]
+> **অ্যারের দুটি প্রধান নিয়ম:**
+> ১. **সমজাতীয় (Homogeneous)**: একই অ্যারেতে সংখ্যা এবং লেখা একসাথে রাখা যায় না। যদি `int` অ্যারে হয়, তবে সব উপাদানই পূর্ণসংখ্যা হতে হবে।
+> ২. **নির্দিষ্ট আকার (Fixed Size)**: একবার অ্যারের সাইজ নির্ধারণ করে ফেললে পরবর্তীতে তা আর ছোট বা বড় করা যায় না।
+
+---
+
+## ২. অ্যারে সিনট্যাক্স: `[]` ব্র্যাকেট আগে না পরে?
+
+একজন নতুন শিক্ষার্থীর সবচেয়ে সাধারণ প্রশ্ন: `[]` ব্র্যাকেটটি কি টাইপের পরে লিখব, নাকি ভ্যারিয়েবলের নামের পরে?
 
 ```java
-public class ArrayDeclarationDemo {
+int[] numbers; // ✅ সবচেয়ে ভালো ও আধুনিক নিয়ম (Java Style)
+int numbers[]; // ⚠️ বৈধ, তবে নিরুৎসাহিত (C/C++ Style)
+```
+
+### কেন `int[] numbers` লেখা উত্তম?
+- জাভাতে `int[]` পুরোটিকে একটি স্বতন্ত্র **ডেটা টাইপ** বিবেচনা করা হয় — যার অর্থ "একটি পূর্ণসংখ্যার অ্যারে"।
+- একাধিক ভ্যারিয়েবল ডিক্লেয়ার করার সময় এটি মারাত্মক বিভ্রান্তি এড়ায়:
+  ```java
+  int[] a, b; // এখানে a এবং b উভয়েই int অ্যারে!
+  
+  int x[], y; // এখানে x হলো অ্যারে, কিন্তু y হলো সাধারণ একটি int সংখ্যা!
+  ```
+  তাই সবসময় টাইপের পরেই `[]` লেখা পেশাদার জাভা কোডের মানদণ্ড।
+
+---
+
+## ৩. তিনটি ধাপে অ্যারে তৈরি (Step-by-Step)
+
+জাভাতে একটি অ্যারে পুরোপুরি তৈরি করতে ৩টি কাজ করতে হয়:
+
+```java
+public class ArrayStepByStep {
     public static void main(String[] args) {
-        // 1. Declaration (Only creates a reference variable on Stack, no memory on Heap yet)
-        int[] numbers; // Preferred Java style
-        int alternativeSyntax[]; // Valid C-style, but discouraged in modern Java
+        // ধাপ ১: ডিক্লারেশন (Declaration)
+        // শুধু নাম ঘোষণা করা হলো, মেমোরিতে এখনো কোনো জায়গা বরাদ্দ হয়নি
+        int[] scores;
 
-        // 2. Instantiation (Allocates heap memory and initializes to default values)
-        numbers = new int[5]; // Default initialized to [0, 0, 0, 0, 0]
+        // ধাপ ২: মেমোরি তৈরি বা ইনস্ট্যানশিয়েশন (Instantiation)
+        // 'new' কিওয়ার্ড মেমোরিতে ৫টি ঘরের জায়গা বরাদ্দ করে
+        scores = new int[5];
 
-        // 3. Assignment by index (0-indexed)
-        numbers[0] = 10;
-        numbers[1] = 20;
+        // ধাপ ৩: মান বসানো (Assignment)
+        // ইনডেক্স ধরে ধরে প্রতিটি ঘরে মান রাখা হয়
+        scores[0] = 85; // ১ম ঘর (ইনডেক্স ০)
+        scores[1] = 92; // ২য় ঘর (ইনডেক্স ১)
+        scores[2] = 78; // ৩য় ঘর (ইনডেক্স ২)
+        scores[3] = 90; // ৪র্থ ঘর (ইনডেক্স ৩)
+        scores[4] = 88; // ৫ম ঘর (ইনডেক্স ৪)
 
-        // 4. Combined Declaration & Array Literal (Memory allocated & initialized together)
-        int[] primes = {2, 3, 5, 7, 11};
-
-        // 5. Anonymous Array (Useful when passing directly to methods)
-        printArray(new int[]{100, 200, 300});
+        // কোনো ঘর থেকে মান পড়া:
+        System.out.println("প্রথম শিক্ষার্থীর স্কোর: " + scores[0]);
     }
+}
+```
 
-    public static void printArray(int[] data) {
-        for (int val : data) {
-            System.out.print(val + " ");
+### `new` কিওয়ার্ডের কাজ কী?
+জাভাতে প্রিমিটিভ সংখ্যা সরাসরি স্ট্যাক মেমরিতে থাকে, কিন্তু অ্যারে হলো একটি অবজেক্ট। `new int[5]` লেখার মাধ্যমে JVM-কে বলা হয়: *"হিপ মেমরিতে ৫টি পূর্ণসংখ্যা রাখার মতো পর্যাপ্ত খালি জায়গা বরাদ্দ করো।"*
+
+---
+
+## ৪. ইনডেক্স ০ থেকে কেন শুরু হয়?
+
+দৈনন্দিন জীবনে আমরা গণনা শুরু করি ১ থেকে, কিন্তু প্রোগ্রামিংয়ে অ্যারের ইনডেক্স শুরু হয় **০ (Zero)** থেকে।
+
+এর কারণ হলো কম্পিউটারের অভ্যন্তরীণ মেমোরি হিসাব:
+- অ্যারের ভ্যারিয়েবলটি (`scores`) মেমরির একদম শুরুর অ্যাড্রেসটি (Base Address) চিনে রাখে।
+- ইনডেক্স নির্দেশ করে শুরুর অ্যাড্রেস থেকে উপাদানটি কত ঘর দূরে (Offset) আছে।
+- প্রথম উপাদানটি শুরুর বিন্দুতেই থাকে, অর্থাৎ দূরত্ব হলো `০`। তাই প্রথম ঘর হলো `scores[0]`।
+- ৫ সাইজের অ্যারের শেষ ঘরটির দূরত্ব হবে `৪` ঘর দূরে, তাই শেষ ইনডেক্স `scores[4]`।
+
+> [!WARNING]
+> **ArrayIndexOutOfBoundsException (সবচেয়ে পরিচিত ভুল):**
+> যদি ৫ সাইজের অ্যারেতে কেউ `scores[5]` এক্সেস করতে চায়, তবে Java তাৎক্ষণিকভাবে এরর ছুড়ে মারবে। কারণ বৈধ ইনডেক্স কেবল `০` থেকে `৪` পর্যন্ত।
+
+---
+
+## ৫. মান না দিলে ঘরে কী থাকে? (স্বয়ংক্রিয় ডিফল্ট মান)
+
+যদি আপনি `new int[3]` লিখেন কিন্তু ঘরে কোনো মান না বসান, তবে Java নিজে থেকেই ঘরগুলো খালি না রেখে ডিফল্ট মান দিয়ে দেয়:
+
+| অ্যারের ডেটা টাইপ | স্বয়ংক্রিয় ডিফল্ট মান |
+| :--- | :--- |
+| `int`, `byte`, `short`, `long` | `0` |
+| `double`, `float` | `0.0` |
+| `boolean` | `false` |
+| `char` | `'\u0000'` (খালি ক্যারেক্টার) |
+| অবজেক্ট বা `String` | `null` |
+
+---
+
+## ৬. এক লাইনে অ্যারে তৈরি (Array Literals)
+
+মান জানা থাকলে ধাপ ১, ২ ও ৩ আলাদা না করে এক লাইনেই সংক্ষেপে অ্যারে ডিক্লেয়ার ও মান দেওয়া যায়:
+
+```java
+// এক লাইনে তৈরি ও মান প্রদান (new লিখতে হয় না)
+int[] ages = {18, 21, 24, 20, 22};
+String[] friends = {"Rahim", "Karim", "Sabbir"};
+
+// অ্যারের সাইজ কত? (.length দিয়ে জানা যায়)
+System.out.println("মোট বন্ধু: " + friends.length); // আউটপুট: 3
+```
+
+> [!TIP]
+> লক্ষ্য করুন: অ্যারের ক্ষেত্রে `friends.length` কোনো মেথড নয়, এটি একটি প্রোপার্টি (তাই শেষে কোনো ব্র্যাকেট `()` নেই)। কিন্তু স্ট্রিংয়ের ক্ষেত্রে `name.length()` মেথড লিখতে হয়।
+
+---
+
+## ৭. লুপ দিয়ে অ্যারের সব উপাদান পড়া
+
+অ্যারেতে ১০০টি উপাদান থাকলে ১০০ বার `println` না লিখে লুপ ব্যবহার করা হয়:
+
+```java
+public class ArrayLoopDemo {
+    public static void main(String[] args) {
+        int[] marks = {75, 82, 90, 68, 95};
+
+        // পদ্ধতি ১: চিরাচরিত for লুপ (ইনডেক্স প্রয়োজন হলে)
+        System.out.println("--- সাধারণ for লুপ ---");
+        for (int i = 0; i < marks.length; i++) {
+            System.out.println("ইনডেক্স " + i + " এর মান: " + marks[i]);
         }
-        System.out.println();
+
+        // পদ্ধতি ২: আধুনিক For-Each লুপ (সংক্ষিপ্ত ও নিরাপদ)
+        System.out.println("--- ফর-ইচ লুপ ---");
+        for (int m : marks) {
+            System.out.println("প্রাপ্ত নম্বর: " + m);
+        }
     }
 }
 ```
 
-### ডিফল্ট মান (Default Values on Heap):
-যখন `new Type[N]` দিয়ে মেমরি বরাদ্দ করা হয়, তখন JVM উপাদানগুলোকে তাদের ডিফল্ট মান দিয়ে পূর্ণ করে:
-- সংখ্যা (`byte`, `short`, `int`, `long`): `0`
-- দশমিক (`float`, `double`): `0.0`
-- বুলিয়ান (`boolean`): `false`
-- ক্যারেক্টার (`char`): `'\u0000'`
-- অবজেক্ট রেফারেন্স (`String`, কাস্টম ক্লাস): `null`
-
 ---
 
-## ৩. Primitive Arrays বনাম Object Arrays (মেমোরি ফাঁদ)
+## ৮. অবজেক্টের অ্যারে ও মেমোরি ফাঁদ
 
-```
-Primitive Array: int[] arr = new int[3];
-Heap: [ 10 | 20 | 30 ]  (সরাসরি মান সংরক্ষিত)
-
-Object Array: Person[] people = new Person[3];
-Heap: [ null | null | null ]  (কেবল ৩টি রেফারেন্স পয়েন্টার বরাদ্দ হয়েছে!)
-```
+সাধারণ সংখ্যার অ্যারে আর অবজেক্টের (যেমন `String` বা কাস্টম ক্লাস) অ্যারের মধ্যে একটি বিশাল পার্থক্য রয়েছে যা নতুনরা ভুল করে:
 
 ```java
-public class ObjectArrayPitfall {
+class Student {
+    String name;
+    Student(String name) { this.name = name; }
+}
 
-    static class Person {
-        String name;
-        Person(String name) { this.name = name; }
-    }
-
+public class ObjectArrayDemo {
     public static void main(String[] args) {
-        Person[] team = new Person[2]; // Allocates space for 2 Person references (null)
+        Student[] list = new Student[2]; // এটি কেবল ২টি null রেফারেন্স তৈরি করেছে!
 
-        // ❌ PITFALL: team[0] is still null!
-        // team[0].name = "Rahim"; // Throws NullPointerException!
+        // ❌ ভুল: list[0] এখনো null, কল করলে NullPointerException হবে!
+        // System.out.println(list[0].name);
 
-        // ✅ CORRECT: Must instantiate each element individually
-        team[0] = new Person("Rahim");
-        team[1] = new Person("Karim");
+        // ✅ সঠিক: প্রতিটি ঘরের জন্য আলাদাভাবে অবজেক্ট বানাতে হবে
+        list[0] = new Student("Karim");
+        list[1] = new Student("Fahim");
 
-        System.out.println("Member 1: " + team[0].name);
+        System.out.println("প্রথম ছাত্র: " + list[0].name);
     }
 }
 ```
 
-> [!CAUTION]
-> অবজেক্টের অ্যারে তৈরি করলে ভেতরের অবজেক্টগুলো নিজে থেকে তৈরি হয় না! `new Person[5]` কেবল ৫টি `null` রেফারেন্স ধারণ করার জায়গা তৈরি করে। প্রতিটি ইনডেক্সে আলাদাভাবে `new Person(...)` অ্যাসাইন না করে কল করলে `NullPointerException` ঘটবে।
-
 ---
 
-## ৪. Multi-dimensional ও Jagged (Ragged) Arrays
+## ৯. বহুমাত্রিক অ্যারে (2D ও Jagged Arrays)
 
-Java-তে সি-এর মতো ফ্ল্যাট টু-ডাইমেনশনাল ম্যাট্রিক্স নেই। **Java-তে 2D Array হলো মূলত "Arrays of Arrays"** — অর্থাৎ একটি প্যারেন্ট অ্যারে যার প্রতিটি স্লটে অন্য একটি সাব-অ্যারের রেফারেন্স সংরক্ষিত থাকে।
-
-```
- jaggedMatrix (Heap)
- ┌───────────┐
- │ [0] ──────┼─────► [ 1, 2 ]       (length = 2)
- ├───────────┤
- │ [1] ──────┼─────► [ 3, 4, 5, 6 ] (length = 4)
- ├───────────┤
- │ [2] ──────┼─────► [ 7 ]          (length = 1)
- └───────────┘
-```
+### ২ডি ম্যাট্রিক্স (Rows ও Columns):
+স্কুলের ক্লাসরুমে টেবিলের সারির মতো রো (Row) এবং কলাম (Column) আকারে ডেটা রাখতে 2D অ্যারে লাগে:
 
 ```java
-public class MultiDimArrayDemo {
+public class TwoDimArrayDemo {
     public static void main(String[] args) {
-        // 1. Regular 2D Rectangular Matrix (3 rows x 3 columns)
+        // ৩টি রো এবং ২টি কলামের একটি ম্যাট্রিক্স
         int[][] matrix = {
-            {1, 2, 3},
-            {4, 5, 6},
-            {7, 8, 9}
+            {1, 2},
+            {3, 4},
+            {5, 6}
         };
 
-        // 2. Jagged (Ragged) Array: Rows with uneven column lengths
-        int[][] jagged = new int[3][]; // Only outer array instantiated
-        jagged[0] = new int[2];        // Row 0 has 2 columns
-        jagged[1] = new int[4];        // Row 1 has 4 columns
-        jagged[2] = new int[1];        // Row 2 has 1 column
+        // রো ১, কলাম ১ এর মান অ্যাক্সেস:
+        System.out.println("মাঝের মান: " + matrix[1][0]); // আউটপুট: 3
 
-        jagged[0][0] = 99;
-        jagged[1][3] = 42;
-
-        // Traversal using Nested Loops
-        for (int i = 0; i < jagged.length; i++) {
-            for (int j = 0; j < jagged[i].length; j++) {
-                System.out.print(jagged[i][j] + " ");
+        // নেস্টেড লুপ দিয়ে পুরো ম্যাট্রিক্স প্রিন্ট:
+        for (int row = 0; row < matrix.length; row++) {
+            for (int col = 0; col < matrix[row].length; col++) {
+                System.out.print(matrix[row][col] + " ");
             }
             System.out.println();
         }
@@ -155,116 +214,98 @@ public class MultiDimArrayDemo {
 }
 ```
 
+### জ্যাগেড অ্যারে (Jagged / Ragged Array):
+জাভাতে ২ডি অ্যারে আসলে "অ্যারের ভেতরে অন্য একটি অ্যারে"। ফলে প্রতিটি রো-এর কলাম সাইজ সমান না-ও হতে পারে:
+
+```java
+int[][] uneven = new int[3][]; // ৩টি সারি
+uneven[0] = new int[2]; // প্রথম সারিতে ২ ঘর
+uneven[1] = new int[5]; // দ্বিতীয় সারিতে ৫ ঘর
+uneven[2] = new int[1]; // তৃতীয় সারিতে ১ ঘর
+```
+
 ---
 
-## ৫. অ্যারে কপি ও ক্লোনিং (Shallow Copy বনাম Deep Copy)
+## ১০. অ্যারে কপি করা (`a = b` কেন কপি নয়?)
 
-জাভাতে একটি অ্যারে রেফারেন্স অন্য ভেরিয়েবলে অ্যাসাইন করলে (`arr2 = arr1;`) নতুন কোনো অ্যারে তৈরি হয় না; উভয় ভেরিয়েবল একই মেমরি অ্যাড্রেস পয়েন্ট করে। নতুন কপি তৈরি করার ৩টি শক্তিশালী উপায়:
+যদি আপনি লিখেন:
+```java
+int[] a = {1, 2, 3};
+int[] b = a; // ❌ এটি কিন্তু কপি নয়!
+b[0] = 99;
+System.out.println(a[0]); // আউটপুট হবে 99!
+```
+কারণ `b = a` লিখলে কোনো নতুন অ্যারে তৈরি হয় না; দুটো ভ্যারিয়েবল মেমোরির একই বাড়িকে নির্দেশ করে।
 
+### সত্যিকারভাবে নতুন কপি তৈরির ৩টি উপায়:
 ```java
 import java.util.Arrays;
 
-public class ArrayCopyDemo {
+public class CopyDemo {
     public static void main(String[] args) {
-        int[] original = {10, 20, 30, 40, 50};
+        int[] original = {10, 20, 30, 40};
 
-        // 1. System.arraycopy (Fastest: Native OS C++ Syscall level transfer)
-        int[] copy1 = new int[original.length];
-        System.arraycopy(original, 0, copy1, 0, original.length);
+        // ১. Arrays.copyOf ব্যবহার করে (সহজ ও পরিষ্কার)
+        int[] copy1 = Arrays.copyOf(original, original.length);
 
-        // 2. Arrays.copyOf and Arrays.copyOfRange
-        int[] copy2 = Arrays.copyOf(original, original.length);
-        int[] subArray = Arrays.copyOfRange(original, 1, 4); // Index 1 to 3: [20, 30, 40]
+        // ২. System.arraycopy ব্যবহার করে (জাভার সবচেয়ে দ্রুততম নেটিভ কপি)
+        int[] copy2 = new int[original.length];
+        System.arraycopy(original, 0, copy2, 0, original.length);
 
-        // 3. clone() method
+        // ৩. clone() মেথড দিয়ে
         int[] copy3 = original.clone();
-
-        System.out.println("Sub array: " + Arrays.toString(subArray));
     }
 }
 ```
 
-> [!WARNING]
-> **Object Array-এর Shallow Copy ঝুঁকি:**
-> প্রিমিটিভ অ্যারে ক্লোন করলে মান পুরোপুরি কপি হয়। কিন্তু কাস্টম অবজেক্টের অ্যারে ক্লোন করলে কেবল অবজেক্টের রেফারেন্স অ্যাড্রেসগুলো কপি হয়। ফলে ক্লোন করা অ্যারের ভেতরের কোনো অবজেক্টের স্টেট পরিবর্তন করলে মূল অ্যারের অবজেক্টও পরিবর্তিত হয়ে যায়!
-
 ---
 
-## ৬. `java.util.Arrays` ইউটিলিটি ক্লাস
+## ১১. `java.util.Arrays` ইউটিলিটি টুলস
 
-Java-এর স্ট্যান্ডার্ড লাইব্রেরির `java.util.Arrays` ক্লাসে দৈনন্দিন কাজের জন্য প্রচুর অপ্টিমাইজড স্ট্যাটিক মেথড রয়েছে:
+জাভার সাথে একটি চমৎকার রেডিমেড টুলবক্স আছে যার নাম `java.util.Arrays`:
 
 ```java
 import java.util.Arrays;
 
-public class ArraysUtilityDemo {
+public class ArraysHelperDemo {
     public static void main(String[] args) {
-        int[] data = {12, 5, 89, 43, 2, 77};
+        int[] numbers = {45, 12, 85, 32, 8};
 
-        // 1. String representation
-        System.out.println("Array: " + Arrays.toString(data));
+        // ১. এক ক্লিকে অ্যারে প্রিন্ট করা:
+        System.out.println("অ্যারে: " + Arrays.toString(numbers)); // [45, 12, 85, 32, 8]
 
-        // 2. Sorting (Uses Dual-Pivot Quicksort for primitives, O(N log N))
-        Arrays.sort(data);
-        System.out.println("Sorted: " + Arrays.toString(data)); // [2, 5, 12, 43, 77, 89]
+        // ২. ছোট থেকে বড় সাজানো (Sorting):
+        Arrays.sort(numbers);
+        System.out.println("সাজানো অ্যারে: " + Arrays.toString(numbers)); // [8, 12, 32, 45, 85]
 
-        // 3. Binary Search (Array MUST be sorted beforehand!)
-        int index = Arrays.binarySearch(data, 43);
-        System.out.println("Index of 43: " + index); // Returns index (positive) or negative if absent
+        // ৩. উপাদান খোঁজা (Binary Search - সর্ট করার পর ব্যবহার্য):
+        int index = Arrays.binarySearch(numbers, 32);
+        System.out.println("৩২ পাওয়া গেছে ইনডেক্স: " + index);
 
-        // 4. Fill with constant value
-        int[] buffer = new int[5];
-        Arrays.fill(buffer, -1);
-        System.out.println("Filled: " + Arrays.toString(buffer)); // [-1, -1, -1, -1, -1]
-
-        // 5. Equality check (Deep vs Shallow)
-        int[] a = {1, 2, 3};
-        int[] b = {1, 2, 3};
-        System.out.println("a == b: " + (a == b)); // false (Different memory addresses)
-        System.out.println("Arrays.equals: " + Arrays.equals(a, b)); // true (Compares contents)
-
-        // 6. 2D Array inspection using deepToString
-        int[][] grid = {{1, 2}, {3, 4}};
-        System.out.println("Grid: " + Arrays.deepToString(grid)); // [[1, 2], [3, 4]]
+        // ৪. দুটি অ্যারের মান হুবহু এক কিনা যাচাই:
+        int[] a = {1, 2};
+        int[] b = {1, 2};
+        System.out.println("সমান কিনা: " + Arrays.equals(a, b)); // true
     }
 }
 ```
 
 ---
 
-## ৭. Array বনাম `ArrayList` তুলনামূলক বিশ্লেষণ
+## ১২. Array বনাম `ArrayList` — কখন কোনটি?
 
-এন্টারপ্রাইজ অ্যাপ্লিকেশনে প্রায়শই সিদ্ধান্ত নিতে হয়: কখন সাধারণ Array ব্যবহার করব এবং কখন `ArrayList` ব্যবহার করব?
-
-| বৈশিষ্ট্য | `T[]` (Native Array) | `ArrayList<T>` (Collections Framework) |
+| বিষয় | সাধারণ Array (`int[]`) | `ArrayList` (কালেকশন) |
 | :--- | :--- | :--- |
-| **আকার (Sizing)** | ফিক্সড (স্থায়ী), পরিবর্তনের সুযোগ নেই | ডায়নামিক, স্বয়ংক্রিয়ভাবে বৃদ্ধি পায় (১.৫ গুণ) |
-| **পারফরম্যান্স** | অত্যন্ত দ্রুত (সরাসরি মেমরি অ্যাড্রেস অফসেট) | সামান্য ধীর (ইন্টারনাল মেথড কল ও ক্যাপাসিটি চেক) |
-| **মেমরি লোকালিটি** | উচ্চতম CPU ক্যাশ লোকালিটি (Contiguous) | পয়েন্টার চেইজিং (হিপে ছড়ানো অবজেক্ট রেফারেন্স) |
-| **প্রিমিটিভ সাপোর্ট**| সরাসরি প্রিমিটিভ রাখে (`int[]`, `double[]`) | প্রিমিটিভ সরাসরি পারে না, র্যাপার অবজেক্ট লাগে (`Integer`) |
-| **অটোবক্সিং ওভারহেড**| কোনো বক্সিং ওভারহেড নেই | প্রচুর অবজেক্ট এলোকেশন ও মেমরি অপচয় |
-| **উপযুক্ত ক্ষেত্র** | ফিক্সড সাইজ বাফার, ম্যাট্রিক্স, হাই-স্পিড কম্পিউটেশন | পরিবর্তনশীল সাইজ, ঘনঘন সংযোজন ও ডেটাবেস রেজাল্ট |
+| **আকার** | ফিক্সড (পরিবর্তন করা যায় না) | ডায়নামিক (প্রয়োজনে নিজে থেকেই বাড়ে) |
+| **প্রিমিটিভ সমর্থন** | সরাসরি `int`, `double` রাখতে পারে | সরাসরি পারে না, Wrapper অবজেক্ট লাগে (`Integer`) |
+| **গতি ও মেমোরি** | অত্যন্ত ফাস্ট ও মেমোরি সাশ্রয়ী | সামান্য ধীরগতির |
+| **কখন ব্যবহার করবেন** | যখন উপাদানের সংখ্যা আগে থেকেই নির্দিষ্ট জানা থাকে | যখন উপাদানের সংখ্যা প্রতিনিয়ত বাড়তে বা কমতে পারে |
 
 ---
 
-## ৮. এন্টারপ্রাইজ Best Practices ও Effective Java টিপস
-
-### ১. কখনো অ্যারের ক্ষেত্রে `null` রিটার্ন করবেন না (Item 54 - Effective Java)
-```java
-// ❌ মারাত্মক ভুল: কলারকে NullPointerException এড়াতে প্রতিবার নাল চেক করতে বাধ্য করে
-public String[] getUserRoles(String userId) {
-    if (roles.isEmpty()) return null;
-    return roles.toArray(new String[0]);
-}
-
-// ✅ সঠিক: দৈর্ঘ্য শূন্যের খালি অ্যারে রিটার্ন করুন
-private static final String[] EMPTY_ROLES = new String[0];
-
-public String[] getUserRoles(String userId) {
-    if (roles.isEmpty()) return EMPTY_ROLES;
-    return roles.toArray(new String[0]);
-}
-```
-
-### ২. ArrayIndexOutOfBoundsException প্রিভেনশন
-সর্বদা লুপের বাউন্ড হিসেবে `i < arr.length` ব্যবহার করুন, কখনো হার্ডকোডেড সংখ্যা বা `i <= arr.length` লিখবেন না (কারণ শেষ উপাদানটির ইনডেক্স সর্বদা `length - 1`)।
+## সারসংক্ষেপ (Quick Revision)
+1. অ্যারে তৈরি করার সবচেয়ে ভালো সিনট্যাক্স: `int[] arr = new int[size];`
+2. ইনডেক্স সর্বদা `0` থেকে শুরু হয়ে `size - 1` এ শেষ হয়।
+3. অ্যারের সাইজ জানার জন্য কোনো ব্র্যাকেট ছাড়া `arr.length` ব্যবহার করুন।
+4. কনসোলে সুন্দরভাবে দেখতে `Arrays.toString(arr)` ব্যবহার করুন।
+5. একটি নতুন কপি তৈরি করতে `Arrays.copyOf(arr, arr.length)` ব্যবহার করুন।

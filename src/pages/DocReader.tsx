@@ -12,8 +12,11 @@ import {
   LockKeyhole,
   PanelLeft,
   PanelLeftClose,
+  Search,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { docLevelLabels, getChapter } from '@/data/docs';
 import { useDocProgress } from '@/hooks/useDocProgress';
@@ -39,6 +42,17 @@ export default function DocReader() {
   const [sidebarHidden, setSidebarHidden] = useState(
     () => localStorage.getItem('docs-sidebar-hidden') === 'true',
   );
+  const [sidebarFilter, setSidebarFilter] = useState('');
+
+  const filteredSidebarChapters = useMemo(() => {
+    const q = sidebarFilter.trim().toLowerCase();
+    if (!q) return data?.category?.chapters ?? [];
+    return (data?.category?.chapters ?? []).filter((item) =>
+      item.title.toLowerCase().includes(q) ||
+      (item.subtitle && item.subtitle.toLowerCase().includes(q)) ||
+      (item.tags && item.tags.some((t) => t.toLowerCase().includes(q)))
+    );
+  }, [data?.category?.chapters, sidebarFilter]);
 
   const switchLang = (l: 'bn' | 'en') => {
     setLang(l);
@@ -100,27 +114,51 @@ export default function DocReader() {
                 <div className={cn('h-full rounded-full transition-all', accent.bar)} style={{ width: `${percent}%` }} />
               </div>
             )}
-            <p className="px-1 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground/70">সূচি</p>
+            {/* Quick sidebar filter */}
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={sidebarFilter}
+                onChange={(e) => setSidebarFilter(e.target.value)}
+                placeholder="চ্যাপ্টার ফিল্টার..."
+                className="h-8 rounded-xl bg-card/60 pl-8 pr-7 text-xs border-border/70"
+              />
+              {sidebarFilter && (
+                <button
+                  type="button"
+                  onClick={() => setSidebarFilter('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+
             <nav className="max-h-[55vh] space-y-0.5 overflow-y-auto pr-1">
-              {category.chapters.map((item, i) => {
-                const active = item.id === chapter.id;
-                const done = isAuthed && readIds.has(item.id);
-                return (
-                  <Link
-                    key={item.id}
-                    to={`/docs/${category.id}/${item.id}`}
-                    className={cn(
-                      'group flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] transition',
-                      active ? cn('font-medium', accent.bg, accent.text) : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-                    )}
-                  >
-                    <span className="grid h-5 w-5 shrink-0 place-items-center rounded-md bg-muted/60 text-[10px] tabular-nums">
-                      {done ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> : i + 1}
-                    </span>
-                    <span className="line-clamp-2 leading-snug">{item.title}</span>
-                  </Link>
-                );
-              })}
+              {filteredSidebarChapters.length === 0 ? (
+                <p className="p-3 text-center text-xs text-muted-foreground">কোনো চ্যাপ্টার মেলেনি</p>
+              ) : (
+                filteredSidebarChapters.map((item) => {
+                  const active = item.id === chapter.id;
+                  const done = isAuthed && readIds.has(item.id);
+                  const origIdx = category.chapters.findIndex((c) => c.id === item.id);
+                  return (
+                    <Link
+                      key={item.id}
+                      to={`/docs/${category.id}/${item.id}`}
+                      className={cn(
+                        'group flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] transition',
+                        active ? cn('font-medium', accent.bg, accent.text) : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                      )}
+                    >
+                      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-md bg-muted/60 text-[10px] tabular-nums">
+                        {done ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> : origIdx + 1}
+                      </span>
+                      <span className="line-clamp-2 leading-snug">{item.title}</span>
+                    </Link>
+                  );
+                })
+              )}
             </nav>
           </div>
         </aside>
