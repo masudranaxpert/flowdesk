@@ -4,7 +4,7 @@
 
 ---
 
-## ১. Abstract Class — অসম্পূর্ণ ব্লুপ্রিন্ট
+## ১. Abstract Class ও Abstraction
 
 abstract class হলো এমন একটি class যার সরাসরি কোনো object (`new`) তৈরি করা যায় না। এটি সাধারণ class-এর মতো স্টেট (ফিল্ড) ও পূর্ণাঙ্গ method ধারণ করতে পারে, সাথে কিছু method-কে অসম্পূর্ণ (`abstract`) রেখে চাইল্ড class-কে তা বাস্তবায়ন করতে বাধ্য করে:
 
@@ -145,7 +145,7 @@ public interface Validator<T> {
 
 ---
 
-## ৬. Abstract Class বনাম Interface — সিদ্ধান্ত ম্যাট্রিক্স
+## ৬. Abstract Class vs Interface Decision Matrix
 
 | বৈশিষ্ট্য | Abstract Class | Interface |
 | :--- | :--- | :--- |

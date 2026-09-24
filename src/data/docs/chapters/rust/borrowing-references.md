@@ -2,7 +2,7 @@
 
 আগের chapter এ দেখলাম ownership move হয়ে যায় — function এ pass করলে variable invalid হয়ে যায়। এটা অসুবিধা! প্রতিবার value নিতে গেলে ownership হারানো মানে না। এই সমস্যার সমাধান হলো **borrowing** — value টা ownership না নিয়ে reference দিয়ে access করা।
 
-## Reference কী?
+## References ও Borrowing Rules
 
 Reference হলো value টার pointer — ownership না নিয়েই value access করার উপায়। Python এর variable reference এর মতো, কিন্তু Rust এ অনেক বেশি strict rule আছে।
 
@@ -190,7 +190,7 @@ let total = sum_slice(&arr);  // 15
 > [!tip]
 > **`nums.iter().sum()` এর ভেতরে:** `iter()` element গুলোর উপর একটা pointer চালায়, `sum()` সবকিছু একটাই loop এ fold করে যোগ করে। LLVM পুরোটাকে মিলিয়ে একটা সাধারণ summing loop বানায় — মাঝপথে কোনো নতুন array তৈরি হয় না। (Iterator এর পুরো গল্প পরের chapter এ।)
 
-## Borrowing in Practice — বাস্তব উদাহরণ ও compiler-এর জাদু
+## Borrowing in Practice — Real-World Example
 
 চল একটি ক্লাসিক সমস্যা দেখি: একটি string থেকে প্রথম শব্দটি বের করা।
 

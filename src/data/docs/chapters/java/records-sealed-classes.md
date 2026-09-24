@@ -113,7 +113,7 @@ public non-sealed class CryptoPayment extends PaymentMethod {
 
 ## ৪. Sealed Types ও Pattern Matching এর যুগলবন্দী
 
-Sealed class-এর সবচেয়ে বড় জাদু প্রকাশ পায় যখন এটিকে আধুনিক `switch` এক্সপ্রেশনের সাথে ব্যবহার করা হয়। যেহেতু compiler নিশ্চিত জানে যে `PaymentMethod` এর সম্ভাব্য চাইল্ড কেবল ৩টিই, তাই কোনো `default` কেস ছাড়াই এক্সহস্টিভ সুইচ লেখা যায়:
+Sealed class-এর সবচেয়ে বড় সুবিধা প্রকাশ পায় যখন এটিকে আধুনিক `switch` এক্সপ্রেশনের সাথে ব্যবহার করা হয়। যেহেতু compiler নিশ্চিত জানে যে `PaymentMethod` এর সম্ভাব্য চাইল্ড কেবল ৩টিই, তাই কোনো `default` কেস ছাড়াই এক্সহস্টিভ সুইচ লেখা যায়:
 
 ```java
 public class PaymentService {

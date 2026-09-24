@@ -4,7 +4,7 @@
 
 ---
 
-## ১. Platform Threads বনাম Virtual Threads
+## ১. Platform Threads vs Virtual Threads
 
 ```
 ┌──────────────────────────────────────┬──────────────────────────────────────┐

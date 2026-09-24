@@ -29,7 +29,7 @@ fn main() {
 > [!note]
 > **ভেতরে কী হচ্ছে?** এই field-less enum টা runtime এ আসলে **একটা ছোট integer** মাত্র — ৪টা variant, তাই `u8` ই যথেষ্ট: `std::mem::size_of::<Direction>()` দেবে `1`। `Direction::Up` মানে ভেতরে `0`, `Down` মানে `1` — এই সংখ্যাটার নাম **discriminant**। আর `match` compile হয় C এর `switch` এর মতো — discriminant পড়ে সরাসরি ঠিক branch এ jump। C++ enum থেকে পার্থক্য: সেখানে ভুল integer ঢুকিয়ে দিলে UB, এখানে `Direction` type ছাড়া অন্য কিছু ঢোকানোই সম্ভব না।
 
-## Enum এ Data — Rust এর ম্যাজিক
+## Enum with Associated Data
 
 Rust এর enum শুধু label নয় — প্রতিটা variant এ data থাকতে পারে:
 
@@ -99,7 +99,7 @@ enum Option<T> {
 > [!note]
 > **`Some(42)`-র গোড়ার গল্প:** আগের chapter গুলোতে `Some(42)` ব্যবহার করেছিলাম বলেছিলাম "পূর্ণ গল্প এখানে" — এই নাও। `Some` আর `None` কোনো function বা keyword না — উপরের enum-এর **দুটো variant**, আর prelude-এর কল্যাণে বিনা import-এ পাওয়া যায়। মজার অংশ: data বহন করা variant (`Some(T)`) নিজেই একটা **ছোট function** — `Some(42)` লিখলে ভেতরে ৪২ ঢুকিয়ে tagged value বানিয়ে দেয়, ঠিক function call-এর মতোই (চলবেও `let f = Some; let x = f(42);` — সত্যি!)। আর কেন দরকার: Rust-এ null নেই বলে "মান না-থাকা" একটা **type-এ বাঁধা অবস্থা** — function `Option<String>` return করলে caller কে `Some`/`None` দুটোই সামলাতেই হবে, compiler জোর করাবে। Python-এ `None` return করলে ভুলে গেলে পরে কোথাও `AttributeError` — Rust-এ সেই ভুল করার সুযোগই নেই।
 
-এই ছোট enum এর layout টা কিন্তু চমকপ্রদ:
+এই enum-এর memory layout বিশেষভাবে অপ্টিমাইজড:
 
 > [!note]
 > **Niche optimization:** `&T` এর জগতে `0` (null address) কখনো valid reference হতে পারে না — Rust সেই ফাঁকা মানটাকে (niche) কাজে লাগায়। `None` বোঝাতে ভেতরের pointer টাকেই `0` লিখে দেয় — তাই **`Option<&T>` এর size `&T` এর সমান** (64-bit এ ৮ byte), আলাদা tag byte লাগে না! `Option<Box<T>>`, `Option<NonZeroU32>` ও একই সুবিধা পায়। বিপরীতে `Option<i32>` — প্রতিটা bit pattern ই valid মান, ফাঁকা কিছু নেই — তাই আলাদা tag লাগে: size হয় ৮ byte, value ৪ byte আর tag বসে বাকি padding এ। মানে `Option` ভারী কিছু না — বেশিরভাগ ক্ষেত্রেই zero-cost abstraction।
@@ -367,7 +367,7 @@ enum Message {
 > [!example]
 > Python 3.10 এ `match` এসেছে, কিন্তু exhaustive check করে না — কোনো case miss করলেও চলে। Rust এ compiler জোর করে সব case handle করতে বলে। এটাই Rust এর safety advantage।
 
-## বাস্তব উদাহরণ — State Machine
+## Real-World Example — State Machine
 
 ```rust
 #[derive(Debug)]

@@ -47,7 +47,7 @@ public class OptionalDeepDive {
 }
 ```
 
-### `orElse` বনাম `orElseGet` সূক্ষ্ম পার্থক্য:
+### orElse vs orElseGet:
 - `orElse(new HeavyObject())`: অপশনাল প্রেজেন্ট থাকুক বা না থাকুক, `new HeavyObject()` সর্বদা তাৎক্ষণিকভাবে memory-তে তৈরি হবে।
 - `orElseGet(() -> new HeavyObject())`: শুধুমাত্র যখন অপশনাল খালি থাকবে, তখনই ল্যাম্বডা এক্সিকিউট হয়ে object তৈরি হবে। পারফরম্যান্সের জন্য সর্বদা `orElseGet` প্রিফার করুন।
 

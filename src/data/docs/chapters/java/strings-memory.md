@@ -4,7 +4,7 @@ Java-তে `String` হলো সবচেয়ে বহুল ব্যব�
 
 ---
 
-## ১. string কেন immutable (Immutable)?
+## ১. String Immutability
 
 Java-এর আর্কিটেক্টরা চারটি প্রধান কারণে string-কে immutable হিসেবে ডিজাইন করেছেন:
 
@@ -47,7 +47,7 @@ System.out.println(s1 == s4); // true!
 
 ---
 
-## ৩. string কনক্যাটেনেশন ও পারফরম্যান্স ফাঁদ
+## ৩. String Concatenation ও Performance Issues
 
 loop-এর ভেতর `+` অপারেটর দিয়ে string জোড়া লাগানো একটি অত্যন্ত ভয়াবহ পারফরম্যান্স অ্যান্টি-প্যাটার্ন:
 
@@ -59,7 +59,7 @@ for (int i = 0; i < 100_000; i++) {
 }
 ```
 
-### সমাধান: `StringBuilder` বনাম `StringBuffer`
+### StringBuilder vs StringBuffer:
 
 | বৈশিষ্ট্য | `StringBuilder` (আধুনিক পছন্দ) | `StringBuffer` (লেগ্যাসি) |
 | :--- | :--- | :--- |
@@ -78,7 +78,7 @@ String finalResult = sb.toString();
 
 ---
 
-## ৪. টেক্সট ব্লক — Text Blocks (Java 15+)
+## ৪. Text Blocks (Java 15+)
 
 SQL কোয়েরি, JSON বা HTML লেখার সময় ব্যাকস্ল্যাশ এস্কেপ (`\n`, `\"`) কোডকে অপাঠ্য করে তুলত। Java 15 থেকে ট্রিপল কোটেশন (`"""`) ভিত্তিক মাল্টি-লাইন টেক্সট ব্লক এসেছে:
 
@@ -102,7 +102,7 @@ public class TextBlockDemo {
 
 ---
 
-## ৫. কম্প্যাক্ট স্ট্রিংস (Compact Strings - Java 9+)
+## ৫. Compact Strings (Java 9+)
 
 Java 8 পর্যন্ত প্রতিটি string `char[]` array হিসেবে সংরক্ষিত হতো, যার অর্থ প্রতিটি ক্যারেক্টার memory-তে বাধ্যতামূলকভাবে **২ বাইট (১৬ বিট)** নিত, যদিও বেশিরভাগ ইংরেজি অক্ষর মাত্র ১ বাইটেই ধরে।
 

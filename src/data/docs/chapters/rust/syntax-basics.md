@@ -2,7 +2,7 @@
 
 আগের chapter এ Rust ইনস্টল করলাম। এবার চলো আসল syntax শিখি — variable, data type, mutability, shadowing সব। Python/C++ এর সাথে তুলনা করে বুঝবো।
 
-## Variable — ডেটা রাখার বাক্স
+## Variable Declaration ও Mutability
 
 Rust এ variable তৈরি করা হয় `let` দিয়ে:
 
@@ -107,9 +107,9 @@ let zeros = [0; 10];     // Initialize fixed-size array with 10 zeros
 > [!note]
 > **Bounds check এর ভেতরে কী হয়?** `numbers[10]` জাতীয় access এ compiler আগে একটা compare + branch generate করে — `index >= len` হলে সরাসরি panic: `index out of bounds: the len is X but the index is Y`। Check pass করলে তবেই আসল memory read: `*(ptr + index * 4)`। খরচ প্রতি access এ একটা compare — নগণ্য। আর LLVM যদি প্রমাণ করতে পারে index সবসময় valid (যেমন `for i in 0..5` loop এ `numbers[i]`), check টা সম্পূর্ণ মুছে দেয় — C এর মতো raw speed, safety সহ।
 
-## Builtins কোথা থেকে আসে — `String::from` আসলে কী?
+## Standard Library ও Associated Functions
 
-এখন থেকে তুমি হাজার হাজার এমন জিনিস দেখবে — `String::from(...)`, `Some(42)`, `Vec::new()`, `x.parse()`, `println!`। মনে হবে ভাষার ভেতরে বানানো কোনো জাদু। আসল গল্পটা অনেক সহজ, আর একবার এই ছবিটা মাথায় ঢুকলে আর কোনো builtin "অচেনা" লাগবে না।
+এখন থেকে স্ট্যান্ডার্ড লাইব্রেরির বিভিন্ন মেথড ও টাইপ দেখবে — যেমন `String::from(...)`, `Some(42)`, `Vec::new()`, `x.parse()`, `println!`। এর অভ্যন্তরীণ ডিজাইন খুবই সরাসরি এবং প্রেডিক্টেবল।
 
 ### সবাই আসলে library থেকে এসেছে
 
@@ -154,11 +154,11 @@ let b = String::from("hello");   // Heap-allocated String buffer with independen
 
 `"hello"` literal ওখানেই থাকবে যেখানে compile হওয়ার সময় বসানো হয়েছে — ওটা বদলানো, বাড়ানো যায় না। `String::from` heap-এ তোমার নিয়ন্ত্রণের একটা **বাড়ানো-যোগ্য copy** বানায়। কখন কোনটা — সেটাই `strings` chapter-এর মূল আলোচনা; ownership chapter-এ এর গভীর কারণ পাবে। আপাতত নিয়ম: শুধু পড়বে → literal/`&str` যথেষ্ট; modify করবে বা own করবে → `String`।
 
-### চেনা-না জিনিস পেলে করো কী?
+### Standard Library Documentation ও Navigation
 
 প্রতিটা std type/method-এর বিস্তারিত doc আছে — terminal-এ `cargo doc --open` চালালেই **নিজের project-এর সাথে std-র documentation** খুলবে, অথবা [doc.rust-lang.org/std](https://doc.rust-lang.org/std/)। Editor-এ `String::` লিখে থামলে autocomplete-এ সব associated function দেখাবে — `.method` গুলোও তাই। এই দুটো অভ্যাসই হলো "আসলে builtin গুলোর ভেতরটা শেখার" প্রধান দরজা; এই docs-এর প্রতিটা chapter সেই ভেতরটাই একটা একটা করে খুলে দেখাচ্ছে।
 
-## Shadowing — Rust এর মজার ফিচার
+## Variable Shadowing
 
 Rust এ একই নামের variable আবার declare করা যায় `let` দিয়ে। আগের variable টা shadow হয়ে যায়:
 

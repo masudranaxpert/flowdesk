@@ -2,7 +2,7 @@
 
 Rust এ string নিয়ে confusion সবচেয়ে বেশি — কারণ দুটো string type আছে: `String` আর `&str`। Python এর মতো একটাই string নয়। চলো বুঝি কেন দুটো, আর কখন কোনটা ব্যবহার করবে।
 
-## দুটো String Type — কেন?
+## Two String Types: String vs &str
 
 | Type | কোথায় | Growable | Ownership | Python Equivalent |
 |------|--------|----------|-----------|-------------------|
@@ -63,7 +63,7 @@ print_str(&s1);          // &String → &str — OK
 
 ভেতরে `&str` একটা **fat pointer** — দুটো word: data এর pointer আর length, মোট ১৬ byte (64-bit এ)। উপরে `&String → &str` auto-convert হওয়াটা **deref coercion** — `String` ভেতরে `Deref<Target = str>` implement করে, তাই compiler বুঝে যায়। কোনো data copy হয় না, শুধু `(ptr, len)` fat pointer তৈরি হয় — খাঁটি zero cost।
 
-## `String` বনাম `&str` — কখন কোনটা?
+## String vs &str
 
 > [!tip]
 > সহজ নিয়ম:
@@ -326,7 +326,7 @@ String ←──── to_string() ──── &str (literal)
   └── push_str(), format!(), +
 ```
 
-## বাস্তব উদাহরণ — Text Processor
+## Real-World Example — Text Processor
 
 ```rust
 fn word_stats(text: &str) -> (usize, usize, String) {

@@ -2,7 +2,7 @@
 
 Rust এ macro হলো code যেটা code generate করে — metaprogramming। C এর `#define`, C++ এর template, Python এর decorator — সব থেকে শক্তিশালী। দুই রকম macro আছে: **declarative** (`macro_rules!`) আর **procedural** (derive, attribute, function-like)।
 
-## Macro কী? কেন?
+## Declarative Macros Overview
 
 ```rust
 // println! is a declarative macro, not a function
@@ -358,7 +358,7 @@ fn main() {
 > [!note]
 > C এর macro এ identifier conflict হয় (unhygienic)। Rust এ এটা safe — macro এর ভেতরের `x` আর caller এর `x` আলাদা। এটাই macro hygiene।
 
-## বাস্তব উদাহরণ — Custom Logger Macro
+## Real-World Example — Custom Logger Macro
 
 ```rust
 macro_rules! log {

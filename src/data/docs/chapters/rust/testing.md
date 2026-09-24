@@ -169,7 +169,7 @@ fn test_parse_success() -> Result<(), ParseIntError> {
 > Test function ও `Result` return করতে পারে! `?` operator ব্যবহার করা যায় — যদি error হয় test automatically fail হবে। `unwrap()` এর চেয়ে পরিষ্কার।
 
 > [!note]
-> ভেতরে আলাদা কোনো জাদু নেই: test function টা `Result` return করলে harness এর হাতে `Err(e)` এলেই সেটা `panic!("{e:?}")` করে দেয় — fail করার প্রক্রিয়া একই, `?` শুধু লেখাটা ছোট করে।
+> এর অভ্যন্তরীণ মেকানিজম খুবই সরাসরি: test function টা `Result` return করলে harness এর হাতে `Err(e)` এলেই সেটা `panic!("{e:?}")` করে দেয় — fail করার প্রক্রিয়া একই, `?` শুধু লেখাটা ছোট করে।
 
 ## Integration Test
 

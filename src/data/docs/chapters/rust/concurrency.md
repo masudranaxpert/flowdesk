@@ -275,7 +275,7 @@ let rc = std::rc::Rc::new(5);
 > [!note]
 > **`Send`/`Sync` ভেতরে কী আছে?** কিছুই না — দুটো **marker trait**, কোনো method নেই, শুধু একটা compile-time সত্য। Compiler এগুলো **auto trait** হিসেবে গাছের মতো বানায়: struct এর সব field `Send` হলে struct ও `Send`; `Sync` মানে সংক্ষেপে `&T: Send` (reference টা অন্য thread এ যেতে পারে)। `Rc` এর count non-atomic বলে std তে সেটা ইচ্ছা করে `!Send + !Sync` রাখা। `thread::spawn` এর `Send + 'static` bound এর সাথে মিলে এই type system ই data race কে compile error বানায়।
 
-## বাস্তব উদাহরণ — Parallel Sum
+## Real-World Example — Parallel Sum
 
 ```rust
 use std::thread;

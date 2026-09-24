@@ -330,7 +330,7 @@ async fn main() -> std::io::Result<()> {
 ```
 
 > [!note]
-> **`tokio::fs` ভেতরে কী চলে?** রহস্য কমই আছে — সাধারণ **blocking** ফাইল syscall গুলো (`open`, `read`, `write`) tokio আলাদা একটা **blocking threadpool**-এ পাঠিয়ে দেয় (`spawn_blocking`-এর মতোই), `.await` করার সময় তোমার task টা শুধু Pending হয়ে বসে থাকে — executor thread আটকে থাকে না। মানে এটা কোনো magic non-blocking file I/O না; অনেক concurrent ফাইল read করলে সেই threadpool-ই bottleneck হবে। এজন্যই উপরের টেবিলে File I/O কে "async বা thread" দুই-ই লেখা — ভেতরে কাজ প্রায় একই, শুধু ergonomics আলাদা।
+> **`tokio::fs` কীভাবে কাজ করে?** এর অভ্যন্তরীণ মেকানিজম — সাধারণ **blocking** ফাইল syscall গুলো (`open`, `read`, `write`) tokio আলাদা একটা **blocking threadpool**-এ পাঠিয়ে দেয় (`spawn_blocking`-এর মতোই), `.await` করার সময় তোমার task টা শুধু Pending হয়ে বসে থাকে — executor thread আটকে থাকে না। মানে এটা কোনো magic non-blocking file I/O না; অনেক concurrent ফাইল read করলে সেই threadpool-ই bottleneck হবে। এজন্যই উপরের টেবিলে File I/O কে "async বা thread" দুই-ই লেখা — ভেতরে কাজ প্রায় একই, শুধু ergonomics আলাদা।
 
 ## `Pin` — Why?
 

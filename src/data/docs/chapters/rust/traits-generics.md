@@ -381,7 +381,7 @@ let id: UserId = 42i32.into();  // From → Into automatic
 > [!note]
 > **`.into()` এর ভেতরে কী?** কিছুই না — একটা call: `From::from(42i32)`। std তে একটা blanket impl আছে: `impl<T, U> Into<U> for T where U: From<T>` — মানে তুমি শুধু `From` লিখলেই `Into` free পাও। সব compile time এ resolve, runtime cost শূন্য। আরেকটা ব্যবহার দেখেছো error-handling chapter এ — `?` operator ভেতরে `From::from(err)` দিয়েই error convert করে।
 
-## Trait Object বনাম Generic — সিদ্ধান্ত
+## Trait Objects vs Generics
 
 ```rust
 // Generic — static dispatch, fast
@@ -406,7 +406,7 @@ fn print_all_dyn(items: &[Box<dyn Summary>]) {
 > - Performance-critical → generic
 > - Flexibility-critical → trait object
 
-## বাস্তব উদাহরণ — Plugin System
+## Real-World Example — Plugin System
 
 ```rust
 trait Plugin {

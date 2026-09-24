@@ -67,7 +67,7 @@ export const docMeta: DocMetaCategory[] = [
       { id: 'intro', title: 'Rust কী ও কেন শিখবে', subtitle: 'C/C++ এর উত্তরসূরি, memory safety ছাড়াই performance', level: 'beginner', minutes: 10, tags: ['setup', 'basic', 'why-rust'] },
       { id: 'syntax-basics', title: 'Syntax আর বেসিক কনসেপ্ট', subtitle: 'variable, mut, data type, shadowing', level: 'beginner', minutes: 11, tags: ['syntax', 'variable', 'assignment', 'type', 'mut', 'shadowing', 'const'] },
       { id: 'control-flow', title: 'Control Flow — if/else, loop, match', subtitle: 'loop, while, for, match expression', level: 'beginner', minutes: 10, tags: ['if', 'else', 'loop', 'while', 'for', 'match', 'break'] },
-      { id: 'ownership', title: 'Ownership — Rust এর হার্ট', subtitle: 'কেন GC নেই, move semantics, drop', level: 'intermediate', minutes: 14, tags: ['ownership', 'move', 'drop', 'memory', 'heap', 'stack'] },
+      { id: 'ownership', title: 'Ownership ও Memory Model', subtitle: 'কেন GC নেই, move semantics, drop', level: 'intermediate', minutes: 14, tags: ['ownership', 'move', 'drop', 'memory', 'heap', 'stack'] },
       { id: 'borrowing-references', title: 'Borrowing ও References', subtitle: '& ও &mut, borrow rules, dangling reference', level: 'intermediate', minutes: 13, tags: ['borrow', 'borrowing', 'reference', 'mut'] },
       { id: 'lifetimes', title: 'Lifetimes গভীরে', subtitle: "'a annotation, elision rules, static lifetime", level: 'advanced', minutes: 14, tags: ['lifetime', 'annotation', 'static', 'elision'] },
       { id: 'structs-methods', title: 'Structs ও Methods', subtitle: 'struct, tuple struct, impl block, associated functions', level: 'intermediate', minutes: 12, tags: ['struct', 'impl', 'method', 'constructor'] },

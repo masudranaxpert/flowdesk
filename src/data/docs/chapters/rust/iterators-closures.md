@@ -71,7 +71,7 @@ for val in v2.iter_mut() {
 
 ## Iterator Adapter — Chain Operations
 
-এবার আসল ম্যাজিক। Rust এর iterator method গুলো chain করা যায় — Python এর generator pipeline এর মতো, কিন্তু zero-cost।
+Rust-এর iterator method গুলো chain করা যায় — Python এর generator pipeline এর মতো, তবে zero-cost abstraction সহ।
 
 ### `map` — Transform
 
@@ -104,7 +104,7 @@ let result: Vec<i32> = (1..=10)
 
 ### Chain এর ভেতরে — Lazy Adapter
 
-প্রথম চমক: `.filter(...)`, `.map(...)` call করার মুহূর্তে **কোনো computation হয় না**। প্রতিটা adapter শুধু একটা ছোট struct return করে যেটা ভেতরের iterator আর closure টা ধরে রাখে — chain মানে একটার ভেতরে আরেকটা wrapper, পেঁয়াজের খোসার মতো:
+Lazy Evaluation: `.filter(...)`, `.map(...)` call করার মুহূর্তে **কোনো computation হয় না**। প্রতিটা adapter শুধু একটা ছোট struct return করে যেটা ভেতরের iterator আর closure টা ধরে রাখে — chain মানে একটার ভেতরে আরেকটা wrapper, পেঁয়াজের খোসার মতো:
 
 ```rust
 // Simplified standard library Map iterator pattern:
@@ -440,7 +440,7 @@ for s in squares(10) {
 > [!note]
 > দুটোই lazy evaluation। কিন্তু Rust এর iterator zero-cost — কোনো runtime overhead নেই। Python এর generator এ protocol overhead আছে। এবং Rust compiler lazy chain কে optimize করে single loop এ পরিণত করে।
 
-## বাস্তব উদাহরণ — Data Pipeline
+## Real-World Example — Data Pipeline
 
 ```rust
 struct Student {

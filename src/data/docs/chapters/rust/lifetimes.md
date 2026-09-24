@@ -207,7 +207,7 @@ let s: &'static str = "I live forever";
 > [!danger]
 > `'static` খারাপ জিনিস না, কিন্তু "fix lifetime error" এর সমাধান হিসেবে `'static` ব্যবহার করা ভুল। এটা memory leak এর সমতুল্য হতে পারে। শুধু তখনই ব্যবহার করো যখন data সত্যিই program জুড়ে থাকা দরকার (global constant, embedded data)।
 
-## বাস্তব উদাহরণ — Parser
+## Real-World Example — Parser
 
 ```rust
 struct Config<'a> {

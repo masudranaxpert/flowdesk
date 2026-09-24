@@ -4,7 +4,7 @@
 
 ---
 
-## ১. Two Paradigms in OOP (Code বনাম Data)
+## ১. Two Paradigms in OOP (Code vs Data)
 
 কম্পিউটার বিজ্ঞানে সমস্ত প্রোগ্রাম মূলত দুটি মৌলিক উপাদানের ওপর দাঁড়িয়ে থাকে: **কোড (লজিক/function)** এবং **ডেটা (স্টেট)**। এই দুটি উপাদানের সংগঠনের ওপর ভিত্তি করে প্রোগ্রামিংকে দুটি প্যারাডাইমে ভাগ করা হয়:
 
@@ -24,12 +24,12 @@ OOP প্যারাডাইমে ডেটা থাকে সিস্ট�
 
 ---
 
-## ২. class বনাম Blueprint vs Instance
+## ২. Class vs Object (Blueprint vs Instance)
 
 - **Class**: একটি ইউজার-ডিফাইন্ড ব্লুপ্রিন্ট বা টেমপ্লেট। এটি নির্দেশ করে একটি object-এ কী কী ফিল্ড (ডেটা) এবং method (লজিক) থাকবে।
 - **Object**: class-এর একটি বাস্তব রূপ (Instance) যা runtime-এ memory-তে জায়গা দখল করে।
 
-### memory Stack vs Heap Memory:
+### Memory Model: Stack vs Heap
 ```java
 BankAccount acc = new BankAccount("Karim", 5000);
 ```
@@ -51,7 +51,7 @@ BankAccount acc = new BankAccount("Karim", 5000);
 
 জাভাতে class-এর ফিল্ডসমূহ বিভিন্ন ধাপে ইনিশিয়ালাইজ হতে পারে। এদের ডিফল্ট মান এবং ইনিশিয়ালাইজেশনের ক্রম জানা অত্যন্ত গুরুত্বপূর্ণ:
 
-### ক. ডিফল্ট Default Values:
+### Default Values:
 method-এর local variableে কোনো ডিফল্ট মান থাকে না (ম্যানুয়ালি ইনিশিয়ালাইজ না করলে compile error হয়), কিন্তু class-এর ফিল্ডসমূহে JVM স্বয়ংক্রিয়ভাবে ডিফল্ট মান প্রদান করে:
 - সংখ্যা (`byte`, `short`, `int`, `long`): `0` বা `0L`
 - দশমিক (`float`, `double`): `0.0f` বা `0.0d`
@@ -59,7 +59,7 @@ method-এর local variableে কোনো ডিফল্ট মান থা
 - ক্যারেক্টার (`char`): `'\u0000'` (null character)
 - যেকোনো reference type (যেমন `String`, `Object`, `Array`): `null`
 
-### খ. ইনিশিয়ালাইজেশনের ৪টি উপায়:
+### Field Initialization-এর ৪টি উপায়:
 ```java
 public class InitializationDemo {
 
@@ -85,14 +85,14 @@ public class InitializationDemo {
 }
 ```
 
-### এক্সিকিউশন Order of Execution:
+### Order of Execution:
 1. **Static Initializer Blocks & Static Variables** (class যখন প্রথমবার লোড হয় — শুধুমাত্র একবার)।
 2. **Instance Initializer Blocks & Inline Field Declarations** (প্রতিবার `new` কল করার সময় constructor-এর আগে)।
 3. **Constructor Body** (object তৈরির চূড়ান্ত ধাপে)।
 
 ---
 
-## ৪. Variable এর Scope ও Lifetime
+## ৪. Variable Scope ও Lifetime
 
 জাভাতে variable-কে তাদের স্কোপ (দৃশ্যমানতা) এবং lifetime (memory-তে টিকে থাকার সময়) অনুযায়ী ৪ ভাগে ভাগ করা হয়:
 
@@ -126,7 +126,7 @@ public class ScopeDemo {
 
 ---
 
-## ৫. Parameter Passing Pass-by-Value Mechanism
+## ৫. Parameter Passing (Pass-by-Value)
 
 > [!IMPORTANT]
 > **জাভাতে সবকিছুই Pass-by-Value!** জাভাতে কোনো "Pass-by-Reference" নেই।
@@ -168,7 +168,7 @@ public class ParameterPassingDeepDive {
 
 ---
 
-## ৬. Arrays (array ও memory আর্কিটেকচার)
+## ৬. Arrays ও Memory Structure
 
 জাভাতে array হলো একটি object যা heap memoryতে সংরক্ষিত হয়। array-র সাইজ ফিক্সড এবং এলিমেন্টগুলো memory-তে সংলগ্নভাবে (Contiguous) অবস্থান করে।
 
@@ -217,7 +217,7 @@ public class ArrayMastery {
 
 ---
 
-## ৭. Variable Argument (vararg: `type... name`)
+## ৭. Variable Arguments (varargs: `type... name`)
 
 Java 5-এ পরিচিত পাওয়া **Varargs** method-কে অনির্দিষ্ট সংখ্যক argument গ্রহণ করার সুবিধা দেয়। compiler ব্যাকগ্রাউন্ডে এই আর্গুমেন্টগুলোকে একটি array-তে র্যাপ করে দেয়:
 
@@ -248,7 +248,7 @@ public class VarargsDemo {
 
 ---
 
-## ৮. Recursion (রিকার্শন ও Call Stack)
+## ৮. Recursion ও Call Stack
 
 যখন কোনো method নিজের ভেতর থেকে নিজেকেই পুনরায় কল করে সমস্যা সমাধান করে, তাকে **Recursion** বলে। প্রতিটি রিকার্সিভ কলের জন্য stack memoryতে একটি নতুন Stack Frame যুক্ত হয়।
 
@@ -287,7 +287,7 @@ Call Stack Execution for factorial(3):
 
 ---
 
-## ৯. Packages ও Import মেকানিজম
+## ৯. Packages ও Import System
 
 প্যাকেজ হলো সম্পর্কিত class এবং interface-এর একটি কন্টেইনার বা নেমস্পেস। এটি ফাইলিং সিস্টেমের ডিরেক্টরি কাঠামোর সাথে সরাসরি ১:১ ম্যাপ করা থাকে।
 
@@ -317,7 +317,7 @@ public class PaymentProcessor {
 
 ---
 
-## ১০. access modifier Access Modifiers Matrix
+## ১০. Access Modifiers Matrix
 
 Java-তে চারটি প্রধান ভিজিবিলিটি লেভেল রয়েছে যা class-এর ফিল্ড, method এবং constructor-এর এক্সেসিবিলিটি নিয়ন্ত্রণ করে:
 
@@ -330,7 +330,7 @@ Java-তে চারটি প্রধান ভিজিবিলিটি �
 
 ---
 
-## ১১. constructor ও `this(...)` চেইনিং
+## ১১. Constructor ও `this(...)` Chaining
 
 constructor হলো object-এর স্টেট ইনিশিয়ালাইজ করার বিশেষ method। এক constructor থেকে একই class-এর অন্য constructor কল করতে `this(...)` ব্যবহৃত হয়:
 
@@ -399,7 +399,7 @@ public class BankAccount {
 
 ---
 
-## ১৪. Garbage Collection ও object-এর লাইফসাইকেল
+## ১৪. Garbage Collection ও Object Lifecycle
 
 জাভাতে C++ এর মতো ম্যানুয়ালি `free()` বা `delete` করতে হয় না। runtime-এ JVM-এর Garbage Collector (GC) object-এর memory স্বয়ংক্রিয়ভাবে রিলিজ করে।
 

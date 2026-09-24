@@ -78,7 +78,7 @@ Transformer<String, Integer> stringLengthRef = String::length;
 
 ---
 
-## ৪. Intermediate বনাম Terminal Operations
+## ৪. Intermediate vs Terminal Operations
 
 ```java
 import java.util.List;

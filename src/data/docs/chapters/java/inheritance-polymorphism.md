@@ -58,7 +58,7 @@ public class Dog extends Animal {
 
 ---
 
-## ২. Method Overriding বনাম Overloading
+## ২. Method Overriding vs Overloading
 
 | বৈশিষ্ট্য | Method Overloading (compile-time) | Method Overriding (runtime) |
 | :--- | :--- | :--- |
@@ -122,7 +122,7 @@ if (myAnimal1 instanceof Dog dog) {
 
 Java-তে প্রতিটি class স্বয়ংক্রিয়ভাবে `java.lang.Object` class-কে ইনহেরিট করে। এর প্রধান মেথডসমূহ:
 
-### ক. `==` বনাম `.equals()`:
+### == vs .equals():
 - `==` তুলনা করে রেফারেন্স অ্যাড্রেস (দুটো variable heap-এর একই memory নির্দেশ করছে কি না)।
 - `.equals()` তুলনা করে object-এর অভ্যন্তরীণ কন্টেন্ট বা ফিল্ডের সমতা।
 

@@ -38,7 +38,7 @@
   └──────────────┘
 ```
 
-### thread তৈরি: `Thread` বনাম `Runnable`
+### Thread Creation: Thread vs Runnable
 জাভাতে inheritance-এর সীমাবদ্ধতা (`extends Thread`) এড়াতে সবসময় `Runnable` বা `Callable` ল্যাম্বডা ব্যবহার করা সর্বোত্তম প্র্যাকটিস:
 
 ```java
@@ -102,7 +102,7 @@ public class BankAccountThreadSafety {
 
 ---
 
-## ৩. `volatile` বনাম `Atomic` ক্লাসেস
+## ৩. volatile vs Atomic Classes
 
 ### `volatile` কী করে:
 জাভাতে প্রতিটি CPU কোরের নিজস্ব L1/L2 ক্যাশ থাকে। একটি thread যখন variable আপডেট করে, তখন অন্য thread সেই পরিবর্তন দেখতে নাও পারে। `volatile` কিওয়ার্ড memory দৃশ্যমানতা (**Visibility Guarantee / Happens-Before**) নিশ্চিত করে। এটি সরাসরি মেইন memory থেকে রিড/রাইট করে।

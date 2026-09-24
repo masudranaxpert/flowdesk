@@ -140,7 +140,7 @@ tasks.withType<Test> {
 }
 ```
 
-### Maven বনাম Gradle সংক্ষেপ তুলনা:
+### Maven vs Gradle Comparison:
 | বৈশিষ্ট্য | Apache Maven | Gradle |
 | :--- | :--- | :--- |
 | **ভাষা/syntax** | XML (`pom.xml`) | Kotlin DSL / Groovy (`build.gradle.kts`) |

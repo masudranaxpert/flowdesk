@@ -36,7 +36,7 @@ flowchart TD
 
 ## ২. Lists — ক্রমানুসারে সাজানো তালিকা
 
-### `ArrayList` বনাম `LinkedList`:
+### ArrayList vs LinkedList:
 
 | বৈশিষ্ট্য | `ArrayList` (ডিফল্ট পছন্দ) | `LinkedList` |
 | :--- | :--- | :--- |
@@ -140,7 +140,7 @@ Map<String, String> configs = Map.of("env", "prod", "port", "8080");
 
 ---
 
-## ৬. সর্টিং: `Comparable` বনাম `Comparator`
+## ৬. Sorting: Comparable vs Comparator
 
 - **`Comparable`**: object-এর নিজস্ব class-এর ভেতর `compareTo()` method দিয়ে ন্যাচারাল সর্টিং ডিফাইন করা।
 - **`Comparator`**: ল্যাম্বডার সাহায্যে বাইরে থেকে যেকোনো কাস্টম শর্তে সর্ট করা:

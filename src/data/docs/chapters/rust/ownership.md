@@ -1,4 +1,4 @@
-# Ownership — Rust এর হার্ট
+# Rust Ownership ও Memory Model
 
 এই chapter টা সবচেয়ে গুরুত্বপূর্ণ। Ownership হলো Rust এর সবচেয়ে বড় innovation — এটাই Rust কে বাকি সব language থেকে আলাদা করে। যদি ownership না বুঝো, Rust এ কোড লিখবে না। কিন্তু একবার বুঝলে বাকি সব সহজ হয়ে যাবে।
 
@@ -53,7 +53,7 @@ println!("{}", s1);  // Compilation error: value borrowed after move
 ```
 
 > [!danger]
-> এটা Rust এর সবচেয়ে বিভ্রান্তিকর moment — Python/C++ থেকে এসে এটা দেখলে চমকে যাবে। Python এ `s2 = s1` দিলে দুটোই same value point করে। কিন্তু Rust এ ownership move হয়ে যায় — `s1` invalid হয়ে যায়।
+> Python/C++ ডেভেলপারদের জন্য এটি একটি গুরুত্বপূর্ণ পরিবর্তন। Python এ `s2 = s1` দিলে দুটোই same value point করে। কিন্তু Rust এ ownership move হয়ে যায় — `s1` invalid হয়ে যায়।
 
 ### Rule ৩: Owner scope ছাড়লে drop হয়
 
@@ -81,7 +81,7 @@ println!("{}", s1);  // Compilation error: value borrowed after move
 }
 ```
 
-ধাপে ধাপে: `String` জানে তার `ptr` কোন heap buffer ধরে আছে → `Drop::drop` ওই buffer এর জন্য dealloc call করে (C এর `free(ptr)` এর মতো) → শেষ। যদি value তে heap data-ই না থাকে (যেমন `i32`), drop call টা no-op — LLVM ওটা মুছেই দেয়। Struct হলে প্রতিটা field নিজের drop পায়, ঘোষণার ক্রম ধরে। মানে "automatic memory management" এর পুরো রহস্য: compile time এ বসানো deterministic `free()` — GC এর মতো কোনো background চালক নেই।
+ধাপে ধাপে: `String` জানে তার `ptr` কোন heap buffer ধরে আছে → `Drop::drop` ওই buffer এর জন্য dealloc call করে (C এর `free(ptr)` এর মতো) → শেষ। যদি value তে heap data-ই না থাকে (যেমন `i32`), drop call টা no-op — LLVM ওটা মুছেই দেয়। Struct হলে প্রতিটা field নিজের drop পায়, ঘোষণার ক্রম ধরে। মানে "automatic memory management" এর মূল আর্কিটেকচার: compile time এ বসানো deterministic `free()` — GC এর মতো কোনো background runtime চালক নেই।
 
 ## Move Semantics গভীরে
 
@@ -110,7 +110,7 @@ s1 (invalid)          s2
 > [!note]
 > কেন copy করা হয় না? কারণ যদি copy করা হতো, scope শেষে দুজনই free করতে চাইতো — **double free** problem। তাই Rust move করে — একজন owner, একবার free।
 
-আরেকটা রহস্য ভেঙে দিই — **move কোনো "invalid flag" set করে না।** Runtime এ যা ঘটে:
+ইন্টারনাল মেকানিজম — **Move কোনো "invalid flag" set করে না:**
 
 ১. `let s2 = s1` মানে শুধু ২৪-byte header টা (ptr, len, capacity) **bit-by-bit copy** — C এর struct assign এর মতোই। Heap এ কিছুই যায় আসে না।
 ২. `s1` এর "invalid" হওয়া runtime এর অবস্থা না — এটা **compile time এর তথ্য**: borrow checker এর হিসাবে `s1` dead হয়ে যায়, তাই ওকে ব্যবহারের লাইন compile ই হয় না।
@@ -289,4 +289,4 @@ fn calculate_length(s: String) -> usize {
 
 ## Summary
 
-Ownership হলো Rust এর হার্ট। তিনটা rule মনে রাখো: একজন owner, move semantics, আর scope ছাড়লে drop। পরের chapter এ দেখবো কীভাবে **borrowing** আর **reference** দিয়ে ownership না নিয়েই value access করা যায় — সেটাই প্রতিদিনের Rust programming এ ব্যবহার হয়।
+Ownership হলো Rust-এর মেমোরি সুরক্ষার মূল ভিত্তি। তিনটা rule মনে রাখো: একজন owner, move semantics, আর scope ছাড়লে drop। পরের chapter এ দেখবো কীভাবে **borrowing** আর **reference** দিয়ে ownership না নিয়েই value access করা যায় — সেটাই প্রতিদিনের Rust programming এ ব্যবহার হয়।

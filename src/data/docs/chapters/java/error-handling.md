@@ -4,7 +4,7 @@
 
 ---
 
-## ১. Throwable হায়ারার্কি: Error বনাম Exception
+## ১. Throwable Hierarchy: Error vs Exception
 
 জাভাতে সব ধরণের এরর এবং এক্সেপশনের রুট class হলো `java.lang.Throwable`। এর দুটি প্রধান শাখা রয়েছে:
 

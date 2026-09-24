@@ -313,7 +313,7 @@ fn fast_add(a: i32, b: i32) -> i32 { a + b }
 > - `#[inline]` — LLVM কে hint: "এই function call site এ copy করে ফেলো" — hint মাত্র, আদেশ না।
 > - `#[cfg(test)]` + `#[test]` — `cargo test` চালালে তবেই ওই module compile হয়; compiler সব `#[test]` function জড়ো করে একটা আলাদা test harness binary বানায়, thread প্রতি চালিয়ে result জোগাড় করে।
 
-## বাস্তব উদাহরণ — Library Structure
+## Real-World Example — Library Structure
 
 ```
 math_lib/

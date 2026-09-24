@@ -83,7 +83,7 @@ public class NumericCalculator<T extends Number> {
 3. **লোয়ার বাউন্ডেড ওয়াইল্ডকার্ড (`List<? super T>`)**: `T` বা তার যেকোনো সুপার-টাইপ।
 
 ### PECS প্রিন্সিপল (Producer Extends, Consumer Super):
-Joshua Bloch-এর বিখ্যাত Effective Java-র সোনালী নিয়ম:
+Effective Java-র বিখ্যাত গাইডলাইন (PECS):
 - **Producer Extends**: যদি তোমার কালেকশনটি ডেটা উৎপাদন বা সরবরাহ করে (তুমি শুধু ডেটা পড়বে), তবে `<? extends T>` ব্যবহার করো।
 - **Consumer Super**: যদি তোমার কালেকশনটি ডেটা গ্রহণ বা কনজিউম করে (তুমি কালেকশনে ডেটা লিখবে বা যোগ করবে), তবে `<? super T>` ব্যবহার করো।
 

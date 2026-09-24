@@ -345,7 +345,7 @@ let diff: Vec<&i32> = set1.difference(&set2).collect();           // [1, 2]
 > [!tip]
 > বেশিরভাগ ক্ষেত্রে `Vec` আর `HashMap` ই যথেষ্ট। Rust এ `LinkedList` খুব কম ব্যবহৃত হয় — cache-unfriendly হওয়ায়। যেখানে Python এ list সব কাজে চলে, Rust এ ওই কাজগুলো `Vec` দিয়েই হয়।
 
-## বাস্তব উদাহরণ — Student Database
+## Real-World Example — Student Database
 
 ```rust
 use std::collections::HashMap;

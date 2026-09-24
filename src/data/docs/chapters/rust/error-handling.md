@@ -324,7 +324,7 @@ fn main() -> Result<()> {
 > [!note]
 > **Library** এ detailed typed error দাও (`thiserror`) — caller কে specific error handle করতে হবে। **Application** এ `anyhow` ব্যবহার করো — শুধু দরকার error propagate আর context যোগ করা।
 
-## unwrap বনাম ? — কখন কোনটা?
+## unwrap vs ? Operator
 
 ```rust
 // Anti-pattern: unwrap panics if Result is Err:

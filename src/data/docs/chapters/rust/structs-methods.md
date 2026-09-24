@@ -277,7 +277,7 @@ fn main() {
 | `Hash` | HashMap key | `__hash__` |
 | `Default` | Default value | — |
 
-## বাস্তব উদাহরণ — Bank Account
+## Real-World Example — Bank Account
 
 ```rust
 #[derive(Debug)]
