@@ -105,6 +105,7 @@ function SearchResultRow({
         </div>
         <p className="truncate text-[11px] text-muted-foreground">
           {result.categoryTitle}
+          {result.matchedHeading ? ` › ${result.matchedHeading}` : ''}
         </p>
         {result.snippet && (
           <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground/70">
@@ -305,16 +306,43 @@ function CategoryView({ category }: { category: typeof docCategories[number] }) 
   const percent = category.chapters.length ? Math.round((readCount / category.chapters.length) * 100) : 0;
   const [search, setSearch] = useState('');
 
-  const filteredChapters = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return category.chapters;
-    return category.chapters.filter((ch) =>
-      ch.title.toLowerCase().includes(q) ||
-      (ch.subtitle && ch.subtitle.toLowerCase().includes(q)) ||
-      (ch.tags && ch.tags.some((t) => t.toLowerCase().includes(q))) ||
-      ch.id.toLowerCase().includes(q)
-    );
-  }, [category.chapters, search]);
+  const isSearchActive = search.trim().length > 0;
+
+  const searchResults = useMemo(() => {
+    const q = search.trim();
+    if (!q) return [];
+    return searchDocs(q, 50, category.id);
+  }, [category.id, search]);
+
+  const displayList = useMemo(() => {
+    if (!isSearchActive) {
+      return category.chapters.map((ch, idx) => ({
+        chapterId: ch.id,
+        chapterTitle: ch.title,
+        chapterSubtitle: ch.subtitle,
+        level: ch.level,
+        minutes: ch.minutes,
+        originalIndex: idx,
+        matchedHeading: undefined,
+        snippet: undefined,
+        matchCount: 0,
+      }));
+    }
+    return searchResults.map((r) => {
+      const origIdx = category.chapters.findIndex((c) => c.id === r.chapterId);
+      return {
+        chapterId: r.chapterId,
+        chapterTitle: r.chapterTitle,
+        chapterSubtitle: r.chapterSubtitle,
+        level: r.level as typeof category.chapters[number]['level'],
+        minutes: r.minutes,
+        originalIndex: origIdx,
+        matchedHeading: r.matchedHeading,
+        snippet: r.snippet,
+        matchCount: r.matchCount,
+      };
+    });
+  }, [category.chapters, isSearchActive, searchResults]);
 
   return (
     <div className="space-y-6">
@@ -376,11 +404,11 @@ function CategoryView({ category }: { category: typeof docCategories[number] }) 
           )}
         </div>
 
-        {search.trim() && (
+        {isSearchActive && (
           <div className="flex items-center justify-between px-1 text-xs text-muted-foreground">
             <span>
-              {filteredChapters.length > 0
-                ? `"${search}" এর সাথে মিলে এমন ${filteredChapters.length}টি চ্যাপ্টার পাওয়া গেছে:`
+              {displayList.length > 0
+                ? `"${search}" এর সাথে মিলে এমন ${displayList.length}টি চ্যাপ্টারে তথ্য পাওয়া গেছে:`
                 : `"${search}" এর সাথে মিলে এমন কোনো চ্যাপ্টার পাওয়া যায়নি`}
             </span>
             <button
@@ -394,37 +422,64 @@ function CategoryView({ category }: { category: typeof docCategories[number] }) 
       </div>
 
       <div className="space-y-2.5">
-        {filteredChapters.length === 0 ? (
+        {displayList.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border bg-card/30 p-8 text-center">
             <Search className="mx-auto h-8 w-8 text-muted-foreground/50" />
             <p className="mt-2 text-sm font-medium">কোনো চ্যাপ্টার মেলেনি</p>
-            <p className="mt-1 text-xs text-muted-foreground">অন্য কীওয়ার্ড দিয়ে চেষ্টা করুন অথবা সার্চ ফিল্টার রিসেট করুন।</p>
-            <Button variant="outline" size="sm" className="mt-3 rounded-full" onClick={() => setSearch('')}>
-              সব চ্যাপ্টার দেখুন
-            </Button>
+            <p className="mt-1 text-xs text-muted-foreground">
+              "{search}" এর সাথে মিলে এমন তথ্য এই ট্র্যাকে পাওয়া যায়নি। অন্য কীওয়ার্ড দিয়ে চেষ্টা করুন অথবা সার্চ ফিল্টার রিসেট করুন।
+            </p>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+              <Button variant="outline" size="sm" className="mt-1 rounded-full" onClick={() => setSearch('')}>
+                সব চ্যাপ্টার দেখুন
+              </Button>
+              <Link to="/docs">
+                <Button variant="secondary" size="sm" className="mt-1 rounded-full">
+                  সব Docs-এ খুঁজুন
+                </Button>
+              </Link>
+            </div>
           </div>
         ) : (
-          filteredChapters.map((chapter, index) => {
-            const done = isAuthed && readIds.has(chapter.id);
-            const originalIndex = category.chapters.findIndex((c) => c.id === chapter.id);
+          displayList.map((item, index) => {
+            const done = isAuthed && readIds.has(item.chapterId);
             return (
               <Link
-                key={chapter.id}
-                to={`/docs/${category.id}/${chapter.id}`}
-                className="group flex items-center gap-4 rounded-2xl border border-border bg-card/50 p-4 transition hover:border-border/80 hover:bg-card"
+                key={item.chapterId}
+                to={`/docs/${category.id}/${item.chapterId}`}
+                className="group flex items-start sm:items-center gap-4 rounded-2xl border border-border bg-card/50 p-4 transition hover:border-border/80 hover:bg-card"
               >
-                <span className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-semibold tabular-nums ring-1', done ? 'bg-emerald-500/12 text-emerald-300 ring-emerald-500/30' : cn(accent.bg, accent.text, accent.ring))}>
-                  {done ? '✓' : (originalIndex >= 0 ? originalIndex + 1 : index + 1)}
+                <span className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-semibold tabular-nums ring-1 mt-0.5 sm:mt-0', done ? 'bg-emerald-500/12 text-emerald-300 ring-emerald-500/30' : cn(accent.bg, accent.text, accent.ring))}>
+                  {done ? '✓' : (item.originalIndex >= 0 ? item.originalIndex + 1 : index + 1)}
                 </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{highlightText(chapter.title, search)}</p>
-                  {chapter.subtitle && <p className="truncate text-xs text-muted-foreground">{highlightText(chapter.subtitle, search)}</p>}
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <p className="truncate text-sm font-semibold">{highlightText(item.chapterTitle, search)}</p>
+                    {isSearchActive && item.matchCount > 1 && (
+                      <span className="hidden sm:inline-flex rounded-md border border-border/80 bg-muted/60 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                        {item.matchCount} বার উল্লেখ
+                      </span>
+                    )}
+                  </div>
+                  {isSearchActive && item.matchedHeading && (
+                    <p className="flex items-center gap-1.5 text-xs font-medium text-primary">
+                      <span className="opacity-70">সেকশন:</span>
+                      <span className="truncate">{highlightText(item.matchedHeading, search)}</span>
+                    </p>
+                  )}
+                  {isSearchActive && item.snippet ? (
+                    <p className="line-clamp-2 text-xs text-muted-foreground/80 leading-relaxed font-normal">
+                      {highlightText(item.snippet, search)}
+                    </p>
+                  ) : (
+                    item.chapterSubtitle && <p className="truncate text-xs text-muted-foreground">{highlightText(item.chapterSubtitle, search)}</p>
+                  )}
                 </div>
-                <div className="hidden items-center gap-2 sm:flex">
-                  <Badge variant="outline" className="rounded-full text-[10px]">{docLevelLabels[chapter.level]}</Badge>
-                  <span className="text-[11px] text-muted-foreground">{chapter.minutes} মিঃ</span>
+                <div className="hidden items-center gap-2 sm:flex shrink-0">
+                  <Badge variant="outline" className="rounded-full text-[10px]">{docLevelLabels[item.level]}</Badge>
+                  <span className="text-[11px] text-muted-foreground">{item.minutes} মিঃ</span>
                 </div>
-                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-foreground" />
+                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-foreground mt-1 sm:mt-0" />
               </Link>
             );
           })

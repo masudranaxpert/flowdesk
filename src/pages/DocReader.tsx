@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { docLevelLabels, getChapter } from '@/data/docs';
+import { searchDocs } from '@/data/docs/search';
 import { useDocProgress } from '@/hooks/useDocProgress';
 import { useAuth } from '@/hooks/useAuth';
 import { docIcon, docAccent } from '@/components/docs/docMeta';
@@ -45,14 +46,21 @@ export default function DocReader() {
   const [sidebarFilter, setSidebarFilter] = useState('');
 
   const filteredSidebarChapters = useMemo(() => {
-    const q = sidebarFilter.trim().toLowerCase();
-    if (!q) return data?.category?.chapters ?? [];
-    return (data?.category?.chapters ?? []).filter((item) =>
-      item.title.toLowerCase().includes(q) ||
-      (item.subtitle && item.subtitle.toLowerCase().includes(q)) ||
-      (item.tags && item.tags.some((t) => t.toLowerCase().includes(q)))
-    );
-  }, [data?.category?.chapters, sidebarFilter]);
+    const q = sidebarFilter.trim();
+    if (!q) {
+      return (data?.category?.chapters ?? []).map((ch) => ({
+        id: ch.id,
+        title: ch.title,
+        matchedHeading: undefined,
+      }));
+    }
+    const hits = searchDocs(q, 30, categoryId);
+    return hits.map((h) => ({
+      id: h.chapterId,
+      title: h.chapterTitle,
+      matchedHeading: h.matchedHeading,
+    }));
+  }, [data?.category?.chapters, sidebarFilter, categoryId]);
 
   const switchLang = (l: 'bn' | 'en') => {
     setLang(l);
@@ -147,14 +155,21 @@ export default function DocReader() {
                       key={item.id}
                       to={`/docs/${category.id}/${item.id}`}
                       className={cn(
-                        'group flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] transition',
+                        'group flex items-start gap-2.5 rounded-xl px-2.5 py-2 text-[13px] transition',
                         active ? cn('font-medium', accent.bg, accent.text) : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
                       )}
                     >
-                      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-md bg-muted/60 text-[10px] tabular-nums">
+                      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-md bg-muted/60 text-[10px] tabular-nums mt-0.5">
                         {done ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> : origIdx + 1}
                       </span>
-                      <span className="line-clamp-2 leading-snug">{item.title}</span>
+                      <div className="min-w-0 flex-1">
+                        <span className="line-clamp-2 leading-snug">{item.title}</span>
+                        {item.matchedHeading && (
+                          <span className="line-clamp-1 text-[10px] text-primary/80 font-normal">
+                            ↳ {item.matchedHeading}
+                          </span>
+                        )}
+                      </div>
                     </Link>
                   );
                 })
