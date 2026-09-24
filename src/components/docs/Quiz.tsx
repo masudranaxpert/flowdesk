@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { BrainCircuit, ChevronDown, ChevronUp, Lightbulb } from 'lucide-react';
 import CodeBlock from '@/components/CodeBlock';
+import MarkdownView from '@/components/MarkdownView';
 import { cn } from '@/lib/utils';
 import {
   difficultyLabels,
@@ -116,13 +117,13 @@ export default function Quiz({ categoryId, chapterId }: { categoryId: string; ch
                     </span>
                   </div>
 
-                  <p className="text-sm leading-relaxed font-normal whitespace-pre-line text-foreground/95">
-                    {q.question}
-                  </p>
+                  <div className="text-sm leading-relaxed font-normal text-foreground/95 [&>p]:mb-1.5 [&>p:last-child]:mb-0 [&_code]:rounded [&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[13px] [&_code]:text-primary">
+                    <MarkdownView>{q.question}</MarkdownView>
+                  </div>
 
                   {q.code && (
                     <div className="mt-3">
-                      <CodeBlock code={q.code} language="rust" maxHeight="18rem" />
+                      <CodeBlock code={q.code} language={categoryId.toLowerCase()} maxHeight="18rem" />
                     </div>
                   )}
 

@@ -8,15 +8,15 @@
   {
     "id": "conc-q2",
     "difficulty": "medium",
-    "question": "নিচের কোডটি লক্ষ্য করো:\n\n```rust\nuse std::thread;\n\nlet handle = thread::spawn(|| {\n    for i in 1..10 {\n        println!(\"Thread: {}\", i);\n    }\n});\n```\n\nমেইন ফাংশন যদি শেষ হয়ে যায়, তাহলে স্পন করা ব্যাকগ্রাউন্ড থ্রেডটির কী হবে? থ্রেডটি সম্পূর্ণ শেষ হওয়া পর্যন্ত অপেক্ষা করতে হ্যান্ডেলের কোন মেথড কল করতে হয়?",
-    "code": "let handle = thread::spawn(|| { ... });\n// handle.join() কল না করলে কী হবে?",
+    "question": "মেইন ফাংশন যদি শেষ হয়ে যায়, তাহলে স্পন করা ব্যাকগ্রাউন্ড থ্রেডটির কী হবে? থ্রেডটি সম্পূর্ণ শেষ হওয়া পর্যন্ত অপেক্ষা করতে হ্যান্ডেলের কোন মেথড কল করতে হয়?",
+    "code": "use std::thread;\n\nlet handle = thread::spawn(|| {\n    for i in 1..10 {\n        println!(\"Thread: {}\", i);\n    }\n});",
     "hint": "মেইন থ্রেড এক্সিট হলে ব্যাকগ্রাউন্ড থ্রেড শেষ না হতেই ওএস সম্পূর্ণ প্রসেস টার্মিনেট করে দেয়। অপেক্ষা করতে `handle.join().unwrap()` কল করতে হয়।"
   },
   {
     "id": "conc-q3",
     "difficulty": "hard",
-    "question": "নিচের কোডে কেন কম্পাইলার ত্রুটি দেবে এবং সমাধান কী?\n\n```rust\nuse std::thread;\n\nlet v = vec![1, 2, 3];\nlet handle = thread::spawn(|| {\n    println!(\"Vector: {:?}\", v); // Error!\n});\nhandle.join().unwrap();\n```\n\nকম্পাইলার `closure may outlive the current function` এরর দিচ্ছে কেন এবং ক্লোজারের আগে `move` কি-ওয়ার্ড দিলে কীভাবে সমস্যার সমাধান হয়?",
-    "code": "let v = vec![1, 2, 3];\nlet handle = thread::spawn(|| {\n    println!(\"{:?}\", v);\n});",
+    "question": "নিচের কোডে কেন কম্পাইলার ত্রুটি দেবে এবং সমাধান কী?\n\nকম্পাইলার `closure may outlive the current function` এরর দিচ্ছে কেন এবং ক্লোজারের আগে `move` কি-ওয়ার্ড দিলে কীভাবে সমস্যার সমাধান হয়?",
+    "code": "use std::thread;\n\nlet v = vec![1, 2, 3];\nlet handle = thread::spawn(|| {\n    println!(\"Vector: {:?}\", v); // Error!\n});\nhandle.join().unwrap();",
     "hint": "স্পন করা থ্রেডের লাইফটাইম বাউন্ড `'static`। কম্পাইলার জানে না মেইন ফাংশন থ্রেডের আগে শেষ হয়ে `v` ড্রপ করবে কিনা। `move ||` দিলে `v` এর সম্পূর্ণ ওনারশিপ নতুন থ্রেডে স্থানান্তরিত হয়ে মেমরি সেফটি নিশ্চিত হয়।"
   },
   {

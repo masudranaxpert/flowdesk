@@ -26,8 +26,8 @@
   {
     "id": "struct-q5",
     "difficulty": "hard",
-    "question": "নিচের কোডটি কেন কম্পাইল হবে না?\n\n```rust\nstruct Buffer {\n    data: Vec<u8>,\n}\n\nimpl Buffer {\n    fn consume(self) {\n        println!(\"Consuming {} bytes\", self.data.len());\n    }\n}\n\nlet buf = Buffer { data: vec![1, 2, 3] };\nbuf.consume();\nbuf.consume(); // Error!\n```\n\nদ্বিতীয়বার `buf.consume()` কলে কম্পাইলার কী এরর দেবে এবং এর ডিজাইন পারপাস কী?",
-    "code": "let buf = Buffer { data: vec![1, 2, 3] };\nbuf.consume();\nbuf.consume();",
+    "question": "নিচের কোডটি কেন কম্পাইল হবে না?\n\nদ্বিতীয়বার `buf.consume()` কলে কম্পাইলার কী এরর দেবে এবং এর ডিজাইন পারপাস কী?",
+    "code": "struct Buffer {\n    data: Vec<u8>,\n}\n\nimpl Buffer {\n    fn consume(self) {\n        println!(\"Consuming {} bytes\", self.data.len());\n    }\n}\n\nlet buf = Buffer { data: vec![1, 2, 3] };\nbuf.consume();\nbuf.consume(); // Error!",
     "hint": "`consume(self)` ওনারশিপ নিয়ে নেয়। প্রথম কলের পর `buf` ড্রপ বা মুভ হয়ে গেছে, তাই দ্বিতীয়বার ব্যবহার করলে `use of moved value` এরর হয়।"
   },
   {
@@ -51,8 +51,8 @@
   {
     "id": "struct-q9",
     "difficulty": "medium",
-    "question": "স্ট্রাক্ট আপডেট সিনট্যাক্স (Struct Update Syntax) ব্যবহারের সময় নন-কপি ফিল্ডের ক্ষেত্রে ওনারশিপ মুভ কীভাবে কাজ করে? নিচের কোডের পর কি `u1.email` ব্যবহার করা যাবে?\n\n```rust\nstruct User {\n    username: String,\n    email: String,\n    active: bool,\n}\n\nlet u1 = User { username: String::from(\"a\"), email: String::from(\"b\"), active: true };\nlet u2 = User { email: String::from(\"c\"), ..u1 };\n```",
-    "code": "let u2 = User { email: String::from(\"c\"), ..u1 };\n// u1 এর username কি বৈধ আছে?",
+    "question": "স্ট্রাক্ট আপডেট সিনট্যাক্স (Struct Update Syntax) ব্যবহারের সময় নন-কপি ফিল্ডের ক্ষেত্রে ওনারশিপ মুভ কীভাবে কাজ করে? নিচের কোডের পর কি `u1.email` ব্যবহার করা যাবে?",
+    "code": "struct User {\n    username: String,\n    email: String,\n    active: bool,\n}\n\nlet u1 = User { username: String::from(\"a\"), email: String::from(\"b\"), active: true };\nlet u2 = User { email: String::from(\"c\"), ..u1 };",
     "hint": "`u1.username` নতুন স্ট্রাক্ট `u2` তে মুভ হয়ে গেছে, তাই `u1` সম্পূর্ণ বা তার username আর বৈধ নয়। তবে `u1.active` কপি টাইপ হওয়ায় আলাদা বিষয়।"
   },
   {
@@ -76,7 +76,7 @@
   {
     "id": "struct-q13",
     "difficulty": "hard",
-    "question": "মেমরি প্যাডিং এবং ফিল্ড অ্যালাইনমেন্ট (Memory Alignment & Padding): নিচের স্ট্রাক্টটি ৬৪-বিট আর্কিটেকচারে র্যামে কত বাইট জায়গা নেবে এবং রাস্ট কম্পাইলার অপটিমাইজেশনের জন্য এর ফিল্ডের ক্রম কীভাবে পরিবর্তন করতে পারে?\n\n```rust\nstruct Sample {\n    a: u8,\n    b: u64,\n    c: u8,\n}\n```",
+    "question": "মেমরি প্যাডিং এবং ফিল্ড অ্যালাইনমেন্ট (Memory Alignment & Padding): নিচের স্ট্রাক্টটি ৬৪-বিট আর্কিটেকচারে র্যামে কত বাইট জায়গা নেবে এবং রাস্ট কম্পাইলার অপটিমাইজেশনের জন্য এর ফিল্ডের ক্রম কীভাবে পরিবর্তন করতে পারে?",
     "code": "struct Sample {\n    a: u8,\n    b: u64,\n    c: u8,\n}",
     "hint": "সি ল্যাঙ্গুয়েজে এটি ২৪ বাইট নিত প্যাডিংয়ের জন্য। কিন্তু রাস্টের ডিফল্ট রিপ্রেজেন্টেশনে কম্পাইলার ফিল্ড রি-অর্ডার করে ১৬ বাইটে সংকুচিত করতে পারে। সি মেমরি লেআউটের জন্য `#[repr(C)]` লাগে।"
   },

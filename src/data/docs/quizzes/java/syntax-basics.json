@@ -8,8 +8,8 @@
   {
     "id": "java-syntax-q2",
     "difficulty": "medium",
-    "question": "নিচের কোডটি লক্ষ্য করো:\n\n```java\nbyte a = 40;\nbyte b = 50;\nbyte c = a + b; // Compilation error!\n```\n\n`a` এবং `b` দুটোই `byte` হওয়া সত্ত্বেও তাদের যোগফল সরাসরি `byte c` তে অ্যাসাইন করতে গেলে কম্পাইলার `possible lossy conversion from int to byte` এরর দেয় কেন?",
-    "code": "byte a = 40;\nbyte b = 50;\nbyte c = a + b; // Error কেন?",
+    "question": "`a` এবং `b` দুটোই `byte` হওয়া সত্ত্বেও তাদের যোগফল সরাসরি `byte c` তে অ্যাসাইন করতে গেলে কম্পাইলার `possible lossy conversion from int to byte` এরর দেয় কেন?",
+    "code": "byte a = 40;\nbyte b = 50;\nbyte c = a + b; // Compilation error!",
     "hint": "Java-তে পাটিগণিত অপারেশনের সময় byte ও short মান স্বয়ংক্রিয়ভাবে int এ প্রমোটেড (Integer Promotion) হয়ে যায়। ফলে (a + b) এর ফলাফল int, যা কাস্ট না করে byte এ রাখা যায় না।"
   },
   {
@@ -27,14 +27,14 @@
   {
     "id": "java-syntax-q5",
     "difficulty": "medium",
-    "question": "র্যাপার ক্লাসে অবজেক্ট ক্যাশিং (Integer Cache): নিচের কোডের আউটপুট কী হবে এবং কেন `==` দিয়ে তুলনা করলে দুটি আলাদা ফলাফল আসে?\n\n```java\nInteger a = 127;\nInteger b = 127;\nSystem.out.println(a == b); // true or false?\n\nInteger c = 128;\nInteger d = 128;\nSystem.out.println(c == d); // true or false?\n```",
-    "code": "Integer a = 127, b = 127; // a == b -> ?\nInteger c = 128, d = 128; // c == d -> ?",
+    "question": "র্যাপার ক্লাসে অবজেক্ট ক্যাশিং (Integer Cache): নিচের কোডের আউটপুট কী হবে এবং কেন `==` দিয়ে তুলনা করলে দুটি আলাদা ফলাফল আসে?",
+    "code": "Integer a = 127;\nInteger b = 127;\nSystem.out.println(a == b); // true or false?\n\nInteger c = 128;\nInteger d = 128;\nSystem.out.println(c == d); // true or false?",
     "hint": "Java -128 থেকে 127 পর্যন্ত ইন্টিজার অবজেক্ট ক্যাশ করে রাখে। ফলে 127 এর ক্ষেত্রে একই রেফারেন্স পায় (true), কিন্তু 128 এ নতুন হিপ অবজেক্ট তৈরি হওয়ায় রেফারেন্স ভিন্ন হয় (false)।"
   },
   {
     "id": "java-syntax-q6",
     "difficulty": "hard",
-    "question": "লুপে অটোবক্সিংয়ের কারণে মেমরি ফ্র্যাগমেন্টেশন: নিচের কোডটিতে কী গুরুতর পারফরম্যান্স সমস্যা রয়েছে?\n\n```java\nLong sum = 0L;\nfor (long i = 0; i < Integer.MAX_VALUE; i++) {\n    sum += i;\n}\n```\n\nপ্রিমিটিভ `long sum = 0L;` এর তুলনায় এটি কেন ১০ গুণ ধীরগতি সম্পন্ন?",
+    "question": "লুপে অটোবক্সিংয়ের কারণে মেমরি ফ্র্যাগমেন্টেশন: নিচের কোডটিতে কী গুরুতর পারফরম্যান্স সমস্যা রয়েছে?\n\nপ্রিমিটিভ `long sum = 0L;` এর তুলনায় এটি কেন ১০ গুণ ধীরগতি সম্পন্ন?",
     "code": "Long sum = 0L; // Wrapper\nfor (long i = 0; i < Integer.MAX_VALUE; i++) {\n    sum += i;\n}",
     "hint": "প্রতি ইটারেশনে unboxing হয়ে যোগ হয় এবং আবার নতুন Long অবজেক্ট তৈরি হয়ে হিপে এলোকেট হয়। বিলিয়ন বিলিয়ন অবজেক্ট তৈরি হয়ে জিবেজ কালেক্টরের ওপর প্রচণ্ড চাপ ফেলে।"
   },

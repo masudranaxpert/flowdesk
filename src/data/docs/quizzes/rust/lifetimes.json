@@ -8,15 +8,15 @@
   {
     "id": "life-q2",
     "difficulty": "medium",
-    "question": "নিচের কোডটি কেন কম্পাইল হবে না?\n\n```rust\nfn longest(x: &str, y: &str) -> &str {\n    if x.len() > y.len() { x } else { y }\n}\n```\n\nকম্পাইলার `expected named lifetime parameter` এরর দেয় কেন এবং ফাংশন সিগনেচারে কীভাবে জেনেরিক লাইফটাইম যোগ করে এটি সমাধান করা যায়?",
+    "question": "নিচের কোডটি কেন কম্পাইল হবে না?\n\nকম্পাইলার `expected named lifetime parameter` এরর দেয় কেন এবং ফাংশন সিগনেচারে কীভাবে জেনেরিক লাইফটাইম যোগ করে এটি সমাধান করা যায়?",
     "code": "fn longest(x: &str, y: &str) -> &str {\n    if x.len() > y.len() { x } else { y }\n}",
     "hint": "রিটার্ন করা রেফারেন্সটি x নাকি y তা রানটাইমে কন্ডিশনের ওপর নির্ভর করে। কম্পাইলারকে জানাতে হয় যে রিটার্ন রেফারেন্সের লাইফটাইম x এবং y এর মধ্যে যেটি ছোট তার সমান হবে: `fn longest<'a>(x: &'a str, y: &'a str) -> &'a str`।"
   },
   {
     "id": "life-q3",
     "difficulty": "hard",
-    "question": "নিচের কোডে `result` প্রিন্ট করতে গেলে কম্পাইলার ত্রুটি দেয়:\n\n```rust\nlet string1 = String::from(\"long string is long\");\nlet result;\n{\n    let string2 = String::from(\"xyz\");\n    result = longest(string1.as_str(), string2.as_str());\n}\nprintln!(\"The longest string is {}\", result);\n```\n\nকম্পাইলার `string2 does not live long enough` বলে কেন? যদিও রানটাইমে `string1` বড় এবং সেটাই রিটার্ন হতো, তবুও কম্পাইলার কেন কোড আটকে দেয়?",
-    "code": "let string1 = String::from(\"long\");\nlet result;\n{\n    let string2 = String::from(\"xyz\");\n    result = longest(string1.as_str(), string2.as_str());\n}\nprintln!(\"{}\", result);",
+    "question": "নিচের কোডে `result` প্রিন্ট করতে গেলে কম্পাইলার ত্রুটি দেয়:\n\nকম্পাইলার `string2 does not live long enough` বলে কেন? যদিও রানটাইমে `string1` বড় এবং সেটাই রিটার্ন হতো, তবুও কম্পাইলার কেন কোড আটকে দেয়?",
+    "code": "let string1 = String::from(\"long string is long\");\nlet result;\n{\n    let string2 = String::from(\"xyz\");\n    result = longest(string1.as_str(), string2.as_str());\n}\nprintln!(\"The longest string is {}\", result);",
     "hint": "কম্পাইলার রানটাইম ভ্যালু চেক করে না। সিগনেচার অনুযায়ী লাইফটাইম 'a হলো দুটি ইনপুটের স্কোপের ইন্টারসেকশন (ছোট স্কোপ)। string2 এর স্কোপ শেষ হয়ে গেছে, তাই result সেই স্কোপের বাইরে ব্যবহার করা নিষিদ্ধ।"
   },
   {
@@ -34,7 +34,7 @@
   {
     "id": "life-q6",
     "difficulty": "hard",
-    "question": "স্ট্রাক্টে লাইফটাইম ব্যবহারের প্রয়োজনীয়তা:\n\n```rust\nstruct Excerpt<'a> {\n    part: &'a str,\n}\n```\n\nএখানে `'a` এনোটেশন কম্পাইলারকে কী গ্যারান্টি দেয়? যদি মূল স্ট্রিংটি এই স্ট্রাক্ট ইনস্ট্যান্সের আগেই মেমরি থেকে ড্রপ হয়ে যায়, তবে কম্পাইলার কী করবে?",
+    "question": "স্ট্রাক্টে লাইফটাইম ব্যবহারের প্রয়োজনীয়তা:\n\nএখানে `'a` এনোটেশন কম্পাইলারকে কী গ্যারান্টি দেয়? যদি মূল স্ট্রিংটি এই স্ট্রাক্ট ইনস্ট্যান্সের আগেই মেমরি থেকে ড্রপ হয়ে যায়, তবে কম্পাইলার কী করবে?",
     "code": "struct Excerpt<'a> {\n    part: &'a str,\n}",
     "hint": "এটি নিশ্চিত করে যে `Excerpt` স্ট্রাক্টের ইনস্ট্যান্স কখনোই তার `part` ফিল্ডে থাকা মূল স্ট্রিংটির আয়ুর চেয়ে বেশি বাঁচতে পারবে না। ড্যাংলিং রেফারেন্স রোধ হয়।"
   },
@@ -77,8 +77,8 @@
   {
     "id": "life-q13",
     "difficulty": "medium",
-    "question": "নিচের কোডে কেন কম্পাইলার ত্রুটি দেবে এবং সমাধান কী?\n\n```rust\nfn parse_data<'a>() -> &'a str {\n    let s = String::from(\"123,456\");\n    &s[0..3] // Error!\n}\n```",
-    "code": "fn parse_data<'a>() -> &'a str {\n    let s = String::from(\"123,456\");\n    &s[0..3]\n}",
+    "question": "নিচের কোডে কেন কম্পাইলার ত্রুটি দেবে এবং সমাধান কী?",
+    "code": "fn parse_data<'a>() -> &'a str {\n    let s = String::from(\"123,456\");\n    &s[0..3] // Error!\n}",
     "hint": "`s` ফাংশন শেষে ড্রপ হবে। কোনো লাইফটাইম এনোটেশনই মৃত ডেটার রেফারেন্সকে বাঁচিয়ে রাখতে পারে না। সমাধান হলো ওনারশিপ সহ `String` রিটার্ন করা।"
   },
   {

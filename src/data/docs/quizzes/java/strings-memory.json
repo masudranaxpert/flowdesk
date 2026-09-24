@@ -8,8 +8,9 @@
   {
     "id": "java-str-q2",
     "difficulty": "medium",
-    "question": "স্ট্রিং কনস্ট্যান্ট পুল (String Pool) মেমরির কোথায় থাকে এবং নিচের কোডের পর হিপে মোট কয়টি স্ট্রিং অবজেক্ট তৈরি হবে?\n\n```java\nString s1 = \"Hello\";\nString s2 = \"Hello\";\nString s3 = new String(\"Hello\");\n```",
-    "hint": "স্ট্রিং পুল হিপ মেমরির একটি অংশ। এখানে মোট ২টি অবজেক্ট তৈরি হবে — ১টি স্ট্রিং পুলে (\"Hello\"), এবং ১টি সাধারণ হিপে (s3 এর জন্য)।"
+    "question": "স্ট্রিং কনস্ট্যান্ট পুল (String Pool) মেমরির কোথায় থাকে এবং নিচের কোডের পর হিপে মোট কয়টি স্ট্রিং অবজেক্ট তৈরি হবে?",
+    "hint": "স্ট্রিং পুল হিপ মেমরির একটি অংশ। এখানে মোট ২টি অবজেক্ট তৈরি হবে — ১টি স্ট্রিং পুলে (\"Hello\"), এবং ১টি সাধারণ হিপে (s3 এর জন্য)।",
+    "code": "String s1 = \"Hello\";\nString s2 = \"Hello\";\nString s3 = new String(\"Hello\");"
   },
   {
     "id": "java-str-q3",
@@ -20,8 +21,8 @@
   {
     "id": "java-str-q4",
     "difficulty": "medium",
-    "question": "নিচের কোডের আউটপুট কী হবে এবং কেন?\n\n```java\nString a = \"Java\";\nString b = \"Ja\" + \"va\";\nString c = \"Ja\";\nString d = c + \"va\";\nSystem.out.println(a == b); // ?\nSystem.out.println(a == d); // ?\n```",
-    "code": "String a = \"Java\";\nString b = \"Ja\" + \"va\"; // Compile-time constant\nString c = \"Ja\";\nString d = c + \"va\";    // Runtime evaluation",
+    "question": "নিচের কোডের আউটপুট কী হবে এবং কেন?",
+    "code": "String a = \"Java\";\nString b = \"Ja\" + \"va\";\nString c = \"Ja\";\nString d = c + \"va\";\nSystem.out.println(a == b); // ?\nSystem.out.println(a == d); // ?",
     "hint": "a == b হবে true কারণ কম্পাইলার কনস্ট্যান্ট এক্সপ্রেশন কম্পাইল টাইমে যোগ করে একই পুলে রাখে। a == d হবে false কারণ ভ্যারিয়েবল c রানটাইমে নতুন হিপ স্ট্রিং বানায়।"
   },
   {

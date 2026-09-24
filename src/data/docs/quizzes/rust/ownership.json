@@ -8,7 +8,7 @@
   {
     "id": "own-q2",
     "difficulty": "medium",
-    "question": "নিচের কোডটি লক্ষ্য করো:\n\n```rust\nlet s1 = String::from(\"hello\");\nlet s2 = s1;\nprintln!(\"{}, world!\", s1);\n```\n\nকম্পাইলার `borrow of moved value: s1` এরর দেয়। মেমরির দৃষ্টিতে (Stack বনাম Heap) এই লাইনে ঠিক কী ঘটেছে? কেন রাস্ট এটিকে শ্যালো কপি (Shallow Copy) না বলে \"মুভ\" (Move) বলে?",
+    "question": "কম্পাইলার `borrow of moved value: s1` এরর দেয়। মেমরির দৃষ্টিতে (Stack বনাম Heap) এই লাইনে ঠিক কী ঘটেছে? কেন রাস্ট এটিকে শ্যালো কপি (Shallow Copy) না বলে \"মুভ\" (Move) বলে?",
     "code": "let s1 = String::from(\"hello\");\nlet s2 = s1;\nprintln!(\"{}\", s1); // Error!",
     "hint": "স্ট্যাকে থাকা পয়েন্টার, লেন্থ ও ক্যাপাসিটি s2 তে কপি হয়, কিন্তু হিপের আসল ডেটা কপি হয় না। দুটি ভেরিয়েবল একই হিপ অ্যাড্রেস ধরে রাখলে ডাবল ফ্রি হবে, তাই কম্পাইলার s1 কে তৎক্ষণাৎ ইনভ্যালিড করে দেয়।"
   },
@@ -27,8 +27,8 @@
   {
     "id": "own-q5",
     "difficulty": "medium",
-    "question": "একটি ফাংশনে আর্গুমেন্ট হিসেবে ভ্যারিয়েবল পাস করলে ওনারশিপের কী ঘটে?\n\n```rust\nfn take_ownership(s: String) {\n    println!(\"{}\", s);\n}\n\nfn main() {\n    let my_str = String::from(\"Rust\");\n    take_ownership(my_str);\n    // এখানে my_str ব্যবহার করা যাবে কি?\n}\n```\n\nফাংশন কলের পর `my_str` ইনভ্যালিড হয়ে যায় কেন এবং কীভাবে একে সচল রাখা যায়?",
-    "code": "fn take_ownership(s: String) { println!(\"{}\", s); }\nfn main() {\n    let my_str = String::from(\"Rust\");\n    take_ownership(my_str);\n}",
+    "question": "একটি ফাংশনে আর্গুমেন্ট হিসেবে ভ্যারিয়েবল পাস করলে ওনারশিপের কী ঘটে?\n\nফাংশন কলের পর `my_str` ইনভ্যালিড হয়ে যায় কেন এবং কীভাবে একে সচল রাখা যায়?",
+    "code": "fn take_ownership(s: String) {\n    println!(\"{}\", s);\n}\n\nfn main() {\n    let my_str = String::from(\"Rust\");\n    take_ownership(my_str);\n    // এখানে my_str ব্যবহার করা যাবে কি?\n}",
     "hint": "ফাংশনে পাস করার সাথে সাথে ওনারশিপ ফাংশনের লোকাল স্কোপে মুভ হয় এবং ফাংশন শেষে ড্রপ হয়ে যায়। সচল রাখতে রেফারেন্স (`&my_str`) পাস করো অথবা ক্লোন করো।"
   },
   {
@@ -40,14 +40,14 @@
   {
     "id": "own-q7",
     "difficulty": "hard",
-    "question": "কোনো ফাংশন থেকে কোনো ভ্যালু রিটার্ন করলে ওনারশিপ কীভাবে ট্রান্সফার হয়? নিচে দেখানো কোডে `create_string` এর লোকাল ভ্যারিয়েবল `s` কি ফাংশন শেষে ড্রপ হবে, নাকি তার ওনারশিপ কলারের কাছে চলে যাবে?\n\n```rust\nfn create_string() -> String {\n    let s = String::from(\"hello\");\n    s\n}\n```",
+    "question": "কোনো ফাংশন থেকে কোনো ভ্যালু রিটার্ন করলে ওনারশিপ কীভাবে ট্রান্সফার হয়? নিচে দেখানো কোডে `create_string` এর লোকাল ভ্যারিয়েবল `s` কি ফাংশন শেষে ড্রপ হবে, নাকি তার ওনারশিপ কলারের কাছে চলে যাবে?",
     "code": "fn create_string() -> String {\n    let s = String::from(\"hello\");\n    s\n}",
     "hint": "রিটার্ন করার মাধ্যমে ওনারশিপ বাইরে মুভ হয়, তাই ফাংশন শেষে ড্রপ মেথড কল হয় না। কলার সেই ভ্যালুর নতুন ওনার হয়ে যায়।"
   },
   {
     "id": "own-q8",
     "difficulty": "medium",
-    "question": "সি ল্যাঙ্গুয়েজে ফাংশনের ভেতর লোকাল ভ্যারিয়েবলের অ্যাড্রেস রিটার্ন করলে ড্যাংলিং পয়েন্টার (Dangling Pointer) তৈরি হয় এবং আনডিফাইন্ড বিহেভিয়ার ঘটে। রাস্টে নিচের কোডটি কেন কম্পাইলার পুরোপুরি আটকে দেয়?\n\n```rust\nfn dangle() -> &String {\n    let s = String::from(\"hello\");\n    &s\n}\n```",
+    "question": "সি ল্যাঙ্গুয়েজে ফাংশনের ভেতর লোকাল ভ্যারিয়েবলের অ্যাড্রেস রিটার্ন করলে ড্যাংলিং পয়েন্টার (Dangling Pointer) তৈরি হয় এবং আনডিফাইন্ড বিহেভিয়ার ঘটে। রাস্টে নিচের কোডটি কেন কম্পাইলার পুরোপুরি আটকে দেয়?",
     "code": "fn dangle() -> &String {\n    let s = String::from(\"hello\");\n    &s // Error!\n}",
     "hint": "স্কোপ শেষে `s` মেমরি থেকে ড্রপ হয়ে যায়। তাই তার রেফারেন্স রিটার্ন করলে তা একটি মৃত মেমরির দিকে নির্দেশ করবে, যা বরো চেকার কম্পাইল টাইমে কঠোরভাবে নিষেধ করে।"
   },
@@ -96,8 +96,8 @@
   {
     "id": "own-q16",
     "difficulty": "medium",
-    "question": "নিচের কোডে ক্লোন ছাড়া কীভাবে ওনারশিপ ট্রান্সফারের সমস্যা সমাধান করবে?\n\n```rust\nfn print_length(s: String) {\n    println!(\"Length: {}\", s.len());\n}\n\nlet s = String::from(\"Rust\");\nprint_length(s);\n// আমি পরেও s ব্যবহার করতে চাই\n```",
-    "code": "fn print_length(s: String) { println!(\"{}\", s.len()); }\nlet s = String::from(\"Rust\");\nprint_length(s);",
+    "question": "নিচের কোডে ক্লোন ছাড়া কীভাবে ওনারশিপ ট্রান্সফারের সমস্যা সমাধান করবে?",
+    "code": "fn print_length(s: String) {\n    println!(\"Length: {}\", s.len());\n}\n\nlet s = String::from(\"Rust\");\nprint_length(s);\n// আমি পরেও s ব্যবহার করতে চাই",
     "hint": "ফাংশনের সিগনেচার পরিবর্তন করে ওনারশিপের পরিবর্তে রেফারেন্স গ্রহণ করো: `fn print_length(s: &str)` অথবা `&String`।"
   },
   {

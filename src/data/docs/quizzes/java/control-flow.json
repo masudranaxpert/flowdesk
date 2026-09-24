@@ -20,8 +20,8 @@
   {
     "id": "java-cf-q4",
     "difficulty": "medium",
-    "question": "Java 21 LTS এ Switch Pattern Matching এ `when` ক্লজ (Guarded Pattern) কীভাবে কাজ করে? নিচের কোডে `when` কীভাবে অতিরিক্ত শর্ত পরীক্ষা করছে?\n\n```java\nswitch (obj) {\n    case String s when s.length() > 10 -> System.out.println(\"Long: \" + s);\n    case String s -> System.out.println(\"Normal: \" + s);\n    default -> System.out.println(\"Other\");\n}\n```",
-    "code": "case String s when s.length() > 10 -> ...\ncase String s -> ...",
+    "question": "Java 21 LTS এ Switch Pattern Matching এ `when` ক্লজ (Guarded Pattern) কীভাবে কাজ করে? নিচের কোডে `when` কীভাবে অতিরিক্ত শর্ত পরীক্ষা করছে?",
+    "code": "switch (obj) {\n    case String s when s.length() > 10 -> System.out.println(\"Long: \" + s);\n    case String s -> System.out.println(\"Normal: \" + s);\n    default -> System.out.println(\"Other\");\n}",
     "hint": "এটি একই সাথে অবজেক্টের টাইপ কাস্ট করে ভ্যারিয়েবলে বাইন্ড করে এবং বাড়তি বুলিয়ান গার্ড শর্ত মেলালেই কেবল সেই কেসে প্রবেশ করতে দেয়।"
   },
   {

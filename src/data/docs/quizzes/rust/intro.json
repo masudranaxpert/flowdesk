@@ -14,8 +14,8 @@
   {
     "id": "intro-q3",
     "difficulty": "medium",
-    "question": "নিচের কোডটি লক্ষ্য করো:\n\n```rust\nfn main() {\n    let mut name = String::new();\n    std::io::stdin().read_line(&mut name).expect(\"Failed to read\");\n    if name == \"admin\" {\n        println!(\"স্বাগতম অ্যাডমিন!\");\n    } else {\n        println!(\"প্রবেশাধিকার নেই!\");\n    }\n}\n```\n\nইউজার টার্মিনালে \"admin\" লিখে Enter প্রেস করলেও প্রোগ্রামটি \"প্রবেশাধিকার নেই!\" প্রিন্ট করছে। এর অন্তর্নিহিত মেমরি/স্ট্রিং কারণ কী এবং কীভাবে এটি ফিক্স করবে?",
-    "code": "let mut name = String::new();\nstd::io::stdin().read_line(&mut name).expect(\"Failed\");\n// name == \"admin\" মিথ্যা হয় কেন?",
+    "question": "ইউজার টার্মিনালে \"admin\" লিখে Enter প্রেস করলেও প্রোগ্রামটি \"প্রবেশাধিকার নেই!\" প্রিন্ট করছে। এর অন্তর্নিহিত মেমরি/স্ট্রিং কারণ কী এবং কীভাবে এটি ফিক্স করবে?",
+    "code": "fn main() {\n    let mut name = String::new();\n    std::io::stdin().read_line(&mut name).expect(\"Failed to read\");\n    if name == \"admin\" {\n        println!(\"স্বাগতম অ্যাডমিন!\");\n    } else {\n        println!(\"প্রবেশাধিকার নেই!\");\n    }\n}",
     "hint": "টার্মিনালে Enter চাপলে ইনপুটের শেষে নিউলাইন ক্যারেক্টার (`\\n` বা `\\r\\n`) যুক্ত থাকে। স্ট্রিং মেথড `.trim()` এর কথা ভাবো।"
   },
   {

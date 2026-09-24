@@ -8,7 +8,7 @@
   {
     "id": "err-q2",
     "difficulty": "medium",
-    "question": "নিচের কোডটি লক্ষ্য করো:\n\n```rust\nlet f = std::fs::File::open(\"config.json\").unwrap();\n```\n\nপ্রোডাকশন সার্ভারে এই কোডটি চালানো কেন অত্যন্ত বিপজ্জনক? ফাইলটি মিসিং থাকলে ঠিক কী ঘটবে?",
+    "question": "প্রোডাকশন সার্ভারে এই কোডটি চালানো কেন অত্যন্ত বিপজ্জনক? ফাইলটি মিসিং থাকলে ঠিক কী ঘটবে?",
     "code": "let f = std::fs::File::open(\"config.json\").unwrap();",
     "hint": "ফাইল না থাকলে `unwrap()` সাথে সাথে panic! ট্রিগার করবে যা সম্পূর্ণ থ্রেডকে ক্র্যাশ করাবে এবং ইউজারকে কোনো গ্রেসফুল মেসেজ বা রিকভারি করতে দেবে না।"
   },
@@ -21,7 +21,7 @@
   {
     "id": "err-q4",
     "difficulty": "medium",
-    "question": "`?` (কোশ্চেন মার্ক) অপারেটর কীভাবে এরর প্রপাগেশন (Error Propagation) সহজ করে তোলে? নিচের ভার্বোস ম্যাচ ব্লকের সমতুল্য এক লাইনের `?` কোডটি কী হবে?\n\n```rust\nlet mut file = match File::open(\"data.txt\") {\n    Ok(f) => f,\n    Err(e) => return Err(e),\n};\n```",
+    "question": "`?` (কোশ্চেন মার্ক) অপারেটর কীভাবে এরর প্রপাগেশন (Error Propagation) সহজ করে তোলে? নিচের ভার্বোস ম্যাচ ব্লকের সমতুল্য এক লাইনের `?` কোডটি কী হবে?",
     "code": "let mut file = match File::open(\"data.txt\") {\n    Ok(f) => f,\n    Err(e) => return Err(e),\n};",
     "hint": "`let mut file = File::open(\"data.txt\")?;` — Ok হলে মান আনপ্যাক করে, Err হলে আর্লি রিটার্ন করে।"
   },
@@ -82,7 +82,7 @@
   {
     "id": "err-q14",
     "difficulty": "hard",
-    "question": "নিচের ফাংশন চেইনিং কোডটি লক্ষ্য করো:\n\n```rust\nlet content = std::fs::read_to_string(\"num.txt\")?;\nlet num: i32 = content.trim().parse()?;\n```\n\nএখানে প্রথম লাইনে আসতে পারে `std::io::Error` এবং দ্বিতীয় লাইনে আসতে পারে `std::num::ParseIntError`। ফাংশনের রিটার্ন টাইপ একটি কংক্রিট কাস্টম এনাম হলে কীভাবে দুটি এররকেই `?` দিয়ে ক্যাচ করবে?",
+    "question": "নিচের ফাংশন চেইনিং কোডটি লক্ষ্য করো:\n\nএখানে প্রথম লাইনে আসতে পারে `std::io::Error` এবং দ্বিতীয় লাইনে আসতে পারে `std::num::ParseIntError`। ফাংশনের রিটার্ন টাইপ একটি কংক্রিট কাস্টম এনাম হলে কীভাবে দুটি এররকেই `?` দিয়ে ক্যাচ করবে?",
     "code": "let content = std::fs::read_to_string(\"num.txt\")?;\nlet num: i32 = content.trim().parse()?;",
     "hint": "কাস্টম এনামে `Io(std::io::Error)` এবং `Parse(ParseIntError)` ভ্যারিয়েন্ট রেখে উভয়ের জন্য `From` ট্রেইট ইমপ্লিমেন্ট করতে হবে (অথবা `#[derive(thiserror::Error)]` ব্যবহার করতে হবে)।"
   },

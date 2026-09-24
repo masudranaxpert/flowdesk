@@ -8,7 +8,7 @@
   {
     "id": "enum-q2",
     "difficulty": "medium",
-    "question": "নিচের এনামটি লক্ষ্য করো:\n\n```rust\nenum WebEvent {\n    PageLoad,\n    KeyPress(char),\n    Click { x: i64, y: i64 },\n}\n```\n\nর্যামে এই এনামটির সাইজ কীভাবে নির্ধারিত হয়? কোন ভ্যারিয়েন্টের সাইজের ওপর ভিত্তি করে মেমরি এলোকেশন হয়?",
+    "question": "নিচের এনামটি লক্ষ্য করো:\n\nর্যামে এই এনামটির সাইজ কীভাবে নির্ধারিত হয়? কোন ভ্যারিয়েন্টের সাইজের ওপর ভিত্তি করে মেমরি এলোকেশন হয়?",
     "code": "enum WebEvent {\n    PageLoad,\n    KeyPress(char),\n    Click { x: i64, y: i64 },\n}",
     "hint": "ট্যাগড ইউনিয়ন (Tagged Union)। সবচেয়ে বড় ভ্যারিয়েন্টের সাইজ + ১টি ডিসক্রিমিন্যান্ট ট্যাগ (কোন ভ্যারিয়েন্ট তা শনাক্ত করার জন্য) এবং অ্যালাইনমেন্ট প্যাডিং।"
   },
@@ -27,8 +27,8 @@
   {
     "id": "enum-q5",
     "difficulty": "medium",
-    "question": "নিচের কোডে ম্যাচিংয়ের সময় ডেটা এক্সট্র্যাক্ট করো:\n\n```rust\nenum Message {\n    Move { x: i32, y: i32 },\n    Write(String),\n}\n\nlet msg = Message::Move { x: 10, y: 20 };\n```\n\n`match` এক্সপ্রেশনের ভেতরে কীভাবে `x` এবং `y` এর মান ধরে তাদের যোগফল প্রিন্ট করবে?",
-    "code": "match msg {\n    Message::Move { x, y } => println!(\"{}\", x + y),\n    _ => (),\n}",
+    "question": "নিচের কোডে ম্যাচিংয়ের সময় ডেটা এক্সট্র্যাক্ট করো:\n\n`match` এক্সপ্রেশনের ভেতরে কীভাবে `x` এবং `y` এর মান ধরে তাদের যোগফল প্রিন্ট করবে?",
+    "code": "enum Message {\n    Move { x: i32, y: i32 },\n    Write(String),\n}\n\nlet msg = Message::Move { x: 10, y: 20 };",
     "hint": "প্যাটার্ন ডিসট্রাকচারিং সিনট্যাক্স: `Message::Move { x, y } => ...`।"
   },
   {
@@ -46,7 +46,7 @@
   {
     "id": "enum-q8",
     "difficulty": "hard",
-    "question": "রিকালসিভ এনাম (Recursive Enum): নিচের কোডটি কেন কম্পাইল হবে না?\n\n```rust\nenum List {\n    Cons(i32, List),\n    Nil,\n}\n```\n\nকম্পাইলার `recursive type List has infinite size` এরর দিচ্ছে কেন এবং কীভাবে `Box` ব্যবহার করে এটি সমাধান করা যায়?",
+    "question": "রিকালসিভ এনাম (Recursive Enum): নিচের কোডটি কেন কম্পাইল হবে না?\n\nকম্পাইলার `recursive type List has infinite size` এরর দিচ্ছে কেন এবং কীভাবে `Box` ব্যবহার করে এটি সমাধান করা যায়?",
     "code": "enum List {\n    Cons(i32, List), // Error!\n    Nil,\n}",
     "hint": "কম্পাইল টাইমে এনামের সাইজ ফিক্সড হতে হয়। রিকার্সিভ ডেটা সরাসরি রাখলে সাইজ অসীম হয়ে যায়। `Box<List>` দিলে এটি হিপে চলে যায় এবং এনামে শুধু একটি ফিক্সড সাইজের পয়েন্টার থাকে।"
   },
@@ -59,8 +59,8 @@
   {
     "id": "enum-q10",
     "difficulty": "medium",
-    "question": "`if let` এবং `while let` ছাড়াও রাস্ট ১.৬৫ ভার্সন থেকে `let-else` সিনট্যাক্স যুক্ত হয়েছে। নিচের কোডে `let-else` ব্যবহারের সুবিধা কী?\n\n```rust\nlet Some(value) = opt else {\n    return;\n};\n```",
-    "code": "let Some(value) = opt else { return; };",
+    "question": "`if let` এবং `while let` ছাড়াও রাস্ট ১.৬৫ ভার্সন থেকে `let-else` সিনট্যাক্স যুক্ত হয়েছে। নিচের কোডে `let-else` ব্যবহারের সুবিধা কী?",
+    "code": "let Some(value) = opt else {\n    return;\n};",
     "hint": "এটি আর্লি রিটার্ন (Early Return) বা গার্ড ক্লজ (Guard Clause) হিসেবে কাজ করে এবং কোনো নেস্টেড ইন্ডেন্টেশন ছাড়াই `value` কে নিচের পুরো স্কোপে অ্যাক্সেসিবল করে।"
   },
   {

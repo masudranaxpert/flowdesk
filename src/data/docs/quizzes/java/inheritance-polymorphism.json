@@ -32,7 +32,7 @@
   {
     "id": "java-inh-q6",
     "difficulty": "hard",
-    "question": "ডায়নামিক মেথড ডিসপ্যাচ (Dynamic Method Dispatch) ও ভার্চুয়াল মেথড টেবিল (vtable): নিচের কোডে কোন মেথডটি এক্সিকিউট হবে এবং JVM কীভাবে রানটাইমে সঠিক মেথড খুঁজে পায়?\n\n```java\nAnimal a = new Dog();\na.makeSound();\n```",
+    "question": "ডায়নামিক মেথড ডিসপ্যাচ (Dynamic Method Dispatch) ও ভার্চুয়াল মেথড টেবিল (vtable): নিচের কোডে কোন মেথডটি এক্সিকিউট হবে এবং JVM কীভাবে রানটাইমে সঠিক মেথড খুঁজে পায়?",
     "code": "Animal a = new Dog();\na.makeSound();",
     "hint": "Dog ক্লাসের makeSound() চলবে। JVM রেফারেন্সের টাইপ (Animal) দেখে না, বরং হিপে থাকা আসল অবজেক্টের vtable পয়েন্টার দেখে রানটাইমে মেথড রেজলভ করে।"
   },

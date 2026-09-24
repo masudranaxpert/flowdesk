@@ -20,8 +20,8 @@
   {
     "id": "java-gen-q4",
     "difficulty": "medium",
-    "question": "নিচের কোডটি কেন কম্পাইল হবে না?\n\n```java\nList<? extends Number> list = new ArrayList<Integer>();\nlist.add(10); // Compilation Error!\n```\n\n১০ একটি ভ্যালিড পূর্ণসংখ্যা হওয়া সত্ত্বেও `? extends Number` যুক্ত লিস্টে কোনো উপাদান যোগ করা কম্পাইলার কেন কঠোরভাবে নিষিদ্ধ করে?",
-    "code": "List<? extends Number> list = new ArrayList<Integer>();\nlist.add(10); // Error কেন?",
+    "question": "নিচের কোডটি কেন কম্পাইল হবে না?\n\n১০ একটি ভ্যালিড পূর্ণসংখ্যা হওয়া সত্ত্বেও `? extends Number` যুক্ত লিস্টে কোনো উপাদান যোগ করা কম্পাইলার কেন কঠোরভাবে নিষিদ্ধ করে?",
+    "code": "List<? extends Number> list = new ArrayList<Integer>();\nlist.add(10); // Compilation Error!",
     "hint": "কম্পাইলার জানে না লিস্টের প্রকৃত কংক্রিট টাইপটি কী (এটি List<Double> ও হতে পারত)। তাই টাইপ সেফটি রক্ষায় null ছাড়া কোনো অবজেক্ট add করা নিষিদ্ধ।"
   },
   {

@@ -2,7 +2,7 @@
   {
     "id": "iter-q1",
     "difficulty": "easy",
-    "question": "রাস্টে ইটারেটর (Iterator) বাই ডিফল্ট \"লেজি\" (Lazy) কেন? নিচের কোডে `println!` কি কোনো আউটপুট দেবে?\n\n```rust\nlet v = vec![1, 2, 3];\nv.iter().map(|x| println!(\"{}\", x));\n```",
+    "question": "রাস্টে ইটারেটর (Iterator) বাই ডিফল্ট \"লেজি\" (Lazy) কেন? নিচের কোডে `println!` কি কোনো আউটপুট দেবে?",
     "code": "let v = vec![1, 2, 3];\nv.iter().map(|x| println!(\"{}\", x));",
     "hint": "কোনো আউটপুট দেবে না! ইটারেটর যতক্ষণ না কোনো কনজিউমিং অ্যাডাপ্টার (যেমন `collect()`, `for` লুপ) দ্বারা টানা হয়, ততক্ষণ কোনো কাজই সম্পন্ন হয় না।"
   },
@@ -81,7 +81,7 @@
   {
     "id": "iter-q14",
     "difficulty": "medium",
-    "question": "নিচের কোডে ক্লোজারটির টাইপ কী এবং কম্পাইলার এটিকে কোন ট্রেইট (`Fn`, `FnMut`, নাকি `FnOnce`) হিসেবে গণ্য করবে?\n\n```rust\nlet mut count = 0;\nlet mut inc = || {\n    count += 1;\n    count\n};\n```",
+    "question": "নিচের কোডে ক্লোজারটির টাইপ কী এবং কম্পাইলার এটিকে কোন ট্রেইট (`Fn`, `FnMut`, নাকি `FnOnce`) হিসেবে গণ্য করবে?",
     "code": "let mut count = 0;\nlet mut inc = || {\n    count += 1;\n    count\n};",
     "hint": "এটি বাইরের মিউটেবল ভেরিয়েবল পরিবর্তন করছে, তাই এটি `FnMut` ট্রেইট বাস্তবায়ন করে।"
   },
