@@ -16,17 +16,13 @@
   {
     "id": "borrowing-references-2",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "কোডটা trace করো — কী ছাপা হবে?",
-    "code": "fn calculate_length(s: &String) -> usize {\n    s.len()\n}\n\nfn main() {\n    let s1 = String::from(\"hello\");\n    let len = calculate_length(&s1);\n\n    println!(\"'{}' এর length {}\", s1, len);\n}",
-    "options": [
-      "'hello' এর length 5",
-      "compile error — s1-এর ownership function-এ চলে গেছে",
-      "'hello' এর length 0",
-      "compile error — s.len() শুধু String-এ চলে, &String-এ না"
-    ],
-    "answer": 0,
-    "explanation": "`&s1` মানে শুধু একটা ৮-byte pointer ধার নেওয়া — ownership যায়নি, তাই function শেষে value drop-ও হয় না এবং s1 পরেও valid। `s.len()`-এ compiler নিজেই pointer deref করে (auto-deref)। আর String-এর len মানে byte count — hello তো ৫ byte।"
+    "type": "code",
+    "prompt": "`s1` এর মালিকানা নষ্ট না করে শুধু পড়ার জন্য immutable reference হিসেবে ধার (borrow) দিতে আর্গুমেন্টে কী লিখবে?",
+    "code": "fn calculate_length(s: &String) -> usize {\n    s.len()\n}\n\nfn main() {\n    let s1 = String::from(\"hello\");\n    let len = calculate_length(____);\n    println!(\"{} {}\", s1, len);\n}",
+    "explanation": "মালিকানা না হারিয়ে কোনো ভ্যালু ধার দিতে & ব্যবহার করে immutable reference তৈরি করা হয়।",
+    "accept": [
+      "&s1"
+    ]
   },
   {
     "id": "borrowing-references-3",
@@ -45,17 +41,13 @@
   {
     "id": "borrowing-references-4",
     "difficulty": "hard",
-    "type": "output",
-    "prompt": "কোডটা trace করো — কী হবে? (NLL মাথায় রেখো)",
-    "code": "fn main() {\n    let mut s = String::from(\"hello\");\n\n    let r1 = &s;\n    let r2 = &s;\n    println!(\"{} {}\", r1, r2);\n\n    let r3 = &mut s;\n    r3.push_str(\"!\");\n    println!(\"{}\", s);\n}",
-    "options": [
-      "compile error — r1, r2 এখনো জীবিত অবস্থায় &mut s নেওয়া যায় না",
-      "compile error — একই variable-এ কখনোই & আর &mut মেশানো যায় না",
-      "hello hello ছাপার পরে hello — push_str কাজ করবে না",
-      "hello hello, তারপর hello! — compile হবে, চলবে"
-    ],
-    "answer": 3,
-    "explanation": "NLL (Non-Lexical Lifetimes) — reference-এর lifetime curly brace-এর জ্যামিতি না, শেষ ব্যবহার পর্যন্ত region। r1, r2-এর last use উপরের println!-এই; ওখানেই তাদের borrow মরে গেছে, তাই পরে `&mut s` নেওয়া বৈধ। তারপর push_str করে s = hello!। নিয়ম বদলায়নি — \"একই সময়ে\" মাপ বদলেছে, brace থেকে ব্যবহারে।"
+    "type": "code",
+    "prompt": "`s` এর উপর একটি mutable reference ধার নিয়ে `r3` ভেরিয়েবলে রাখতে blank-এ কী লিখবে?",
+    "code": "let mut s = String::from(\"hello\");\nlet r3 = ____;\nr3.push_str(\"!\");",
+    "explanation": "কোনো ভ্যালুকে পরিবর্তন করতে হলে &mut দিয়ে mutable reference ধার নিতে হয়।",
+    "accept": [
+      "&mut s"
+    ]
   },
   {
     "id": "borrowing-references-5",
@@ -89,17 +81,14 @@
   {
     "id": "borrowing-references-7",
     "difficulty": "medium",
-    "type": "output",
-    "prompt": "কোডটা trace করো — ঠিক কী ছাপা হবে?",
-    "code": "fn main() {\n    let s = String::from(\"hello world\");\n\n    let hello = &s[0..5];\n    let world = &s[6..11];\n\n    println!(\"{} {}\", hello, world);\n}",
-    "options": [
-      "hello world",
-      "helloworld",
-      "compile error — s-এর অংশ move করা হয়েছে",
-      "world hello"
-    ],
-    "answer": 0,
-    "explanation": "Indices ধরো: 0-4 পর্যন্ত \"hello\", index 5-এ space, 6-10 পর্যন্ত \"world\"। দুটো slice-ই মূল String-এর reference — কোনো copy বা move নেই। println!-এর মাঝের একটা space-সহ ফলাফল দেখতে হুবহু মূল string-এর মতো: `hello world`।"
+    "type": "code",
+    "prompt": "`s` স্ট্রিংটির শুরু থেকে প্রথম ৫টি ক্যারেক্টার (\"hello\") ধার নিয়ে স্লাইস তৈরি করতে blank-এ কী লিখবে?",
+    "code": "let s = String::from(\"hello world\");\nlet hello = ____;",
+    "explanation": "স্ট্রিং স্লাইস হলো মূল স্ট্রিংয়ের একটি অংশের রেফারেন্স। &s[0..5] বা &s[..5] দিয়ে শুরু থেকে ৫টি বাইটের রেফারেন্স তৈরি হয়।",
+    "accept": [
+      "&s[0..5]",
+      "&s[..5]"
+    ]
   },
   {
     "id": "borrowing-references-8",
@@ -115,17 +104,13 @@
   {
     "id": "borrowing-references-9",
     "difficulty": "hard",
-    "type": "output",
-    "prompt": "কোডটা trace করো — কী হবে?",
-    "code": "fn first_word(s: &String) -> usize {\n    let bytes = s.as_bytes();\n\n    for (i, &byte) in bytes.iter().enumerate() {\n        if byte == b' ' {\n            return i;\n        }\n    }\n    s.len()\n}\n\nfn main() {\n    let mut words = String::from(\"hello beautiful world\");\n\n    let first = first_word(&words);\n    println!(\"First word length: {}\", first);\n\n    words.clear();\n    println!(\"{}\", words.len());\n}",
-    "options": [
-      "compile হবে আর ছাপবে: First word length: 5, তারপর 0",
-      "compile error — words.clear()-এর &mut নেওয়া যাবে না, first-এর borrow এখনো জীবিত",
-      "compile হবে, কিন্তু clear-এর পরে পুরনো/undefined value ছাপবে",
-      "runtime panic — clear-এর পরে পুরনো index অচল"
-    ],
-    "answer": 0,
-    "explanation": "first_word শুধু `&String` নিয়েছে আর ফেরত দিয়েছে usize — একটা plain copy, তাই ফাংশন শেষ হলেই words-এর কোনো borrow বাকি নেই। এরপর `clear()` (যেটার `&mut` লাগে) বৈধ, words খালি হয়ে len 0। কিন্তু ফাংশনটা যদি `&str` slice ফেরাত আর clear-এর পরেও সেই slice ছাপতে — তখনই E0502; compiler নিজেই ordering ঠিক রাখতে বাধ্য করে।"
+    "type": "code",
+    "prompt": "`first_word` ফাংশনটি ইনপুট স্ট্রিংয়ের একটি স্লাইস রিটার্ন করবে। ফাংশনের রিটার্ন টাইপ হিসেবে blank-এ কী লিখবে?",
+    "code": "fn first_word(s: &str) -> ____ {\n    let bytes = s.as_bytes();\n    for (i, &byte) in bytes.iter().enumerate() {\n        if byte == b' ' {\n            return &s[..i];\n        }\n    }\n    &s[..]\n}",
+    "explanation": "স্ট্রিং স্লাইসের টাইপ হলো &str। এটি কোনো মেমোরি কপি না করে সরাসরি মূল ডেটার ভিউ প্রদান করে।",
+    "accept": [
+      "&str"
+    ]
   },
   {
     "id": "borrowing-references-10",

@@ -158,15 +158,21 @@ export default function Quiz({ categoryId, chapterId }: { categoryId: string; ch
 
                 {/* code answer */}
                 {q.type === 'code' && (
-                  <textarea
-                    value={typeof response === 'string' ? response : ''}
-                    disabled={submitted}
-                    onChange={(e) => setResponses((r) => ({ ...r, [q.id]: e.target.value }))}
-                    placeholder="এখানে কোড লিখো…"
-                    spellCheck={false}
-                    rows={2}
-                    className="mt-3 w-full rounded-lg border bg-muted/40 px-3 py-2 font-mono text-[13px] leading-relaxed outline-none transition focus:border-primary/50 focus:bg-background"
-                  />
+                  <div className="mt-3 space-y-1.5">
+                    <label className="text-[11px] font-medium text-muted-foreground flex items-center justify-between">
+                      <span>তোমার সমাধান কোড:</span>
+                      <span className="text-[10px] text-muted-foreground/80 font-mono">syntax check সক্রিয়</span>
+                    </label>
+                    <textarea
+                      value={typeof response === 'string' ? response : ''}
+                      disabled={submitted}
+                      onChange={(e) => setResponses((r) => ({ ...r, [q.id]: e.target.value }))}
+                      placeholder="এখানে সমাধান কোড টাইপ করো (যেমন: &mut name বা x * 2)…"
+                      spellCheck={false}
+                      rows={typeof response === 'string' && response.includes('\n') ? 4 : 2}
+                      className="w-full rounded-lg border bg-muted/40 p-3 font-mono text-[13px] leading-relaxed outline-none transition focus:border-primary/50 focus:bg-background"
+                    />
+                  </div>
                 )}
 
                 {/* verdict + explanation */}
@@ -174,9 +180,12 @@ export default function Quiz({ categoryId, chapterId }: { categoryId: string; ch
                   <div className="mt-3 space-y-2 text-[13px] leading-relaxed">
                     <p className={cn('flex items-center gap-1.5 font-medium', correct ? 'text-emerald-600 dark:text-emerald-300' : 'text-rose-600 dark:text-rose-300')}>
                       {correct ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-                      {correct ? 'সঠিক!' : q.type === 'code' ? `সঠিক উত্তর: \`${(q.accept ?? ['—'])[0]}\`` : `সঠিক উত্তর: ${String.fromCharCode(65 + (q.answer ?? 0))}`}
+                      {correct ? 'দারুণ! তোমার সমাধান সঠিক হয়েছে।' : q.type === 'code' ? `প্রত্যাশিত উত্তর: \`${(q.accept ?? ['—'])[0]}\`` : `সঠিক উত্তর: ${String.fromCharCode(65 + (q.answer ?? 0))}`}
                     </p>
-                    <p className="text-muted-foreground">{q.explanation}</p>
+                    <div className="rounded-lg bg-muted/40 p-3 border text-muted-foreground">
+                      <span className="font-semibold text-foreground block mb-1">ব্যাখ্যা ও শেখার বিষয়:</span>
+                      {q.explanation}
+                    </div>
                   </div>
                 )}
               </div>
@@ -189,7 +198,7 @@ export default function Quiz({ categoryId, chapterId }: { categoryId: string; ch
               <div>
                 <p className="text-sm font-semibold">
                   স্কোর: {score}/{visible.length} ({percent}%)
-                  {percent >= 80 ? ' — দুর্দান্ত! 🎉' : percent >= 50 ? ' — ভালো, আরেকবার দেখলেই perfect!' : ' — chapter টা আরেকবার পড়ে আয়!'}
+                  {percent >= 80 ? ' — দুর্দান্ত! 🎉' : percent >= 50 ? ' — ভালো, আরেকবার দেখলেই perfect!' : ' — chapter টি আরেকবার রিভিশন দিয়ে নাও!'}
                 </p>
                 <p className="text-xs text-muted-foreground">সেরা স্কোর: {Math.max(percent, best)}%</p>
               </div>

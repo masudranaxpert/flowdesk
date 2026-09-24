@@ -16,32 +16,24 @@
   {
     "id": "best-practices-2",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "কী print হবে?",
-    "code": "use std::borrow::Cow;\n\nfn clean(input: &str) -> Cow<str> {\n    if input.contains(\"bad\") {\n        Cow::Owned(input.replace(\"bad\", \"good\"))\n    } else {\n        Cow::Borrowed(input)\n    }\n}\n\nfn main() {\n    let a = clean(\"this is fine\");\n    let b = clean(\"bad day\");\n    println!(\"{}\", a);\n    println!(\"{}\", b);\n}",
-    "options": [
-      "this is fine\nbad day",
-      "Cow::Borrowed(\\\"this is fine\\\")\nCow::Owned(\\\"good day\\\")",
-      "this is fine\ngood day",
-      "compile error — একই function দুই রকম variant return করতে পারে না"
-    ],
-    "answer": 2,
-    "explanation": "Cow একটা enum — Borrowed(&str) বা Owned(String)। \"this is fine\"-এ \"bad\" নেই, তাই Borrowed (কোনো allocation নেই); \"bad day\"-তে আছে, তাই Owned — replace করে নতুন String allocate হয়: \"good day\"। println! দেখায় শুধু ভেতরের str, variant নয়। নামটাই তো clone on write — খরচ conditional।"
+    "type": "code",
+    "prompt": "ফাংশনে স্ট্রিং প্যারামিটার হিসেবে &String এর পরিবর্তে আরও ফ্লেক্সিবল ও ইডিওম্যাটিক স্ট্রিং স্লাইস টাইপ লিখো:",
+    "code": "fn print_name(name: ____) {\n    println!(\"{}\", name);\n}",
+    "explanation": "&str প্যারামিটার টাইপ দিলে &String এবং string literal (\"hello\") উভয়ই কোনো মেমোরি কপি ছাড়া সরাসরি পাস করা যায়।",
+    "accept": [
+      "&str"
+    ]
   },
   {
     "id": "best-practices-3",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "কী print হবে?",
-    "code": "#[derive(Default)]\nstruct Config {\n    host: String,\n    port: u16,\n}\n\nimpl Config {\n    fn new() -> Self {\n        Self::default()\n    }\n\n    fn host(mut self, host: &str) -> Self {\n        self.host = host.to_string();\n        self\n    }\n\n    fn port(mut self, port: u16) -> Self {\n        self.port = port;\n        self\n    }\n}\n\nfn main() {\n    let config = Config::new().host(\"localhost\").port(8080);\n    println!(\"{}:{}\", config.host, config.port);\n}",
-    "options": [
-      "localhost:8080",
-      ":0",
-      "localhost:0",
-      "compile error — builder method গুলো chain করা যায় না"
-    ],
-    "answer": 0,
-    "explanation": "Config::new() default দিয়ে শুরু (খালি host, port 0), তারপর প্রতিটা builder method self by-value নিয়ে মান বসিয়ে self ফেরত দেয় — chain-টা ownership-এর হাতবদল মাত্র। তাই host-এ localhost, port-এ 8080 বসে যায়।"
+    "type": "code",
+    "prompt": "স্ট্রাক্টের ফিল্ডগুলোর ডিফল্ট মান স্বয়ংক্রিয়ভাবে জেনারেট করতে derive ম্যাক্রোতে কোন ট্রেইটটি বসাবে?",
+    "code": "#[derive(____)]\nstruct Config {\n    port: u16,\n}",
+    "explanation": "#[derive(Default)] দিলে কম্পাইলার টাইপের জন্য default() মেথড তৈরি করে দেয়।",
+    "accept": [
+      "Default"
+    ]
   },
   {
     "id": "best-practices-4",
@@ -91,7 +83,9 @@
     "type": "code",
     "prompt": "দুই ধরনের call — String-এর reference আর str literal — দুটোই কাজ করাতে blank-এ কী বসবে?",
     "code": "fn greet(name: ____) -> String {\n    format!(\"Hello, {}!\", name)\n}\n\nfn main() {\n    let owned = String::from(\"Karim\");\n    println!(\"{}\", greet(&owned));\n    println!(\"{}\", greet(\"Sadia\"));\n}",
-    "accept": ["&str"],
+    "accept": [
+      "&str"
+    ],
     "explanation": "&str parameter দুটোই নেয়: \"Sadia\" হলো &str, আর &owned (&String) deref coercion-এ automatic &str হয়ে যায়। name: String হলে greet(\"Sadia\") compile-ই হতো না (borrow-কে ownership দেওয়া যায় না), &String হলে greet(\"Sadia\") আটকে যেত — তাই &str-ই idiomatic।"
   },
   {
@@ -100,7 +94,9 @@
     "type": "code",
     "prompt": "১০০০টা push-এ বারবার reallocation এড়াতে blank-এ কী বসবে?",
     "code": "fn main() {\n    let mut v: Vec<i32> = Vec::____(1000);\n    for i in 0..1000 {\n        v.push(i);\n    }\n    println!(\"{}\", v.len());\n}",
-    "accept": ["with_capacity"],
+    "accept": [
+      "with_capacity"
+    ],
     "explanation": "Vec::with_capacity(1000) একবারেই ১০০০ জায়গার buffer নেয় — বাকি push গুলো শুধু slot-এ লেখা, amortized O(1), কোনো copy নেই। সাধারণ push-এ capacity শেষ হলে বারবার নতুন বড় buffer allocate + পুরনো সব copy হয় (growth মোটামুটি ২×)। String::with_capacity হুবহু একই জিনিস।"
   },
   {

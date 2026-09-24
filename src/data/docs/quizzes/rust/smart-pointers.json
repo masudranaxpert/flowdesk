@@ -16,17 +16,14 @@
   {
     "id": "smart-pointers-2",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "এই কোডের output কী (কোন ক্রমে)?",
-    "code": "struct CustomPointer {\n    data: &'static str,\n}\n\nimpl Drop for CustomPointer {\n    fn drop(&mut self) {\n        println!(\"Dropping: {}\", self.data);\n    }\n}\n\nfn main() {\n    let a = CustomPointer { data: \"first\" };\n    let b = CustomPointer { data: \"second\" };\n    println!(\"End of main\");\n}",
-    "options": [
-      "End of main\nDropping: second\nDropping: first",
-      "Dropping: first\nDropping: second\nEnd of main",
-      "End of main\nDropping: first\nDropping: second",
-      "End of main — Drop শুধু smart pointer-এর জন্য, custom struct-এ চলে না"
-    ],
-    "answer": 0,
-    "explanation": "Scope শেষে drop glue প্রতিটা local-এর `Drop::drop` ডাকে — ঘোষণার উল্টো ক্রমে (b আগে, a পরে), কারণ পরে ঘোষিতটা আগেরটার data borrow করে থাকতে পারে। তাই \"second\" আগে ছাপা হয়। `Box`, `Rc`, `File`, `MutexGuard` — সবার cleanup এই একই পথে।"
+    "type": "code",
+    "prompt": "মান 5 কে স্ট্যাকের পরিবর্তে হিপ মেমোরিতে সংরক্ষণ করতে Box স্মার্ট পয়েন্টারটি তৈরি করো:",
+    "code": "let b = ____;\nprintln!(\"b = {}\", b); // 5",
+    "explanation": "Box::new(value) স্ট্যাকের পরিবর্তে মেমোরির হিপ সেকশনে ডেটা সংরক্ষণ করে এবং স্ট্যাকে শুধু একটি পয়েন্টার রাখে।",
+    "accept": [
+      "Box::new(5)",
+      "Box::new(5);"
+    ]
   },
   {
     "id": "smart-pointers-3",
@@ -34,23 +31,21 @@
     "type": "code",
     "prompt": "Recursive Cons list-কে compile করানোর জন্য blank-এ কী বসবে? (Box ছাড়া compiler বলবে \"recursive type has infinite size\")",
     "code": "enum List {\n    Cons(i32, ____),\n    Nil,\n}\n\nuse List::{Cons, Nil};\n\nfn main() {\n    let list = Cons(1, Box::new(Cons(2, Box::new(Cons(3, Box::new(Nil))))));\n    if let Cons(head, _tail) = list {\n        println!(\"{}\", head);\n    }\n}",
-    "accept": ["Box<List>"],
+    "accept": [
+      "Box<List>"
+    ],
     "explanation": "`Cons(i32, List)` হলে enum-এর size অসীম হয়ে যায় — ভেতরে নিজের মতো বড় field ঢুকতেই থাকে। `Box<List>` দিলে store হয় শুধু একটা pointer (8 bytes), তাই size finite হয়ে যায়।"
   },
   {
     "id": "smart-pointers-4",
     "difficulty": "medium",
-    "type": "output",
-    "prompt": "এই কোডের output কী?",
-    "code": "use std::rc::Rc;\n\nfn main() {\n    let data = Rc::new(String::from(\"shared\"));\n    let r1 = Rc::clone(&data);\n    let r2 = Rc::clone(&data);\n    drop(r1);\n    println!(\"{}\", Rc::strong_count(&data));\n}",
-    "options": [
-      "2",
-      "3",
-      "1",
-      "0"
-    ],
-    "answer": 0,
-    "explanation": "`Rc::clone` data copy করে না — শুধু heap-এর control block-এ strong counter ১ করে বাড়ায়। data (1) + r1 + r2 = 3; `drop(r1)`-এ ২। শেষ reference drop হলে তবেই value free হয়।"
+    "type": "code",
+    "prompt": "Rc স্মার্ট পয়েন্টারের রেফারেন্স কাউন্টার বৃদ্ধি করতে Rc::clone কলটি লিখো:",
+    "code": "use std::rc::Rc;\nlet data = Rc::new(String::from(\"shared\"));\nlet r1 = ____;",
+    "explanation": "Rc::clone(&data) ডেটা কপি না করে কেবল রেফারেন্স কাউন্ট ১ বৃদ্ধি করে।",
+    "accept": [
+      "Rc::clone(&data)"
+    ]
   },
   {
     "id": "smart-pointers-5",
@@ -83,17 +78,13 @@
   {
     "id": "smart-pointers-7",
     "difficulty": "medium",
-    "type": "output",
-    "prompt": "এই কোডের output কী?",
-    "code": "use std::cell::RefCell;\nuse std::rc::Rc;\n\nfn main() {\n    let shared = Rc::new(RefCell::new(vec![1, 2, 3]));\n    let owner2 = Rc::clone(&shared);\n    shared.borrow_mut().push(4);\n    println!(\"{:?} {}\", owner2.borrow(), Rc::strong_count(&shared));\n}",
-    "options": [
-      "[1, 2, 3, 4] 2",
-      "[1, 2, 3] 2",
-      "[1, 2, 3, 4] 1",
-      "Panic — একই সময়ে দুই owner"
-    ],
-    "answer": 0,
-    "explanation": "`Rc<RefCell<T>>` combo: একাধিক owner + mutation। `shared.borrow_mut().push(4)` ভেতরের Vec-এ 4 যোগ করে (statement শেষে guard drop হয়ে borrow flag ০-তে ফেরে), তাই `owner2.borrow()` একই data দেখে — দুজনেই একই heap block share করছে। strong count = 2 (shared + owner2)।"
+    "type": "code",
+    "prompt": "RefCell এর ভেতরে থাকা ভ্যালু মিউটেবলভাবে পরিবর্তন করার জন্য কোন মেথড কল করবে?",
+    "code": "use std::cell::RefCell;\nlet data = RefCell::new(5);\n*data.____ += 1;",
+    "explanation": "RefCell রানটাইমে ধার নেওয়ার নিয়ম রক্ষা করে। পরিবর্তন করতে .borrow_mut() কল করতে হয়।",
+    "accept": [
+      "borrow_mut()"
+    ]
   },
   {
     "id": "smart-pointers-8",
@@ -129,7 +120,9 @@
     "type": "code",
     "prompt": "Tree-তে child থেকে parent-এর দিকে reference রাখতে হবে যাতে cycle/leak না হয় — blank-এ কী বসবে?",
     "code": "use std::rc::{Rc, Weak};\n\nstruct Node {\n    children: Vec<Rc<Node>>, // down the tree: strong ownership\n    parent: ____,            // up the tree: must not bump strong count\n}",
-    "accept": ["Weak<Node>"],
+    "accept": [
+      "Weak<Node>"
+    ],
     "explanation": "উপরের দিকে `Weak` — clone-এ `weak` counter বাড়ে, strong না, তাই parent-কে বাঁচিয়ে রাখে না এবং `Rc` cycle ভেঙে যায়। Value দরকার হলে `parent.upgrade()`: strong count > 0 হলে `Some(Rc)`, data drop হয়ে গেলে `None` — dangling pointer-এর সুযোগই নেই।"
   }
 ]

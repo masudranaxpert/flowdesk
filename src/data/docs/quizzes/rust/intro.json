@@ -30,32 +30,25 @@
   {
     "id": "intro-3",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "User terminal-এ `Rahim` লিখে Enter দিলো — শেষ `println!` লাইনটা ঠিক কী ছাপবে?",
-    "code": "use std::io;\n\nfn main() {\n    println!(\"তোমার নাম কী?\");\n\n    let mut name = String::new();\n    io::stdin()\n        .read_line(&mut name)\n        .expect(\"Failed to read line\");\n\n    println!(\"হ্যালো, {}! Rust শেখায় স্বাগতম।\", name.trim());\n}",
-    "options": [
-      "হ্যালো, Rahim-এর পরেই লাইন ভেঙে যাবে — read_line-এর newline থেকে যায়",
-      "compile error — read_line-এর পরে name ব্যবহার করা যায় না",
-      "কিছুই ছাপবে না — expect panic করবে",
-      "হ্যালো, Rahim! Rust শেখায় স্বাগতম।"
-    ],
-    "answer": 3,
-    "explanation": "read_line newline পর্যন্ত পড়ে buffer-এ `Rahim\\n` রাখে। `name.trim()` শুরু-শেষের whitespace (newline সহ) বাদ দিয়ে একটা &str slice দেয় — তাই ঠিক `হ্যালো, Rahim! ...` ছাপা হয়। read_line সফল হলে expect panic করে না।"
+    "type": "code",
+    "prompt": "Terminal-এ \"Hello, World!\" প্রিন্ট করার জন্য Rust-এর স্ট্যান্ডার্ড প্রিন্ট ম্যাক্রোটি কল করো:",
+    "code": "fn main() {\n    ____;\n}",
+    "explanation": "Rust-এ কনসোলে টেক্সট প্রিন্ট করার সবচেয়ে সাধারণ ম্যাক্রো হলো println!। নামের শেষে ! চিহ্ন ম্যাক্রো নির্দেশ করে, যা কম্পাইল টাইমে টেক্সট ফরম্যাট ভ্যালিডেট করে।",
+    "accept": [
+      "println!(\"Hello, World!\")",
+      "println!(\"Hello, World!\");"
+    ]
   },
   {
     "id": "intro-4",
     "difficulty": "medium",
-    "type": "output",
-    "prompt": "এই program-টা `cargo run` করলে কী হবে?",
-    "code": "fn main() {\n    let lang = \"Rust\";\n    println!(\"আমি {} শিখছি\", lang, lang);\n}",
-    "options": [
-      "ছাপবে: আমি Rust শিখছি — extra argument নীরবে ignore হবে",
-      "ছাপবে: আমি Rust Rust শিখছি",
-      "compile error — format string-এর `{}` আর argument-এর সংখ্যা মিলছে না, rustc-ই ধরবে",
-      "runtime-এ format exception"
-    ],
-    "answer": 2,
-    "explanation": "println! আসলে macro — compile-এর সময় expand হয়ে format string parse ও argument check হয়। ব্যবহার হয়নি এমন argument থাকলে compile error। C-তে printf-এ এটা runtime garbage output, Python-এ runtime exception — Rust-এ দুটোই compile error, run করার আগেই ধরা পড়ে।"
+    "type": "code",
+    "prompt": "`lang` ভেরিয়েবলের মান \"আমি Rust শিখছি\" হিসেবে প্রিন্ট করতে format string-এর ভেতরে সঠিক placeholder বসাও:",
+    "code": "fn main() {\n    let lang = \"Rust\";\n    println!(\"আমি ____ শিখছি\", lang);\n}",
+    "explanation": "Rust-এর println! ম্যাক্রোতে format specifier হিসেবে {} ব্যবহার করা হয়। কম্পাইলার আর্গুমেন্টের টাইপ দেখে নিজেই ডিসপ্লে কোড তৈরি করে নেয়।",
+    "accept": [
+      "{}"
+    ]
   },
   {
     "id": "intro-5",

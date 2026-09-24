@@ -99,19 +99,24 @@ for val in &v {
 // Mutable borrow
 let mut v2 = vec![1, 2, 3];
 for val in &mut v2 {
-    *val *= 2;  // dereference করে value change
+    *val *= 2;  // `val` হলো `&mut i32` — তাই মান পরিবর্তন করতে `*` (dereference) দিতে হয়
 }
 // v2 = [2, 4, 6]
 
-// Ownership নিয়ে নেওয়া
+// Ownership নিয়ে নেওয়া (consume)
 for val in v {
     println!("{}", val);
 }
-// v এখন invalid — ownership move হয়েছে
+// v এখন invalid — লুপের ভেতরে উপাদানগুলোর মালিকানা মুভ হয়ে গেছে
 ```
 
 > [!note]
-> `for val in &v` — borrow করে (v valid থাকে)। `for val in v` — ownership নেয় (v invalid হয়)। Python এ এই পার্থক্য নেই — Rust এ সচেতন হতে হবে।
+> **কেন `*val` লিখতে হলো?** `for val in &mut v2` লুপে `val` সরাসরি সংখ্যা নয়, বরং মেমোরির একটি রেফারেন্স (`&mut i32`)। রেফারেন্সের পেছনের আসল সংখ্যাটিকে পরিবর্তন করতে ডিরিফারেন্স অপারেটর `*` ব্যবহার করা হয়।
+> 
+> **তিন রকম ইটারেশন মনে রাখবে:**
+> 1. `for val in &v` — শুধু পড়ার জন্য ধারের রেফারেন্স (`&T`), ভেক্টর অক্ষত থাকে।
+> 2. `for val in &mut v` — প্রতিটি উপাদান পরিবর্তন করতে (`&mut T`), ভেক্টর অক্ষত থাকে।
+> 3. `for val in v` — মালিকানা মুভ হয় (`T`), লুপ শেষে পুরো ভেক্টর মেমোরি থেকে মুছে যায়।
 
 ### Iteration with Index
 

@@ -87,32 +87,24 @@
   {
     "id": "lifetimes-7",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "এই code-টা কী প্রিন্ট করবে?",
-    "code": "fn longest<'a>(x: &'a str, y: &'a str) -> &'a str {\n    if x.len() > y.len() {\n        x\n    } else {\n        y\n    }\n}\n\nfn main() {\n    let s1 = String::from(\"hello\");\n    let result;\n    {\n        let s2 = String::from(\"world!\");\n        result = longest(s1.as_str(), s2.as_str());\n        println!(\"{}\", result);\n    }\n}",
-    "options": [
-      "world!",
-      "hello",
-      "Compile error — `result` ভেতরের block-এর বাইরে declare করা",
-      "Runtime panic"
-    ],
-    "answer": 0,
-    "explanation": "\"hello\" ৫ byte, \"world!\" ৬ byte — `5 > 6` মিথ্যা, তাই `y` অর্থাৎ \"world!\" return হয়। আর প্রিন্টটা `s2`-এর block-এর ভেতরেই, তাই `result` এখনো valid। Block-এর বাইরে `result` ব্যবহার করলেই `s2` drop হয়ে যাওয়ায় error আসত।"
+    "type": "code",
+    "prompt": "`longest` ফাংশনের প্যারামিটারগুলোতে একই লাইফটাইম 'a অ্যাসাইন করতে `y` প্যারামিটারটির টাইপ অ্যানোটেশন লিখো:",
+    "code": "fn longest<'a>(x: &'a str, y: ____) -> &'a str {\n    if x.len() > y.len() {\n        x\n    } else {\n        y\n    }\n}",
+    "explanation": "উভয় প্যারামিটার এবং রিটার্ন ভ্যালুর লাইফটাইম একই রাখতে &'a str ব্যবহার করা হয়।",
+    "accept": [
+      "&'a str"
+    ]
   },
   {
     "id": "lifetimes-8",
     "difficulty": "medium",
-    "type": "output",
-    "prompt": "এই code-এর কী হবে?",
-    "code": "fn main() {\n    let r;\n    {\n        let x = 5;\n        r = &x;\n    }\n    println!(\"{}\", r);\n}",
-    "options": [
-      "5 প্রিন্ট হবে",
-      "Runtime-এ dangling reference ধরা পড়ে crash",
-      "Compile error — `x` block শেষে drop হয়ে গেছে, `r` dangling হয়ে যাবে",
-      "0 প্রিন্ট হবে"
-    ],
-    "answer": 2,
-    "explanation": "`r` reference-টা `x`-কে point করছে, কিন্তু ভেতরের block শেষে `x` drop হয়ে গেছে। Borrow checker compile time-এই ধরে ফেলে — runtime check না, compile-time guarantee। এটাই lifetime-এর মূল কাজ: dangling reference-এর সুযোগই থাকে না।"
+    "type": "code",
+    "prompt": "`struct Excerpt` এ `part` ফিল্ডটিতে রেফারেন্স রাখার জন্য স্ট্রাক্ট নামের পাশে জেনেরিক লাইফটাইম প্যারামিটার ডিক্লেয়ার করো:",
+    "code": "struct Excerpt<____> {\n    part: &'a str,\n}",
+    "explanation": "স্ট্রাক্টের ভেতরে রেফারেন্স ফিল্ড থাকলে স্ট্রাক্টের নামের সাথে <'a> লাইফটাইম জেনেরিক ঘোষণা করতে হয়।",
+    "accept": [
+      "'a"
+    ]
   },
   {
     "id": "lifetimes-9",

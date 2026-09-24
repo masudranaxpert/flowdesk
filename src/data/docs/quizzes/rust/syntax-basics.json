@@ -2,47 +2,37 @@
   {
     "id": "syntax-basics-1",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "এই program-টা চালালে কী হবে?",
-    "code": "fn main() {\n    let x = 5;\n    x = 6;\n    println!(\"x = {}\", x);\n}",
-    "options": [
-      "x = 6 ছাপবে",
-      "compile error — E0384: cannot assign twice to immutable variable; `let mut x` লাগত",
-      "runtime panic — immutability violation",
-      "x = 5 ছাপবে — assign নীরবে ignore হয়"
-    ],
-    "answer": 1,
-    "explanation": "Rust-এ variable ডিফল্টভাবে immutable। `mut` ছাড়া ঘোষিত binding-এ পরে assignment দিলে compiler type check-এর সময়ই E0384 দেখায় — binary তৈরিই হবে না। Check-টা পুরোটা compile time-এ, runtime খরচ শূন্য।"
+    "type": "code",
+    "prompt": "`x` ভেরিয়েবলটির মান প্রথমে 5 নির্ধারণ করো এবং পরবর্তীতে 6 এ পরিবর্তন করার অনুমতি দিতে প্রথম লাইনটি সঠিকভাবে লিখো:",
+    "code": "fn main() {\n    ____;\n    x = 6;\n    println!(\"x = {}\", x);\n}",
+    "explanation": "Rust-এ variable ডিফল্টভাবে immutable। মান পরিবর্তন করতে হলে ভেরিয়েবল ঘোষণার সময় let mut কিওয়ার্ড ব্যবহার করতে হয়।",
+    "accept": [
+      "let mut x = 5",
+      "let mut x = 5;"
+    ]
   },
   {
     "id": "syntax-basics-2",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "কোডটা trace করো — কী ছাপা হবে?",
-    "code": "fn main() {\n    let x = 5;\n    let x = x + 1;\n    let x = x * 2;\n    println!(\"{}\", x);\n}",
-    "options": [
-      "12",
-      "10",
-      "6",
-      "compile error — একই নামে একাধিক let হয় না"
-    ],
-    "answer": 0,
-    "explanation": "প্রতিটা `let x` একটা নতুন binding (shadowing): 5 → 6 → 12। Shadowing বৈধ, এমনকি টাইপ বদলানোও যায়। \"একই নামে দুইবার let\" error — সেটা Python মনের ভুল ধারণা; Rust-এ এটা নতুন variable তৈরির বৈধ উপায়।"
+    "type": "code",
+    "prompt": "Shadowing ব্যবহার করে `x` (মান 5) এর সাথে 1 যোগ করার পর, তাকে 2 দিয়ে গুণ করে পুনরায় shadow করতে blank-এ কী লিখবে?",
+    "code": "fn main() {\n    let x = 5;\n    let x = x + 1;\n    ____;\n    println!(\"{}\", x); // 12 ছাপবে\n}",
+    "explanation": "Shadowing করতে প্রতিবার let কিওয়ার্ড দিয়ে আগের ভেরিয়েবলের নাম ও মান ব্যবহার করে নতুন immutable binding তৈরি করা যায়।",
+    "accept": [
+      "let x = x * 2",
+      "let x = x * 2;"
+    ]
   },
   {
     "id": "syntax-basics-3",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "কোডটা trace করো — `y`-এর value কত ছাপা হবে?",
-    "code": "fn main() {\n    let y = {\n        let z = 3;\n        z + 1\n    };\n    println!(\"{}\", y);\n}",
-    "options": [
-      "3",
-      "()",
-      "4",
-      "compile error — block-এর ভেতরে let দেওয়া যায় না"
-    ],
-    "answer": 2,
-    "explanation": "Block-এর শেষ expression (semicolon ছাড়া) সেটার value — এখানে `z + 1` = 4। এটাই Rust-এর expression vs statement নিয়ম: semicolon দিলে statement হয়ে value হারায়।"
+    "type": "code",
+    "prompt": "Rust-এ block একটি expression। `y` এর মান যেন `4` রিটার্ন হয়, সেজন্য block এর শেষের এক্সপ্রেশনটি লিখো (মনে রাখবে এটি কোনো statement নয়):",
+    "code": "fn main() {\n    let y = {\n        let z = 3;\n        ____\n    };\n    println!(\"{}\", y); // 4\n}",
+    "explanation": "ব্লকের শেষ লাইনে semicolon না দিলে সেটি রিটার্ন এক্সপ্রেশন হিসেবে মূল ভেরিয়েবলে মান রিটার্ন করে। Semicolon দিলে সেটি statement হয়ে unit () রিটার্ন করতো।",
+    "accept": [
+      "z + 1"
+    ]
   },
   {
     "id": "syntax-basics-4",
@@ -101,17 +91,13 @@
   {
     "id": "syntax-basics-8",
     "difficulty": "medium",
-    "type": "output",
-    "prompt": "এই program-টা চালালে কী হবে?",
-    "code": "fn main() {\n    let numbers = [1, 2, 3];\n    println!(\"{}\", numbers[3]);\n}",
-    "options": [
-      "3 ছাপবে — শেষ element",
-      "compile error — ভুল index compile-এই ধরা পড়ে",
-      "C/C++-এর মতো undefined behavior — memory-তে যা আছে তাই ছাপবে",
-      "run করলে panic হবে: index out of bounds: the len is 3 but the index is 3"
-    ],
-    "answer": 3,
-    "explanation": "Rust প্রতিটা array access-এ bounds check করে — `index >= len` হলে panic। C/C++-এর মতো undefined behavior হবে না। আর খরচও নগণ্য: LLVM যদি প্রমাণ করতে পারে index সবসময় valid (যেমন `for i in 0..5` loop-এ), check-টা মুছেই দেয়।"
+    "type": "code",
+    "prompt": "5 টি সংখ্যা বিশিষ্ট `numbers` অ্যারের ৩ নম্বর ইনডেক্সের মান (40) পড়ার জন্য array indexing এক্সপ্রেশনটি লিখো:",
+    "code": "fn main() {\n    let numbers = [10, 20, 30, 40, 50];\n    let val = ____;\n    println!(\"{}\", val); // 40\n}",
+    "explanation": "অ্যারে থেকে উপাদান অ্যাক্সেস করতে square bracket numbers[index] সিনট্যাক্স ব্যবহার করা হয়। Rust রানটাইমে bounds check করে নিরাপত্তা দেয়।",
+    "accept": [
+      "numbers[3]"
+    ]
   },
   {
     "id": "syntax-basics-9",
@@ -127,16 +113,13 @@
   {
     "id": "syntax-basics-10",
     "difficulty": "hard",
-    "type": "output",
-    "prompt": "কোডটা trace করো — কোন দুটো লাইন কী ক্রমে ছাপা হবে?",
-    "code": "fn main() {\n    let x = 5;\n    {\n        let x = \"inner\";\n        println!(\"{}\", x);\n    }\n    println!(\"{}\", x);\n}",
-    "options": [
-      "প্রথমে inner, তারপর 5",
-      "প্রথমে inner, তারপর compile error — বাইরের x shadow হয়ে মরে গেছে",
-      "প্রথমে 5, তারপর 5",
-      "compile error — একই নামে nested block-এ let নেই"
-    ],
-    "answer": 0,
-    "explanation": "ভেতরের block-এ নতুন `let x` শুধু ওই block-এর ভেতরে বাইরের x-কে shadow করে — সেটাও type বদলে &str। Block শেষ হলে ভেতরের binding drop হয়, নাম `x` আবার বাইরের binding-এ ফেরে — পুরনো binding জীবিতই ছিল। Shadowing নতুন variable বানায়, পুরনোটা নষ্ট করে না।"
+    "type": "code",
+    "prompt": "ভেতরের ব্লকে `x` এর মূল মান অক্ষুণ্ণ রেখে শুধু ওই ব্লকের জন্য `x` এর মান \"inner\" করতে blank-এ নতুন শ্যাডো ভেরিয়েবল ডিক্লেয়ার করো:",
+    "code": "fn main() {\n    let x = 5;\n    {\n        ____;\n        println!(\"{}\", x);\n    }\n    println!(\"{}\", x); // 5\n}",
+    "explanation": "স্কোপের ভেতরে let x = \"inner\"; ঘোষণা করলে তা শুধু ওই ব্লকের জন্য কার্যকর থাকে। ব্লক শেষ হলে বাইরের মূল x আবার সক্রিয় হয়।",
+    "accept": [
+      "let x = \"inner\"",
+      "let x = \"inner\";"
+    ]
   }
 ]

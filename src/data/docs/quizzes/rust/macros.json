@@ -16,17 +16,14 @@
   {
     "id": "macros-2",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "কী print হবে?",
-    "code": "macro_rules! sum {\n    ($($x:expr),*) => {\n        {\n            let mut total = 0;\n            $(total += $x;)*\n            total\n        }\n    };\n}\n\nfn main() {\n    println!(\"{}\", sum!(1, 2, 3, 4, 5));\n    println!(\"{}\", sum!(10));\n}",
-    "options": [
-      "15\n10",
-      "15\n0",
-      "compile error — sum!(10)-এ একটাই argument",
-      "0\n0"
-    ],
-    "answer": 0,
-    "explanation": "$(...)* হলো zero-or-more repetition — একটা element নিয়েও expand হয়। এটা আসলে compile-time loop unrolling: sum!(1, 2, 3, 4, 5)-এ generated code-এ সোজা total += 1; ... total += 5; বসে যায়, মানে 15। sum!(10)-এ শুধু total += 10 — মানে 10। runtime-এ কোনো loop নেই।"
+    "type": "code",
+    "prompt": "`say_hello!` ম্যাক্রোটি কল করার সঠিক সিনট্যাক্সটি লিখো:",
+    "code": "macro_rules! say_hello {\n    () => {\n        println!(\"Hello!\");\n    };\n}\n\nfn main() {\n    ____;\n}",
+    "explanation": "ম্যাক্রো কল করার সময় নামের শেষে এক্সক্লেমেশন মার্ক (!) দিতে হয়, যেমন say_hello!()।",
+    "accept": [
+      "say_hello!()",
+      "say_hello!();"
+    ]
   },
   {
     "id": "macros-3",
@@ -73,17 +70,13 @@
   {
     "id": "macros-6",
     "difficulty": "medium",
-    "type": "output",
-    "prompt": "কী print হবে?",
-    "code": "macro_rules! using_x {\n    ($e:expr) => {\n        {\n            let x = 42;\n            $e\n        }\n    };\n}\n\nfn main() {\n    let x = \"hello\";\n    let result = using_x!(x.len());\n    println!(\"{}\", result);\n}",
-    "options": [
-      "42",
-      "compile error — x দুইবার define করা যায় না",
-      "5",
-      "0"
-    ],
-    "answer": 2,
-    "explanation": "এটাই macro hygiene: macro-র ভেতরের let x = 42 আর caller-এর x সম্পূর্ণ আলাদা identifier — conflict করে না। $e-এর জায়গায় বসা x.len() caller-এর x বোঝায়, মানে \"hello\".len() = 5। C-এর unhygienic macro হলে macro-র x-এর সাথে মিশে ভুল ফল বা error আসত।"
+    "type": "code",
+    "prompt": "macro_rules! তে একটি এক্সপ্রেশন আর্গুমেন্ট ম্যাচ করতে কোন fragment specifier টি ব্যবহার করবে?",
+    "code": "macro_rules! double {\n    ($x:____) => {\n        $x * 2\n    };\n}",
+    "explanation": "$x:expr ফ্র্যাগমেন্ট স্পেসিফায়ার যেকোনো বৈধ Rust এক্সপ্রেশন গ্রহণ করে।",
+    "accept": [
+      "expr"
+    ]
   },
   {
     "id": "macros-7",
@@ -91,7 +84,9 @@
     "type": "code",
     "prompt": "info!(\"Server started on port {}\", 8080) যেন [INFO] Server started on port 8080 print করে — blank-এ কোন ম্যাক্রোর নাম বসবে?",
     "code": "macro_rules! info {\n    ($($arg:tt)*) => {\n        println!(\"[INFO] {}\", ____!($($arg)*));\n    };\n}\n\nfn main() {\n    info!(\"Server started on port {}\", 8080);\n}",
-    "accept": ["format"],
+    "accept": [
+      "format"
+    ],
     "explanation": "$($arg:tt)* ধরে রাখা token tree গুলো আবার format!-এ পাঠানো হয় — সে format string + argument থেকে একটা String বানিয়ে দেয়, আর println! সেটাকে [INFO] prefix-এর পাশে ছাপায়। tt (token tree) হলো সবচেয়ে general fragment specifier — যেকোনো token pass করা যায়, তাই logger ম্যাক্রোতে এটাই ব্যবহার হয়।"
   },
   {
@@ -100,7 +95,9 @@
     "type": "code",
     "prompt": "make_struct!(Point) call থেকে struct Point; generate করতে blank-এ কোন fragment specifier বসবে?",
     "code": "macro_rules! make_struct {\n    ($name:____) => {\n        struct $name;\n    };\n}\n\nfn main() {\n    make_struct!(Point);\n    let p = Point;\n    println!(\"made a struct\");\n}",
-    "accept": ["ident"],
+    "accept": [
+      "ident"
+    ],
     "explanation": "$name:ident identifier ধরে (Point, MyType ইত্যাদি) — আর সেটাই struct-এর নাম হিসেবে generated code-এ বসে। expr হলে Point-কে expression হিসেবে ধরত, তখন সেটাকে struct-এর নামের জায়গায় বসানো যেত না। chapter-এর টেবিলে দেখো: expr, ident, ty, stmt, block, literal, path — প্রতিটার নিজস্ব কাজ।"
   },
   {

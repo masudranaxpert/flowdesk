@@ -44,11 +44,25 @@ export function normalizeCode(s: string): string {
     .join('\n');
 }
 
+/** Normalize punctuation and trailing semicolons for relaxed syntax comparisons. */
+function stripPunctuationSpacing(str: string): string {
+  return str
+    .replace(/;+\s*$/, '')
+    .replace(/\s*([=+\-*\/&,:;{}()[\]<>|])\s*/g, '$1')
+    .trim();
+}
+
 export function isCorrect(q: QuizQuestion, response: number | string | undefined): boolean {
   if (response === undefined || response === '') return false;
   if (q.type === 'code') {
     const given = normalizeCode(String(response));
-    return (q.accept ?? []).some((a) => normalizeCode(a) === given);
+    const givenClean = stripPunctuationSpacing(given);
+
+    return (q.accept ?? []).some((a) => {
+      const aNorm = normalizeCode(a);
+      if (given === aNorm) return true;
+      return givenClean === stripPunctuationSpacing(aNorm);
+    });
   }
   return response === q.answer;
 }

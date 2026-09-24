@@ -1,121 +1,144 @@
 # Rust কী ও কেন শিখবে
 
-Rust হলো একটা systems programming language যেটা C আর C++ এর মতো fast, কিন্তু সাথে একটা বিশাল সুবিধা — **memory safety without garbage collector**। Mozilla 2010 সালে এটা তৈরি শুরু করে, আর আজকে Rust টানা ৯ বছর ধরে Stack Overflow এর survey তে **সবচেয়ে প্রিয় language** (most loved language)।
+Rust হলো একটি আধুনিক systems programming language যা C এবং C++ এর মতো সমান গতিসম্পন্ন ও দক্ষ, কিন্তু সাথে দেয় একটি যুগান্তকারী নিশ্চয়তা — **Garbage Collector (GC) ছাড়াই compile-time memory safety**। Mozilla ২০১০ সালে এটি প্রথম তৈরি করে এবং Stack Overflow-এর বৈশ্বিক ডেভেলপার সার্ভেতে Rust টানা ৯ বছর ধরে **বিশ্বের সবচেয়ে প্রশংসিত ভাষা** (Most Loved Programming Language)।
 
-## Rust কেন শিখবে?
+---
 
-C++ এ memory leak, null pointer, data race — এই সমস্যাগুলো ডিবাগ করা ছিল দুঃস্বপ্ন। Rust এই সমস্যাগুলো **compile time** এই ধরে ফেলে। একটা উদাহরণ দেখি:
+## ১. Rust কেন শিখবে?
+
+ঐতিহ্যগত সিস্টেম প্রোগ্রামিং ভাষাগুলোতে (যেমন C বা C++) মেমোরি ম্যানেজমেন্ট সম্পূর্ণ প্রোগ্রামারকে নিজে হাতে (`malloc`/`free`) করতে হয়। এর ফলে সামান্যতম ভুলে তৈরি হয়:
+- **Memory Leak**: মেমোরি ব্যবহার শেষে রিলিজ না করা।
+- **Dangling Pointer / Use-After-Free**: মুছে ফেলা মেমোরি অ্যাক্সেস করে ক্র্যাশ বা সিকিউরিটি হোল।
+- **Data Race**: মাল্টি-থ্রেডিংয়ে একই মেমোরিতে একসাথে একাধিক থ্রেডের পরিবর্তন।
+
+Python বা Go-এর মতো আধুনিক ভাষাগুলোতে একটি ব্যাকগ্রাউন্ড **Garbage Collector (GC)** থাকে যা নিয়মিত মেমোরি স্ক্যান করে খালি করে। কিন্তু এর ফলে অতিরিক্ত CPU overhead এবং অপ্রত্যাশিত pause তৈরি হয়।
+
+Rust এই দ্বন্দ্ব সমাধান করেছে **Ownership ও Borrowing** সিস্টেমের মাধ্যমে। প্রোগ্রাম চলার সময় কোনো GC লাগে না; কম্পাইলার নিজে বিল্ড করার সময়ই প্রতিটি ভেরিয়েবলের মেমোরি ব্যবহারের মেয়াদ নিশ্চিত করে।
 
 ```rust
 fn main() {
+    // Print a welcoming message to stdout
     println!("Hello, World!");
 }
 ```
 
-Python এর মতোই সোজা। কিন্তু ভেতরে Rust C++ এর সমান fast। কোনো garbage collector নেই, কোনো runtime overhead নেই।
+### প্রথম কোডের লাইন-বাই-লাইন বিশ্লেষণ:
 
-> [!note]
-> **`println!` আসলে function না — macro।** নামের শেষের `!` চিহ্নটাই সেটা বোঝায়। Compile করার সময় rustc এই লাইনটাকে ভেতরে expand করে: format string parse হয়, argument গুলোর type check হয়, তারপর plain stdout-write কোড generate হয়। তাই runtime এ কোনো format parser চলে না — C এর `printf` যেখানে format string runtime এ parse হয়, Python এ ভুল format ধরা পড়ে runtime exception এ — Rust এ দুটোই compile error।
+1. **`fn main()`**: Rust প্রোগ্রামের এক্সিকিউশন শুরু হয় `main` ফাংশন দিয়ে। `fn` কিওয়ার্ড দিয়ে ফাংশন সংজ্ঞায়িত করা হয়।
+2. **`{ ... }`**: ফাংশনের সমস্ত কোড কার্লি ব্রেসের ভেতরে ব্লক হিসেবে আবদ্ধ থাকে।
+3. **`println!("Hello, World!");`**:
+   - `println!` সাধারণ ফাংশন নয় — এটি একটি **macro** (নামের শেষে `!` দেখে শনাক্ত করা যায়)।
+   - কম্পাইল করার সময় Rust কম্পাইলার (`rustc`) এই লাইনটিকে সম্প্রসারিত (expand) করে দক্ষ মেশিন কোডে রূপান্তর করে।
+   - লাইনের শেষে সেমিকোলন (`;`) আবশ্যক, যা একটি স্টেটমেন্টের সমাপ্তি নির্দেশ করে।
 
-> [!tip]
-> তুমি যদি Python জানো — Rust শেখা তোমার জন্য ভালো সিদ্ধান্ত। Python দ্রুত কোড লেখা যায়, কিন্তু Rust দ্রুত চলে। দুটোই জানলে তুমি সব জায়গায় survive করতে পারবে।
+---
 
-## Python vs C++ vs Rust — তুলনা
+## ২. ভেরিয়েবল ও ফরম্যাটিং সহ প্রিন্ট করা
+
+Rust-এ টেক্সট ফরম্যাটিং অত্যন্ত সহজ ও শক্তিশালী:
+
+```rust
+fn main() {
+    let language = "Rust";
+    let version = 2024;
+    
+    // Positional interpolation using curly braces
+    println!("স্বাগতম! আমি {} সংস্করণ শিখছি।", language);
+    
+    // Direct variable interpolation inside placeholder
+    println!("ভাষা: {language}, এডিশন: {version}");
+}
+```
+
+### কোডের লাইন-বাই-লাইন বিশ্লেষণ:
+- **`let language = "Rust";`**: `let` দিয়ে ভেরিয়েবল ঘোষণা করা হয়। Rust স্বয়ংক্রিয়ভাবে এর টাইপ অনুমান (type inference) করে নেয়।
+- **`{}` Placeholder**: `println!` ম্যাক্রোতে `{}` চিহ্নটি একটি ফরম্যাট স্পেসিফায়ার। কমার পরে থাকা ভেরিয়েবলের মান ক্রমানুসারে এই বন্ধনীগুলোর জায়গায় প্রতিস্থাপিত হয়।
+- **`{language}`**: আধুনিক Rust-এ ভেরিয়েবলের নাম সরাসরি বন্ধনীর মধ্যে লিখলেও তা সুন্দরভাবে প্রিন্ট হয়।
+
+---
+
+## ৩. Python vs C++ vs Rust — তুলনা
 
 | বিষয় | Python | C++ | Rust |
-|-------|--------|-----|------|
-| **Speed** | ধীর (interpreted) | খুব fast | খুব fast (C++ এর সমান) |
-| **Memory Safety** | Safe (GC আছে) | Unsafe (manual) | Safe (GC ছাড়াই!) |
-| **Learning Curve** | সহজ | কঠিন | মাঝারি |
-| **Garbage Collector** | আছে | নেই | নেই |
-| **Concurrency** | GIL সমস্যা | Complex (data race) | Safe (compile-time guarantee) |
-| **Use Case** | Script, AI, Web | Game engine, OS | OS, WebAssembly, CLI, Server |
+| :--- | :--- | :--- | :--- |
+| **গতি (Speed)** | ধীর (Interpreted) | সর্বোচ্চ গতি | সর্বোচ্চ গতি (C++ এর সমকক্ষ) |
+| **মেমোরি নিরাপত্তা** | নিরাপদ (GC আছে) | ঝুঁকিপূর্ণ (Manual free) | **নিরাপদ (GC ছাড়াই!)** |
+| **কনকারেন্সি** | GIL বাধা (Slow) | জটিল (Data race ঝুঁকি) | **Fearless Concurrency** |
+| **টাইপ সিস্টেম** | Dynamic | Static | Static + Type Inference |
+| **টুলিং** | pip + venv (আলাদা) | CMake/Make (জটিল) | **Cargo (অল-ইন-ওয়ান)** |
 
-## কোথায় Rust ব্যবহার হয়?
+---
 
-| Field | কী করা যায় | উদাহরণ |
-|-------|------------|---------|
-| **Systems Programming** | OS, driver, embedded | Linux kernel (Rust support added) |
-| **Web** | Backend server, API | Web framework: Actix, Axum |
-| **WebAssembly** | Browser এ fast code | Figma, Photoshop web version |
-| **CLI Tools** | Fast command-line tool | ripgrep, fd, bat |
-| **Blockchain** | Smart contract, crypto | Solana, Polkadot |
-| **Game Dev** | Game engine | Bevy engine |
+## ৪. কোথায় Rust সবচেয়ে বেশি ব্যবহৃত হচ্ছে?
 
-> [!note]
-> বড় বড় কোম্পানি — Microsoft, Google, Amazon, Discord, Dropbox — সবাই Rust ব্যবহার করছে। Discord তাদের backend Go থেকে Rust এ সরিয়েছে কারণ Rust তাদের latency অনেক কমিয়েছে।
+- **Systems & Kernel**: Linux Kernel, Windows Components, Redox OS।
+- **Cloud & High Performance Servers**: Discord, Cloudflare, Amazon AWS, Dropbox।
+- **Fast CLI Tools**: `ripgrep` (grep এর চেয়ে ১০ গুণ দ্রুত), `fd` (find এর বিকল্প), `bat`।
+- **WebAssembly (Wasm)**: ব্রাউজারে ভারী অ্যাপ্লিকেশন চালাতে (Figma, Photoshop Web)।
+- **Modern Web Backends**: Actix-web, Axum (অত্যন্ত উচ্চ throughput ও নিম্ন latency)।
 
-## Rust ইনস্টল করা
+---
 
-Rust ইনস্টল করার অফিশিয়াল টুল হলো `rustup`। এটা Rust এর সব toolchain ম্যানেজ করে।
+## ৫. Rust ইনস্টলেশন
 
-### Windows
+Rust ইনস্টল ও ম্যানেজ করার অফিশিয়াল টুল হলো **`rustup`**।
 
-1. **rustup-init.exe** ডাউনলোড করো — [rustup.rs](https://rustup.rs) থেকে
-2. রান করো — next-next দিলেই হবে
-3. Visual Studio C++ Build Tools লাগবে (C++ linker এর জন্য)
-
-### macOS / Linux
-
-Terminal এ এই কমান্ডটা দাও:
-
+### Linux ও macOS-এ:
+টার্মিনালে নিচের কমান্ডটি রান করো:
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-### ইনস্টল verify করা
+### Windows-এ:
+1. [rustup.rs](https://rustup.rs) থেকে `rustup-init.exe` ডাউনলোড করে চালান।
+2. Visual Studio C++ Build Tools আবশ্যক।
 
+### ইনস্টলেশন যাচাই:
 ```bash
 rustc --version
 cargo --version
 ```
+যদি `rustc 1.8x.x` এবং `cargo 1.8x.x` দেখায়, তবে তোমার এনভায়রনমেন্ট পুরোপুরি প্রস্তুত।
 
-যদি দেখো `rustc 1.85.0` আর `cargo 1.85.0` — তার মানে সব ঠিক আছে!
+---
 
-> [!warn]
-> Windows এ Rust কাজ করাতে চাইলে **Visual Studio Build Tools** অবশ্যই ইনস্টল করতে হবে। এটা ছাড়া Rust compile হবে না।
+## ৬. Cargo — Rust-এর শক্তিশালী টুলচেইন
 
-## Cargo — Rust এর সব কিছু
+Rust ইকোসিস্টেমে `cargo` একসাথে তিনটি মূল দায়িত্ব পালন করে:
+1. **Package Manager**: লাইব্রেরি (crates) ডিপেন্ডেন্সি ডাউনলোড ও ম্যানেজ করে।
+2. **Build System**: কোড অপটিমাইজ ও কম্পাইল করে বাইনারি বানায়।
+3. **Test Runner**: কোডের সমস্ত ইউনিট টেস্ট ও বেঞ্চমার্ক চালায়।
 
-Rust এ `cargo` হলো একই সাথে package manager, build tool, আর test runner। Python এর `pip` + `venv` + `pytest` — সব এক জায়গায়।
-
-নতুন প্রজেক্ট তৈরি করা:
-
+### নতুন প্রজেক্ট তৈরি ও স্ট্রাকচার:
 ```bash
-cargo new my_project
-cd my_project
+cargo new hello_cargo
+cd hello_cargo
 ```
 
-এটা এই structure তৈরি করবে:
-
-```
-my_project/
-├── Cargo.toml      # pyproject.toml / package.json এর মতো
+তৈরি হওয়া ফাইল স্ট্রাকচার:
+```text
+hello_cargo/
+├── Cargo.toml      # প্রজেক্টের মেটাডেটা ও ডিপেন্ডেন্সি তালিকা
 ├── src/
-│   └── main.rs     # entry point
-└── target/         # build output (gitignore করা থাকে)
+│   └── main.rs     # প্রোগ্রামের মূল এন্ট্রি পয়েন্ট
+└── target/         # কম্পাইল হওয়া আউটপুট ও বাইনারি (gitignore করা থাকে)
 ```
 
-রান করা:
+### দৈনন্দিন প্রয়োজনীয় Cargo কমান্ডসমূহ:
 
-```bash
-cargo run
-```
+| কমান্ড | কাজ ও উপযোগিতা |
+| :--- | :--- |
+| **`cargo check`** | কোডের সিনট্যাক্স ও টাইপ ভ্যালিডেট করে। মেশিন কোড তৈরি করে না বলে **অত্যন্ত দ্রুত** কাজ করে। |
+| **`cargo build`** | ডেভেলপমেন্ট বাইনারি তৈরি করে (`target/debug/hello_cargo`)। |
+| **`cargo run`** | এক কমান্ডেই কম্পাইল করে প্রোগ্রাম এক্সিকিউট করে। |
+| **`cargo test`** | প্রজেক্টের সমস্ত টেস্ট রান করে। |
+| **`cargo build --release`** | প্রোডাকশনের জন্য সর্বোচ্চ অপটিমাইজড বাইনারি তৈরি করে (`target/release/`)। |
 
-> [!example]
-> `Cargo.toml` হলো Python এর `pyproject.toml` বা Node এর `package.json` এর মতো। এখানে dependency, version, metadata সব থাকে।
+---
 
-## প্রথম Program
+## ৭. ইন্টারঅ্যাক্টিভ ইউজার ইনপুট প্রোগ্রাম
 
-`cargo new` করার পর `src/main.rs` ফাইলে এই কোডটা থাকবে:
-
-```rust
-fn main() {
-    println!("Hello, world!");
-}
-```
-
-চলো একটু বদলাই — user এর নাম নিয়ে greeting করি:
+এবার টার্মিনাল থেকে ইউজারের নাম ইনপুট নিয়ে তাকে স্বাগতম জানানোর একটি সম্পূর্ণ প্রোগ্রাম দেখি:
 
 ```rust
 use std::io;
@@ -123,70 +146,70 @@ use std::io;
 fn main() {
     println!("তোমার নাম কী?");
 
+    // Create a mutable, empty String buffer on the heap
     let mut name = String::new();
+
+    // Read a line from standard input into the buffer
     io::stdin()
         .read_line(&mut name)
         .expect("Failed to read line");
 
-    println!("হ্যালো, {}! Rust শেখায় স্বাগতম।", name.trim());
+    // Print greeting after stripping trailing newline characters
+    println!("হ্যালো, {}! Rust প্রোগ্রামিংয়ে স্বাগতম।", name.trim());
 }
 ```
 
-রান করো `cargo run` দিয়ে:
+### এই প্রোগ্রামের লাইন-বাই-লাইন পুঙ্খানুপুঙ্খ ব্যাখ্যা:
 
+1. **`use std::io;`**:
+   - Rust-এর স্ট্যান্ডার্ড লাইব্রেরির (`std`) ইনপুট/আউটপুট মডিউল `io` বর্তমান ফাইলে ইম্পোর্ট করা হয়েছে।
+   - এর ফলে আমরা সরাসরি `io::stdin()` কল করতে পারি।
+2. **`let mut name = String::new();`**:
+   - `let` দ্বারা ভেরিয়েবল ঘোষণা করা হয়, কিন্তু Rust-এ ভেরিয়েবল ডিফল্টভাবে **immutable** (অপরিবর্তনযোগ্য)।
+   - যেহেতু ইউজারের ইনপুট আসার পর ভেরিয়েবলের ভেতরে ডেটা রাখা হবে, তাই এটিকে পরিবর্তনশীল করতে **`mut`** কিওয়ার্ড বাধ্যতামূলক।
+   - `String::new()` একটি খালি স্ট্রিং বাফার তৈরি করে। এই মুহূর্তে হিপ মেমোরিতে কোনো বাড়তি অ্যালোকেশন হয় না (লেন্থ = 0, ক্যাপাসিটি = 0)।
+3. **`io::stdin().read_line(&mut name)`**:
+   - `io::stdin()` টার্মিনালের স্ট্যান্ডার্ড ইনপুট হ্যান্ডেল প্রদান করে।
+   - `.read_line(...)` ইউজারের এন্টার চাপার আগ পর্যন্ত সমস্ত ক্যারেক্টার পড়ে বাফারে পুশ করে।
+   - **`&mut name`**: মেমোরির মালিকানা হস্তগত না করে বাফারটিকে মডিফাই করার জন্য একটি **mutable reference** প্রদান করা হয়েছে।
+   - `read_line` একটি `Result<usize, io::Error>` রিটার্ন করে, যা নির্দেশ করে সফলভাবে কত বাইট পড়া গেছে অথবা কোনো হার্ডওয়্যার/ওএস এরর হয়েছে কিনা।
+4. **`.expect("Failed to read line");`**:
+   - Rust-এ কোনো এরর অবহেলা করা যায় না।
+   - `.expect()` মেথডটি `Result`-কে আনপ্যাক করে: সফল হলে বাইট সংখ্যা বের করে দেয়, আর এরর হলে প্রোগ্রাম বন্ধ (panic) করে টার্মিনালে মেসেজটি প্রদর্শন করে।
+5. **`name.trim()`**:
+   - ইউজার টাইপ করে Enter চাপলে ইনপুটের শেষে একটি নিউলাইন ক্যারেক্টার (`\n`) বা ক্যারেজ রিটার্ন যুক্ত থাকে।
+   - `.trim()` মেথডটি কোনো নতুন মেমোরি কপি না করে শুধু শুরু ও শেষের অপ্রয়োজনীয় স্পেস এবং নিউলাইন বাদ দিয়ে একটি `&str` স্লাইস ভিউ রিটার্ন করে।
+
+---
+
+## ৮. Rust কম্পাইলার কেন ডেভেলপারদের সবচেয়ে প্রিয়?
+
+Rust-এর কম্পাইলার (`rustc`) কেবল এরর ধরে না, বরং একজন ধৈর্যশীল শিক্ষকের মতো সমস্যাটির সঠিক সমাধানও বাতলে দেয়। উদাহরণস্বরূপ, যদি তুমি `mut` লিখতে ভুলে যাও:
+
+```rust
+fn main() {
+    let x = 5;
+    x = 6;
+}
 ```
-তোমার নাম কী?
-Rahim
-হ্যালো, Rahim! Rust শেখায় স্বাগতম।
-```
 
-> [!tip]
-> Python এ এই কাজটা এক লাইনে হতো (`input()`)। Rust এ একটু বেশি কোড লাগে, কিন্তু এর কারণ হলো Rust সব কিছু explicit রাখে — কোনো hidden magic নেই।
-
-### এই Program এ ভেতরে কী ঘটছে?
-
-ছোট দেখলেও এই কোডে পাঁচটা জিনিস কাজ করছে — প্রতিটার ভেতরে যা চলে:
-
-- **`use std::io;`** — তোমার প্রথম `use` দেখা। মানে: "standard library-র `io` module টা এই ফাইলে এনে নাও, যাতে সংক্ষেপে `io::stdin()` লিখতে পারি।" `std` হলো Rust-এর সাথেই আসা বিশাল library — `String`, `Vec`, file, network সব ওখানে। মনে রেখো: Rust-এর আসল keyword মাত্র ~৩৫টা; `String`, `Some` এগুলো "ভাষার জাদু" না, library-র সাধারণ type (বিস্তারিত পরের chapter-এর "Builtins কোথা থেকে আসে" section-এ)।
-- **`String::new()`** — এই মুহূর্তে কোনো heap allocation হয় না। শুধু একটা খালি `String` header তৈরি হয়: `len = 0`, `capacity = 0`। Memory লাগবে যখন প্রথম byte ঢুকবে, তখন।
-- **`io::stdin().read_line(&mut name)`** — terminal থেকে newline পর্যন্ত byte গুলো পড়ে সরাসরি `name` এর buffer এ লেখে (buffer ছোট হলে বড় করে নেয়), শেষে `Ok(কত byte পড়লাম)` অথবা `Err` return করে। তাই return type হলো `io::Result<usize>` — এই error handle না করলে compiler ছাড়বে না।
-- **`.expect("...")`** — `Result` এর উপর চলা একটা check: `Ok(v)` হলে ভেতরের value বের করে দেয়, `Err` হলে তোমার message দিয়ে সাথে সাথে panic — মানে program বন্ধ। Magic কিছু না, check + early exit।
-- **`.trim()`** — নতুন String বানায় না, copy ও হয় না। শুধু একটা `&str` slice return করে — শুরু-শেষের whitespace বাদ দিয়ে pointer আর length একটু সরিয়ে। O(1), zero allocation।
-
-> [!tip]
-> খেয়াল করো — `trim()` এর মতো অনেক std method আসলে নতুন data বানায় না, পুরনো data দেখার "জানালা" (slice) বানায়। Rust এর performance এর একটা বড় সোর্স এটাই।
-
-## কেন Rust সবার থেকে আলাদা?
-
-Rust এর মূল innovation হলো **Ownership system**। এই কনসেপ্টের কারণে:
-
-1. **Garbage collector লাগে না** — memory compile time এ manage হয়
-2. **Data race হতে পারে না** — concurrent code automatically safe
-3. **Null pointer exception নেই** — `Option<T>` দিয়ে null safety
-4. **Performance আর safety একসাথে** — trade-off করতে হয় না
-
-### Compile Pipeline — তোমার কোড machine code হওয়ার পথ
-
-Rust ahead-of-time compiled — `cargo run` দিলে ভেতরে এই pipeline চলে:
-
+কম্পাইলার সরাসরি নির্দেশ করবে:
 ```text
-main.rs
-  │  rustc: parse → type check → borrow check (ownership/borrowing rule গুলো এখানে verify হয়)
-  ▼
-ভেতরের intermediate form (MIR) → LLVM IR
-  │  LLVM optimizer: অপ্রয়োজনীয় কোড বাদ, function inline, loop unroll
-  ▼
-machine code (binary) — এরপর চলন্ত program এর সাথে আর কোনো runtime নেই
+error[E0384]: cannot assign twice to immutable variable `x`
+ --> src/main.rs:3:5
+  |
+2 |     let x = 5;
+  |         - first assignment to `x`
+  |         help: consider making this binding mutable: `mut x`
+3 |     x = 6;
+  |     ^^^^^ cannot assign twice to immutable variable
 ```
 
-Python এ interpreter প্রতি লাইন runtime এ চলে, Java এ JIT পরে optimize করে। Rust এ পুরো ব্যাপারটা build এর সময়েই শেষ। এখান থেকেই "builtin গুলো zero-cost কেন" বোঝা যায়:
+---
 
-- `println!`, `vec!` এর মতো macro compile time এ expand হয়ে সরাসরি সাধারণ Rust কোড হয়ে যায় — runtime এ macro engine বলে কিছু নেই।
-- `String`, `Vec` এর method গুলো সাধারণ Rust-লেভেল কোড — LLVM সেগুলো তোমার কোডে inline করে দেয়, ফলে hand-written C এর সমান (মাঝে মাঝে তার চেয়েও ভালো) machine code বেরোয়।
-- Ownership/borrow এর সব check compile time এই শেষ — চলন্ত program এ GC বা reference counting কিছুই চলে না। Safety এর "বিল" build time এই পরিশোধ হয়।
+## সারাংশ
 
-পরের chapter গুলোতে আমরা এক এক করে সব শিখবো। মনে রাখবে — Rust শুরুতে একটু কঠিন মনে হবে (especially ownership আর borrowing), কিন্তু একবার concept পরিষ্কার হলে এর চেয়ে দারুণ language আর নেই।
-
-## Summary
-
-Rust হলো fast + safe + modern systems language। C++ এর power, Python এর tooling ecosystem, আর নিজস্ব memory safety guarantee। পরের chapter এ আমরা syntax আর basic concept গুলো দেখবো। চলো এগোই!
+1. Rust হলো শূন্য ওভারহেড সহ মেমোরি নিরাপদ ভাষা — এতে কোনো Garbage Collector নেই।
+2. `cargo` দিয়ে খুব সহজেই প্রজেক্ট তৈরি (`cargo new`), যাচাই (`cargo check`), এবং রান (`cargo run`) করা যায়।
+3. ডিফল্টভাবে প্রতিটি ভেরিয়েবল immutable; পরিবর্তন করতে হলে `let mut` লিখতে হয়।
+4. স্ট্যান্ডার্ড লাইব্রেরির যেকোনো ফাংশন `use` কিওয়ার্ড দিয়ে ফাইলে এনে সহজে ব্যবহার করা যায়।

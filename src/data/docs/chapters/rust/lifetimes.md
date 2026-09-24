@@ -97,16 +97,26 @@ fn main() {
 
 ```rust
 fn main() {
-    let s1 = String::from("hello");
+    let s1 = String::from("long string is long");
     let result;
     {
-        let s2 = String::from("world!");
+        let s2 = String::from("xyz");
         result = longest(s1.as_str(), s2.as_str());
-        println!("{}", result);  // OK — এখানে সব valid
-    }
-    // এখানে result ব্যবহার করলে ERROR — s2 drop হয়ে গেছে
+        println!("Longest: {}", result); // OK — এখানে s1 ও s2 দুটোই জীবিত
+    } // s2 এর স্কোপ শেষ — s2 ড্রপ হয়ে গেছে!
+
+    // ERROR! যদি এখানে result ব্যবহার করার চেষ্টা করি:
+    // println!("Longest: {}", result); 
+    // COMPILER ERROR: E0597 `s2` does not live long enough!
 }
 ```
+
+### কেন এই এররটি ঘটল? (Aha! Moment):
+1. `longest` ফাংশনের সিগনেচারে বলা হয়েছে: `longest<'a>(x: &'a str, y: &'a str) -> &'a str`।
+2. এর অর্থ: রিটার্ন করা রেফারেন্সটির লাইফটাইম হবে ইনপুট `x` এবং `y` এর মধ্যে **যেটির জীবনকাল ছোট**, ঠিক সেটির সমান।
+3. এখানে `s1` বাইরের ব্লকে জীবিত, কিন্তু `s2` ভেতরের ব্লকে সীমাবদ্ধ। ফলে `'a` এর কার্যকর সীমা দাঁড়ায় ভেতরের ছোট্ট ব্লকটি।
+4. যখন ভেতরের ব্লকটি শেষ হয়, `s2` মেমোরি থেকে ড্রপ হয়ে যায়। সুতরাং `result` আর কোনোভাবেই ভ্যালিড থাকতে পারে না।
+5. কম্পাইলার রানটাইমে কোনো ক্র্যাশ বা ড্যাঙ্গলিং পয়েন্টার হতে দেওয়ার আগেই কম্পাইল টাইমে `E0597` এরর দিয়ে কোডটি আটকে দেয়।
 
 ## Lifetime Elision Rules
 

@@ -268,21 +268,24 @@ fn main() {
 
     // Heap data — move
     let s1 = String::from("hello");
-    let len = calculate_length(s1.clone()); // clone করলাম যাতে s1 আর থাকে
+    // যদি আমরা সরাসরি `calculate_length(s1)` দিতাম, তবে s1 এর মালিকানা ফাংশনে চলে যেত
+    // এবং নিচে println!-এ s1 ব্যবহার করতে গেলে কম্পাইলার error দিত: E0382 (borrow of moved value)
+    let len = calculate_length(s1.clone()); // তাই সাময়িকভাবে clone করা হয়েছে
 
     println!("'{}' এর length {}", s1, len);
 }
 
 fn calculate_length(s: String) -> usize {
     s.len()
-}   // s drop হয়ে যায়
+}   // ফাংশন শেষ: s মেমোরি থেকে ড্রপ হয়ে যায়
 ```
 
-> [!note]
-> **`s.len()` এর ভেতরে:** কোনো character গোনা হয় না — শুধু `len` field টা সরাসরি return করে। আর Rust এ String এর `len` মানে **byte count**, character count না (বাংলা 'ক' নিজেই ৩ byte!)। O(1), এক field read।
-
-> [!tip]
-> এখনকার জন্য `clone()` ব্যবহার করো যখন compiler ownership error দেখায়। পরের chapter এ শিখবো কীভাবে **borrowing** দিয়ে এই সমস্যা আরো ভালো ভাবে solve করা যায় — clone ছাড়াই।
+### কেন এই সতর্কতা?
+- যদি `s1.clone()` না লিখে `calculate_length(s1)` লেখা হতো, `s1` ফাংশনের প্যারামিটার `s`-এ মুভ হয়ে যেত।
+- ফাংশনের ব্র্যাকেট `}` শেষ হওয়া মাত্র `s` মেমোরি থেকে ড্রপ হয়ে যেত।
+- ফলস্বরূপ, `main` ফাংশনে এসে `println!("{}", s1);` কল করলে কম্পাইলার তীব্র আপত্তি জানাত:
+  `error[E0382]: borrow of moved value: s1`
+- পরের অধ্যায়ে আমরা দেখব কীভাবে **Borrowing (`&s1`)** ব্যবহার করে এই অপ্রয়োজনীয় `clone()` সম্পূর্ণ পরিহার করা যায়।
 
 ## Summary
 

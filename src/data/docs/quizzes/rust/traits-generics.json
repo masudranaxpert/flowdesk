@@ -16,17 +16,13 @@
   {
     "id": "traits-generics-2",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "এই কোডের output কী?",
-    "code": "trait Summary {\n    fn summarize(&self) -> String;\n}\n\nstruct Tweet {\n    username: String,\n    text: String,\n}\n\nimpl Summary for Tweet {\n    fn summarize(&self) -> String {\n        format!(\"@{}: {}\", self.username, self.text)\n    }\n}\n\nfn main() {\n    let t = Tweet {\n        username: String::from(\"bot\"),\n        text: String::from(\"hello\"),\n    };\n    println!(\"{}\", t.summarize());\n}",
-    "options": [
-      "@bot: hello",
-      "Tweet { username: \"bot\", text: \"hello\" }",
-      "bot: hello",
-      "Compile error — trait import না করে summarize call করা যায় না"
-    ],
-    "answer": 0,
-    "explanation": "`impl Summary for Tweet`-এ দেওয়া format: `\"@{}: {}\"` — username-এর আগে @ বসে, তাই `@bot: hello`। Struct-এর মতো Debug ছাপ দিতে হলে `{:?}` আর `#[derive(Debug)]` লাগত — এখানে সেটা নেই।"
+    "type": "code",
+    "prompt": "Tweet স্ট্রাক্টের জন্য Summary ট্রেইট ইমপ্লিমেন্ট করার ঘোষণা লাইনটি সঠিকভাবে লিখো:",
+    "code": "trait Summary {\n    fn summarize(&self) -> String;\n}\n\nstruct Tweet {\n    username: String,\n    text: String,\n}\n\n____ {\n    fn summarize(&self) -> String {\n        format!(\"@{}: {}\", self.username, self.text)\n    }\n}",
+    "explanation": "কোনো নির্দিষ্ট টাইপের জন্য ট্রেইট ইমপ্লিমেন্ট করতে impl TraitName for TypeName সিনট্যাক্স ব্যবহার করতে হয়।",
+    "accept": [
+      "impl Summary for Tweet"
+    ]
   },
   {
     "id": "traits-generics-3",
@@ -59,17 +55,13 @@
   {
     "id": "traits-generics-5",
     "difficulty": "medium",
-    "type": "output",
-    "prompt": "এই কোডের output কী?",
-    "code": "fn largest<T: PartialOrd>(list: &[T]) -> &T {\n    let mut largest = &list[0];\n    for item in &list[1..] {\n        if item > largest {\n            largest = item;\n        }\n    }\n    largest\n}\n\nfn main() {\n    let numbers = vec![34, 50, 25, 100, 65];\n    let chars = vec!['y', 'm', 'a', 'q'];\n    println!(\"{} {}\", largest(&numbers), largest(&chars));\n}",
-    "options": [
-      "100 y",
-      "100 q",
-      "34 y",
-      "Compile error — একই generic function দুই রকম type-এ call করা যায় না"
-    ],
-    "answer": 0,
-    "explanation": "সংখ্যার মধ্যে সবচেয়ে বড় 100। char compare হয় code point অনুযায়ী — 'y' (121) সবচেয়ে বড়, 'q' (113) না। Monomorphization-এর কারণে দুই call-এর জন্য দুইটা আলাদা version compile হয়, কোনো conflict নেই।"
+    "type": "code",
+    "prompt": "জেনেরিক ফাংশন `largest` ডিক্লেয়ার করো যা PartialOrd ট্রেইট বাউন্ড যুক্ত একটি জেনেরিক টাইপ T গ্রহণ করে:",
+    "code": "fn largest<____>(list: &[T]) -> &T {\n    let mut largest = &list[0];\n    for item in &list[1..] {\n        if item > largest {\n            largest = item;\n        }\n    }\n    largest\n}",
+    "explanation": "জেনেরিক টাইপের উপাদানগুলোর মধ্যে তুলনা করতে সক্ষম হতে <T: PartialOrd> ট্রেইট বাউন্ড দেওয়া বাধ্যতামূলক।",
+    "accept": [
+      "T: PartialOrd"
+    ]
   },
   {
     "id": "traits-generics-6",
@@ -77,7 +69,9 @@
     "type": "code",
     "prompt": "`a > b` compare করতে পারার জন্য blank-এ কোন trait bound বসবে? (`>` operator আসলে trait method-এর sugar)",
     "code": "fn longest<T: ____>(a: T, b: T) -> T {\n    if a > b { a } else { b }\n}",
-    "accept": ["PartialOrd"],
+    "accept": [
+      "PartialOrd"
+    ],
     "explanation": "Rust-এ `==`, `<`, `>`, `+` সব operator আসলে trait method-এর sugar — `a > b` মানে PartialOrd-র compare method call। তাই bound `T: PartialOrd` দিতে হয়, নাহলে compiler জানবেই না কোন method call করবে। দুই parameter same type হতে হলে trait bound syntax-ই ব্যবহার করো।"
   },
   {
@@ -128,7 +122,9 @@
     "type": "code",
     "prompt": "একই Vec-এ Article আর Tweet — দুই রকম type রাখতে চাই। Blank-এ কী বসবে?",
     "code": "trait Summary {\n    fn summarize(&self) -> String;\n}\n\nstruct Article {\n    title: String,\n    author: String,\n    content: String,\n}\n\nstruct Tweet {\n    username: String,\n    text: String,\n}\n\nimpl Summary for Article {\n    fn summarize(&self) -> String {\n        format!(\"{} by {}\", self.title, self.author)\n    }\n}\n\nimpl Summary for Tweet {\n    fn summarize(&self) -> String {\n        format!(\"@{}: {}\", self.username, self.text)\n    }\n}\n\nfn main() {\n    let items: Vec<____> = vec![\n        Box::new(Article {\n            title: String::from(\"News\"),\n            author: String::from(\"AP\"),\n            content: String::from(\"...\"),\n        }),\n        Box::new(Tweet {\n            username: String::from(\"user\"),\n            text: String::from(\"Hello\"),\n        }),\n    ];\n    for item in &items {\n        println!(\"{}\", item.summarize());\n    }\n}",
-    "accept": ["Box<dyn Summary>"],
+    "accept": [
+      "Box<dyn Summary>"
+    ],
     "explanation": "মিশ্র type-এর collection-এ লাগে trait object: `Box<dyn Summary>`। `dyn Summary`-র size compile time-এ জানা নেই (DST), তাই Box-এ মুড়ে heap-এ রাখতে হয়; method call যায় vtable দিয়ে (dynamic dispatch)। সব আইটেম একই type হলে `Vec<T>` + generic-ই যেত — static dispatch, দ্রুত।"
   }
 ]

@@ -307,18 +307,37 @@ let y = {
     z + 1   // semicolon নেই → এটাই block এর value
 };          // y = 4
 
-// Statement হিসেবে লিখলে return হবে না
-let w = {
+// Statement হিসেবে লিখলে ব্লকের মান হয় unit type `()`
+let w: i32 = {
     let z = 3;
-    z + 1;  // semicolon আছে → এটা statement, return করবে না
-};          // ERROR!
+    z + 1;  // semicolon আছে → এটি statement, কোনো মান রিটার্ন করে না (রিটার্ন করে `()`)
+};          // COMPILER ERROR! expected `i32`, found `()`
 ```
 
 > [!tip]
-> এই expression/statement distinction হলো Rust এর সবচেয়ে গুরুত্বপূর্ণ syntax rule। মনে রাখবে — **semicolon দিলে statement, না দিলে expression**।
+> এই expression/statement পার্থক্য হলো Rust এর সবচেয়ে গুরুত্বপূর্ণ syntax rule। মনে রাখবে — **semicolon দিলে statement (মান হয় `()`), semicolon না দিলে expression (শেষ এক্সপ্রেশনের মানটিই ব্লকের রিটার্ন মান)**।
 
 > [!note]
-> ভেতরের ঘটনা: প্রতিটা block `{}` একটা expression, type হলো তার শেষ expression এর type। কিন্তু expression এর পরে `;` বসালে সেটা statement হয়ে যায় আর value দেয় **`()`** — unit type, মানে "কিছুই না"। তাই `z + 1;` লিখলে block টা `i32` এর বদলে `()` দেয় — expected type এর সাথে mismatch, তাই ERROR।
+> ভেতরের ঘটনা: প্রতিটা block `{}` একটি expression, যার টাইপ হলো তার শেষ এক্সপ্রেশনের টাইপ। কিন্তু এক্সপ্রেশনের পরে `;` বসালে সেটি statement হয়ে যায় আর মান দেয় **`()`** — unit type, মানে "কিছুই না"। ফাংশন বা ব্লকে কোনো টাইপ প্রত্যাশা করলে unit type মেলায় না বলে কম্পাইলার এরর দেয়।
+
+## Type Casting — কোনো Implicit টাইপ রূপান্তর নেই
+
+Python বা C/C++ এ ছোট টাইপ স্বয়ংক্রিয়ভাবে বড় টাইপে কনভার্ট হয়ে যায় (যেমন `5 + 2.5` সরাসরি `7.5` হয়ে যায়)। কিন্তু Rust এ **implicit conversion সম্পূর্ণ নিষিদ্ধ**:
+
+```rust
+let a: i32 = 10;
+let b: f64 = 2.5;
+
+// ERROR! Rust এ দুটি ভিন্ন টাইপের মধ্যে সরাসরি অপারেশন করা যায় না
+// let sum = a + b; 
+
+// সঠিক সমাধান: `as` কিওয়ার্ড দিয়ে explicit type casting:
+let sum = (a as f64) + b; // 12.5 (উভয়ই f64)
+println!("Sum: {}", sum);
+```
+
+> [!note]
+> Rust কেন কঠোর? কারণ implicit casting অনেক সময় সূক্ষ্ম প্রেসিলেশন লস (precision loss) বা ওভারফ্লোর সৃষ্টি করে। তাই প্রোগ্রামারকে `as` কিওয়ার্ড দিয়ে সচেতনভাবে রূপান্তর করতে বাধ্য করা হয়।
 
 ## একসাথে সব — BMI Calculator
 
@@ -351,9 +370,24 @@ fn main() {
 }
 ```
 
-> [!example]
-> খেয়াল করো — `weight` variable দুইবার ব্যবহার হয়েছে কিন্তু দ্বিতীয়বার `let` দিয়ে shadow করা হয়েছে (string থেকে float এ convert)। এটাই shadowing এর real-world use case।
+### BMI প্রোগ্রামের লাইন-বাই-লাইন বিশ্লেষণ:
+1. **`let weight: f64 = weight.trim().parse().expect("Not a number");`**:
+   - এখানে একই নামের `weight` ভেরিয়েবলকে **shadowing** করা হয়েছে।
+   - প্রথমে ইউজার থেকে নেওয়া `String` বাফারের স্পেস বাদ দিয়ে `.trim()` করা হয়, তারপর `.parse()` স্ট্রিং থেকে `f64` ফ্লোটিং-পয়েন্ট সংখ্যায় রূপান্তর করে।
+   - টাইপ অ্যানোটেশন `: f64` কম্পাইলারকে স্পষ্ট করে দেয় কোন সংখ্যায় পার্স করতে হবে।
+2. **`let bmi = weight / (height * height);`**:
+   - গাণিতিক হিসাব। দুটি `f64` এর মধ্যে ভাগ ও গুণ হচ্ছে।
+3. **`println!("তোমার BMI: {:.2}", bmi);`**:
+   - `{:.2}` ফরম্যাট স্পেসিফায়ার নির্দেশ করে দশমিকের পর ঠিক ২ ঘর পর্যন্ত সংখ্যাটি প্রিন্ট করতে হবে।
+4. **`let category = if bmi < 18.5 { ... } else { ... };`**:
+   - `if/else` এখানে একটি এক্সপ্রেশন হিসেবে কাজ করছে। প্রতিটি ব্রাঞ্চ থেকে একটি `&str` মান রিটার্ন হয়ে সরাসরি `category` ভেরিয়েবলে বসে যাচ্ছে। কোনো টেনারি অপারেটর বা বাহ্যিক মিউটেবল ভেরিয়েবল লাগে না।
 
 ## Summary
 
-এই chapter এ দেখলাম — immutable by default, `mut`, data types, shadowing, function, expression vs statement। Rust এর syntax C++ এর মতো, কিন্তু safety rule Python এর মতো strict। পরের chapter এ control flow শিখবো।
+এই অধ্যায়ে আমরা শিখলাম:
+- ভেরিয়েবল ডিফল্টভাবে immutable; পরিবর্তনযোগ্য করতে `let mut` লাগে।
+- প্রিমিটিভ স্কেলার টাইপ (integers, floats, bool, char) এবং কম্পাউন্ড টাইপ (tuple, array)।
+- `as` কিওয়ার্ড দিয়ে explicit type casting করতে হয়; implicit casting নেই।
+- Shadowing দিয়ে একই ভেরিয়েবল নাম ব্যবহার করে টাইপ ও মান উভয়ই নিরাপদে প্রতিস্থাপন করা যায়।
+- ব্লকের শেষ লাইনে সেমিকোলন না থাকলে তা রিটার্ন এক্সপ্রেশন, আর সেমিকোলন দিলে স্টেটমেন্ট (মান হয় `()`)।
+পরের অধ্যায়ে আমরা Rust-এর decision-making ও control flow (if/else, loops, match) বিস্তারিত শিখব।

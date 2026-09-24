@@ -190,22 +190,13 @@ let total = sum_slice(&arr);  // 15
 > [!tip]
 > **`nums.iter().sum()` এর ভেতরে:** `iter()` element গুলোর উপর একটা pointer চালায়, `sum()` সবকিছু একটাই loop এ fold করে যোগ করে। LLVM পুরোটাকে মিলিয়ে একটা সাধারণ summing loop বানায় — মাঝপথে কোনো নতুন array তৈরি হয় না। (Iterator এর পুরো গল্প পরের chapter এ।)
 
-## Borrowing in Practice — বাস্তব উদাহরণ
+## Borrowing in Practice — বাস্তব উদাহরণ ও কম্পাইলারের জাদু
 
+চল একটি ক্লাসিক সমস্যা দেখি: একটি স্ট্রিং থেকে প্রথম শব্দটি বের করা।
+
+### ১. সূচক (Index) রিটার্ন করার সমস্যা:
 ```rust
-fn main() {
-    let mut words = String::from("hello beautiful world");
-
-    let first = first_word(&words);  // 5 (first word length)
-    println!("First word length: {}", first);
-
-    words.clear();  // mutable operation
-
-    // first এখনো 5, কিন্তু words empty
-    // Rust আমাদের বাধ্য করবে না clear করার আগে first ব্যবহার করতে
-}
-
-fn first_word(s: &String) -> usize {
+fn first_word_index(s: &str) -> usize {
     let bytes = s.as_bytes();
 
     for (i, &byte) in bytes.iter().enumerate() {
@@ -216,12 +207,51 @@ fn first_word(s: &String) -> usize {
     s.len()
 }
 ```
+যদি আমরা শুধু ইনডেক্স `usize` রিটার্ন করি, তবে মূল স্ট্রিং পরিবর্তিত বা খালি (`words.clear()`) হয়ে গেলেও ইনডেক্স `5` অক্ষত থেকে যায়। পরবর্তীতে সেই ইনডেক্স দিয়ে কাজ করতে গেলে ডেটা অসঙ্গতি বা রানটাইম এরর হতে পারে।
 
-> [!note]
-> এই function `&String` নিয়েছে — ownership নেয়নি। মূল value intact আছে। এটাই borrowing এর শক্তি — value access করো, ownership নাও নিয়ে।
+### ২. ইডিওম্যাটিক Rust সমাধান — Slice রিটার্ন করা:
+```rust
+// Return an immutable slice tied to the lifetime of the input string
+fn first_word(s: &str) -> &str {
+    let bytes = s.as_bytes();
 
-> [!note]
-> কৌতূহল-জাগানো কথা: এই function যদি `usize` এর বদলে **`&str` slice** return করত (মূল string এর অংশ point করে), তবু এই নির্দিষ্ট কোড চলত — কারণ `first` এর শেষ ব্যবহার `println!` এ, `clear()` এর আগেই NLL ওই borrow কে মেরে দেয়। কিন্তু `clear()` এর **পরে** `first` ছাপতে গেলেই `E0502` — immutable borrow জীবিত অবস্থায় `clear` এর দরকারি `&mut` নেওয়া যাবে না। মানে slice return করলে compiler নিজে থেকেই তোমাকে ordering ঠিক রাখতে বাধ্য করে — এটাই borrowing এর আসল নিরাপত্তা।
+    for (i, &byte) in bytes.iter().enumerate() {
+        if byte == b' ' {
+            return &s[..i]; // Return slice up to the space
+        }
+    }
+
+    &s[..] // No space found, return the whole string as slice
+}
+
+fn main() {
+    let mut words = String::from("hello beautiful world");
+
+    // Borrow words immutably as a slice
+    let first = first_word(&words);
+
+    // This works fine:
+    println!("First word: {}", first); // "hello"
+
+    // ERROR if you try to mutate while 'first' is still being used:
+    // words.clear(); 
+    // println!("First word: {}", first); // COMPILER ERROR: E0502!
+}
+```
+
+### এই কোডের লাইন-বাই-লাইন গভীর বিশ্লেষণ:
+1. **`fn first_word(s: &str) -> &str`**:
+   - ইনপুট নেওয়া হয়েছে `&str` (স্ট্রিং স্লাইস), যা `&String` এবং স্ট্রিং লিটারেল উভয়কেই কোনো মেমোরি কপি ছাড়াই সরাসরি গ্রহণ করতে পারে।
+   - আউটপুট রিটার্ন টাইপ `&str`। কম্পাইলার জানে যে রিটার্ন করা স্লাইসটি সরাসরি ইনপুট `s` এর মেমোরির সাথে যুক্ত।
+2. **`let bytes = s.as_bytes();`**:
+   - স্ট্রিংটিকে বাইট অ্যারেতে রূপান্তর করে, যাতে আমরা স্পেস ক্যারেক্টার (`b' '`) খুঁজতে পারি।
+3. **`for (i, &byte) in bytes.iter().enumerate()`**:
+   - `.enumerate()` প্রতিটি উপাদানের ইনডেক্স `i` এবং উপাদানটির রেফারেন্স `&byte` জোড়া হিসেবে প্রদান করে।
+4. **`return &s[..i];`**:
+   - প্রথম স্পেস পাওয়া মাত্র 0 থেকে `i` ইনডেক্স পর্যন্ত অংশটি একটি স্লাইস রেফারেন্স হিসেবে রিটার্ন করা হয়। কোনো নতুন হিপ অ্যালোকেশন হয় না (O(1) টাইম ও মেমোরি)।
+5. **কম্পাইলারের নিরাপত্তা সুরক্ষা (`E0502`)**:
+   - যদি `first` স্লাইসটি জীবিত থাকা অবস্থায় আমরা `words.clear()` কল করতে চাই, কম্পাইলার সাথে সাথে `E0502: cannot borrow words as mutable because it is also borrowed as immutable` এরর দিয়ে বিল্ড আটকে দেবে!
+   - কারণ `clear()` মেথডের জন্য `&mut self` প্রয়োজন, আর `first` ইতিমধ্যে একটি immutable borrow `&words` ধরে রেখেছে। এটিই Rust-এর compile-time memory safety-র আসল রূপ।
 
 ## `&str` vs `&String` — Function Parameter
 

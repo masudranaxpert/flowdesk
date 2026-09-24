@@ -16,32 +16,24 @@
   {
     "id": "ownership-2",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "এই program-টা চালালে কী হবে?",
-    "code": "fn main() {\n    let s1 = String::from(\"hello\");\n    let s2 = s1;\n\n    println!(\"{} {}\", s1, s2);\n}",
-    "options": [
-      "hello hello ছাপবে",
-      "compile error — s1-এর ownership s2-তে move হয়ে গেছে, s1 আর valid না",
-      "runtime-এ double free crash করবে",
-      "শুধু hello একবার ছাপবে"
-    ],
-    "answer": 1,
-    "explanation": "String heap data point করে — assign মানে move। Python-এ `s2 = s1` দুটোই same value দেখায়, কিন্তু Rust-এ s1 মরে যায়, ব্যবহার করতে গেলেই compile error। Copy করা হলে scope-এর শেষে দুজনই free করতে চাইত — double free; তাই Rust move করে, একজন owner, একবার free।"
+    "type": "code",
+    "prompt": "`s1` এর মালিকানা (ownership) `s2` তে মুভ করতে অ্যাসাইনমেন্ট এক্সপ্রেশনটি লিখো:",
+    "code": "fn main() {\n    let s1 = String::from(\"hello\");\n    let s2 = ____;\n    println!(\"{}\", s2);\n}",
+    "explanation": "Rust-এ যখন কোনো heap ডেটা ધરાভী টাইপ (যেমন String) অন্য ভেরিয়েবলে অ্যাসাইন করা হয়, তখন তার মালিকানা মুভ হয়ে যায় এবং আগের ভেরিয়েবলটি ইনভ্যালিড হয়ে যায়।",
+    "accept": [
+      "s1"
+    ]
   },
   {
     "id": "ownership-3",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "আর এইটা? কী ছাপা হবে?",
-    "code": "fn main() {\n    let x = 5;\n    let y = x;\n\n    println!(\"{} {}\", x, y);\n}",
-    "options": [
-      "compile error — x-এর ownership y-তে move হয়েছে",
-      "5 0",
-      "5 5",
-      "runtime error"
-    ],
-    "answer": 2,
-    "explanation": "i32 stack-এ থাকা সস্তা type — তাই Copy। `y = x` এ শুধু bitwise copy হয়, x জীবিতই থাকে। শুধু String, Vec-এর মতো heap data point করা type-এর ক্ষেত্রেই assign মানে move। নিয়ম: stack value copy, heap-ওয়ালা value move।"
+    "type": "code",
+    "prompt": "`x` এর মান `y` তে কপি করো (যেহেতু i32 একটি Copy টাইপ, তাই `x` এর মান অক্ষুণ্ণ থাকবে):",
+    "code": "fn main() {\n    let x = 5;\n    let y = ____;\n    println!(\"{} {}\", x, y); // 5 5\n}",
+    "explanation": "স্ট্যাক-ভিত্তিক প্রিমিটিভ টাইপ (যেমন i32, bool) Copy ট্রেইট ধারণ করে, তাই মেমোরিতে সরাসরি বিট কপি হয় এবং মূল ভেরিয়েবলটি অক্ষত থাকে।",
+    "accept": [
+      "x"
+    ]
   },
   {
     "id": "ownership-4",
@@ -88,17 +80,14 @@
   {
     "id": "ownership-7",
     "difficulty": "medium",
-    "type": "output",
-    "prompt": "কোডটা trace করো — কী হবে?",
-    "code": "fn takes_ownership(some_string: String) {\n    println!(\"{}\", some_string);\n}\n\nfn makes_copy(some_integer: i32) {\n    println!(\"{}\", some_integer);\n}\n\nfn main() {\n    let s = String::from(\"hello\");\n    takes_ownership(s);\n\n    let x = 5;\n    makes_copy(x);\n    println!(\"{}\", x);\n}",
-    "options": [
-      "hello, তারপর 5, তারপর 5 — compile হবে, চলবে",
-      "compile error — makes_copy(x)-এর পরে x আর valid না",
-      "compile error — takes_ownership(s)-এ s দুইবার drop হচ্ছে",
-      "চলবে, কিন্তু শেষে double-free panic করবে"
-    ],
-    "answer": 0,
-    "explanation": "s-এর ownership function-এ গিয়ে function শেষে drop হয় — পরে s আর ব্যবহারই হয়নি, তাই কোনো সমস্যা না। কিন্তু x copy type — makes_copy(x)-এর পরেও x জীবিত, তাই শেষের println বৈধ। কোন value move হবে না copy — সেটা type-ই ঠিক করে দেয়।"
+    "type": "code",
+    "prompt": "`s` এর মালিকানা `takes_ownership` ফাংশনে পাস করতে ফাংশন কলটি সঠিকভাবে লিখো:",
+    "code": "fn takes_ownership(some_string: String) {\n    println!(\"{}\", some_string);\n}\n\nfn main() {\n    let s = String::from(\"hello\");\n    ____;\n}",
+    "explanation": "ফাংশনে ভ্যালু পাস করার সময় মালিকানা চলে যায়। ফাংশনের এক্সিকিউশন শেষে some_string মেমোরি থেকে ড্রপ হয়ে যায়।",
+    "accept": [
+      "takes_ownership(s)",
+      "takes_ownership(s);"
+    ]
   },
   {
     "id": "ownership-8",

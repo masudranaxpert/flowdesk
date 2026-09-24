@@ -16,32 +16,24 @@
   {
     "id": "testing-2",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "কী print হবে?",
-    "code": "fn main() {\n    let a = 2 + 2;\n    assert_eq!(a, 4);\n    println!(\"after assert\");\n    assert_ne!(a, 5);\n    println!(\"done\");\n}",
-    "options": [
-      "after assert — এরপর assert_ne panic করে",
-      "after assert\ndone",
-      "কিছুই না — assertion pass হলে println চাপা পড়ে যায়",
-      "panic: assertion failed — প্রথম assert_eq-তেই"
-    ],
-    "answer": 1,
-    "explanation": "assert_eq!(a, 4)-তে 4 == 4 সত্য — expansion-এ (l, r) if *l == *r => {} arm-এ কিছুই হয় না। assert_ne!(a, 5)-ও পাস, কারণ 4 != 5। দুটো assertion-ই নীরবে পাস করে বলে দুটো println-ই চলে। assertion fail হলেই শুধু panic হয়।"
+    "type": "code",
+    "prompt": "একটি টেস্ট ফাংশন নির্দেশ করার জন্য ফাংশনের ঠিক উপরে কোন অ্যাট্রিবিউটটি ব্যবহার করা হয়?",
+    "code": "____\nfn test_addition() {\n    assert_eq!(2 + 2, 4);\n}",
+    "explanation": "#[test] অ্যাট্রিবিউট দিলে টেস্ট রানার (cargo test) ফাংশনটিকে একটি টেস্ট কেস হিসেবে শনাক্ত করে।",
+    "accept": [
+      "#[test]"
+    ]
   },
   {
     "id": "testing-3",
     "difficulty": "medium",
-    "type": "output",
-    "prompt": "stdout-এ কী print হবে? (panic message-টা যায় stderr-এ)",
-    "code": "use std::panic;\n\nfn main() {\n    let result = panic::catch_unwind(|| {\n        println!(\"before\");\n        let v = vec![1, 2, 3];\n        v[99]\n    });\n    println!(\"caught: {}\", result.is_err());\n}",
-    "options": [
-      "before\ncaught: true",
-      "before\ncaught: false",
-      "caught: true — আগের println আটকে যায় unwind-এ",
-      "কিছুই না — panic পুরো process-টাকে মেরে ফেলে"
-    ],
-    "answer": 0,
-    "explanation": "catch_unwind panic-টা ধরে ফেলে — process বাঁচে আর Err পাওয়া যায়; println!(\"before\") আগেই হয়ে গেছে। test harness-ও ঠিক এভাবেই প্রতিটা test চালায় — এজন্যই panic করলে test fail হয় কিন্তু harness বাকি test চালাতে পারে। এখানে v[99] index out of bounds panic দেয় বলে is_err() সত্য।"
+    "type": "code",
+    "prompt": "দুটি মানের সমতা যাচাই করার জন্য স্ট্যান্ডার্ড টেস্ট ম্যাক্রোটি কল করো:",
+    "code": "let result = 2 + 2;\n____(result, 4);",
+    "explanation": "assert_eq!(left, right) ম্যাক্রো দুটি মান সমান না হলে প্যানিক তৈরি করে টেস্ট ফেইল করায়।",
+    "accept": [
+      "assert_eq!"
+    ]
   },
   {
     "id": "testing-4",
@@ -77,7 +69,9 @@
     "type": "code",
     "prompt": "Result return করা test-এ error propagate করতে blank-এ কী বসাতে হবে?",
     "code": "use std::num::ParseIntError;\n\nfn parse_and_double(s: &str) -> Result<i32, ParseIntError> {\n    let n: i32 = s.parse()?;\n    Ok(n * 2)\n}\n\n#[test]\nfn test_parse_success() -> Result<(), ParseIntError> {\n    let result = parse_and_double(\"21\")____;\n    assert_eq!(result, 42);\n    Ok(())\n}",
-    "accept": ["?"],
+    "accept": [
+      "?"
+    ],
     "explanation": "test function Result return করলে ? operator ব্যবহার করা যায়। ভেতরে জাদু কিছু নেই — harness-এর হাতে Err(e) এলে সে panic! করে দেয়, মানে fail হওয়ার প্রক্রিয়া একই, ? শুধু লেখাটা ছোট করে। unwrap-এর চেয়ে পরিষ্কার।"
   },
   {
@@ -86,7 +80,9 @@
     "type": "code",
     "prompt": "নির্দিষ্ট panic message match করতে blank-এ কোন key বসবে?",
     "code": "pub fn index_element(v: &[i32], i: usize) -> i32 {\n    v[i]\n}\n\n#[test]\n#[should_panic(____ = \"index out of bounds\")]\nfn test_out_of_bounds() {\n    index_element(&[1, 2, 3], 99);\n}",
-    "accept": ["expected"],
+    "accept": [
+      "expected"
+    ],
     "explanation": "#[should_panic(expected = \"...\")] দিলে harness panic message-এর সাথে substring match দেখে — ভুল panic হলেও test fail। expected ছাড়া খালি #[should_panic] হলে যেকোনো panic-ই pass করে, তাই expected দেওয়াই নিরাপদ।"
   },
   {

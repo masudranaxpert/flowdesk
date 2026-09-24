@@ -16,17 +16,13 @@
   {
     "id": "async-await-2",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "প্রোগ্রামটা কী print করবে?",
-    "code": "use tokio::select;\nuse tokio::time::{sleep, Duration};\n\n#[tokio::main]\nasync fn main() {\n    let result = select! {\n        _ = sleep(Duration::from_millis(100)) => \"Timeout 1 won\",\n        _ = sleep(Duration::from_millis(50)) => \"Timeout 2 won\",\n    };\n\n    println!(\"{}\", result);\n}",
-    "options": [
-      "Timeout 1 won",
-      "Timeout 2 won",
-      "দুটোই print হয়",
-      "প্রতিবার random ফলাফল — fairness-এ order ঘোরে বলে যেকোনোটা জিততে পারে"
-    ],
-    "answer": 1,
-    "explanation": "select! branch-গুলোর future পালা করে poll করে, যেটা আগে Ready হয় তার arm চলে। ৫০ms-এর timer সবসময় ১০০ms-এর আগে শেষ হবে, তাই Timeout 2 won। fairness-এর জন্য poll-এর শুরুর order প্রতিবার ঘোরে ঠিকই, কিন্তু এখানে deadline-এর তফাত এত বড় যে ফলাফল নির্দিষ্ট।"
+    "type": "code",
+    "prompt": "Tokio রানটাইমে একটি async মেইন ফাংশন ডিক্লেয়ার করতে fn এর আগে কোন কিওয়ার্ড লিখবে?",
+    "code": "#[tokio::main]\n____ fn main() {\n    println!(\"Running async main!\");\n}",
+    "explanation": "অ্যাসিনক্রোনাস ফাংশন ডিক্লেয়ার করতে fn কিওয়ার্ডের পূর্বে async লিখতে হয়।",
+    "accept": [
+      "async"
+    ]
   },
   {
     "id": "async-await-3",
@@ -59,17 +55,14 @@
   {
     "id": "async-await-5",
     "difficulty": "medium",
-    "type": "output",
-    "prompt": "কী print হবে?",
-    "code": "use tokio::time::{sleep, Duration};\n\nasync fn task(name: &'static str, ms: u64) -> &'static str {\n    sleep(Duration::from_millis(ms)).await;\n    name\n}\n\n#[tokio::main]\nasync fn main() {\n    let (x, y) = tokio::join!(task(\"fast\", 10), task(\"slow\", 20));\n    println!(\"{} {}\", x, y);\n}",
-    "options": [
-      "fast slow",
-      "slow fast",
-      "অনিশ্চিত — কে আগে শেষ হয় তার উপর নির্ভর করে",
-      "compile error — join! একসাথে দুইটা future await করতে পারে না"
-    ],
-    "answer": 0,
-    "explanation": "join! ফলাফলের tuple দেয় branch-গুলো যে ক্রমে লেখা সেই ক্রমেই — completion order-এ নয়। ভেতরে future দুটোকে পালা করে একই thread-এ poll করা হয় (thread yield হয় না), মোট সময় max(10ms, 20ms) = 20ms। slow পরে শেষ হলেও tuple-এর প্রথম ঘরে fast-এর ফলাফলই বসে।"
+    "type": "code",
+    "prompt": "দুটি async টাস্ক task1 এবং task2 কে কনকারেন্টলি রান করে একসাথে ফলাফল পেতে Tokio-র ম্যাক্রোটি লিখো:",
+    "code": "let (res1, res2) = ____(task1(), task2());",
+    "explanation": "tokio::join! একাধিক ফিউচারকে কনকারেন্টলি এক্সিকিউট করে সবগুলোর সমাপ্তির পর ফলাফল টাপল হিসেবে প্রদান করে।",
+    "accept": [
+      "tokio::join!",
+      "join!"
+    ]
   },
   {
     "id": "async-await-6",
@@ -77,7 +70,9 @@
     "type": "code",
     "prompt": "user-এর ভেতরে User 1 String-টা পেতে blank-এ কী বসাতে হবে?",
     "code": "async fn fetch_user(id: u32) -> String {\n    format!(\"User {}\", id)\n}\n\n#[tokio::main]\nasync fn main() {\n    let user = fetch_user(1)____;\n    println!(\"{}\", user);\n}",
-    "accept": [".await"],
+    "accept": [
+      ".await"
+    ],
     "explanation": "fetch_user(1) call করলে শুধু future পাওয়া যায় — কাজ শুরুই হয়নি। .await করলে executor সেটাকে poll করে আর user পায় String মান। await ছাড়া user হতো future-ই — println!-এ display করতে গিয়ে compile error আসত।"
   },
   {
@@ -128,7 +123,9 @@
     "type": "code",
     "prompt": "consumer loop-এ blank-এ কী বসালে producer-এর পাঠানো ০ থেকে ৪ পর্যন্ত সব message পাওয়া যাবে?",
     "code": "use tokio::sync::mpsc;\n\n#[tokio::main]\nasync fn main() {\n    let (tx, mut rx) = mpsc::channel(100);\n\n    tokio::spawn(async move {\n        for i in 0..5 {\n            tx.send(i).await.unwrap();\n            println!(\"Sent: {}\", i);\n        }\n    });\n\n    while let Some(msg) = rx.____().await {\n        println!(\"Received: {}\", msg);\n    }\n}",
-    "accept": ["recv"],
+    "accept": [
+      "recv"
+    ],
     "explanation": "tokio-র mpsc-তে rx.recv().await — queue খালি হলে Pending হয়ে অপেক্ষা করে, সব sender drop হলে None দেয়, তাই while let Some(msg) loop ঠিকভাবে শেষ হয়। channel(100)-এর ring buffer + permit ব্যবস্থাই backpressure — buffer ভর্তি হলে send().await নিজেই অপেক্ষা করে, memory ফুলে ওঠে না।"
   }
 ]

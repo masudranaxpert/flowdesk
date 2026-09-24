@@ -30,17 +30,14 @@
   {
     "id": "error-handling-3",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "এই কোডের stdout output কী?",
-    "code": "fn divide(a: i32, b: i32) -> Result<i32, String> {\n    if b == 0 {\n        Err(String::from(\"division by zero\"))\n    } else {\n        Ok(a / b)\n    }\n}\n\nfn main() {\n    match divide(10, 2) {\n        Ok(v) => println!(\"ok: {}\", v),\n        Err(e) => println!(\"err: {}\", e),\n    }\n    match divide(1, 0) {\n        Ok(v) => println!(\"ok: {}\", v),\n        Err(e) => println!(\"err: {}\", e),\n    }\n}",
-    "options": [
-      "ok: 5\nerr: division by zero",
-      "ok: 5\nok: 0",
-      "err: division by zero\nerr: division by zero",
-      "প্রথম match-এ 5 ছাপার পর দ্বিতীয় match-এ panic হয়"
-    ],
-    "answer": 0,
-    "explanation": "`divide(10, 2)` → `Ok(5)`, তাই `ok: 5`। `divide(1, 0)` → `Err(\"division by zero\")`, তাই `err: division by zero`। `Result` হাতে থাকলে panic নয় — match-ই শান্তভাবে নিজের arm বেছে নেয়।"
+    "type": "code",
+    "prompt": "`divide(a, b)` ফাংশনে `b == 0` হলে Err(\"division by zero\") ফেরত দিতে Err ভ্যারিয়েন্ট কনস্ট্রাক্ট করো:",
+    "code": "fn divide(a: i32, b: i32) -> Result<i32, String> {\n    if b == 0 {\n        ____\n    } else {\n        Ok(a / b)\n    }\n}",
+    "explanation": "Result এ এরর রিটার্ন করতে Err(...) ভ্যারিয়েন্টে এরর মেসেজ র্যাপ করে পাঠানো হয়।",
+    "accept": [
+      "Err(String::from(\"division by zero\"))",
+      "Err(\"division by zero\".to_string())"
+    ]
   },
   {
     "id": "error-handling-4",
@@ -76,7 +73,10 @@
     "type": "code",
     "prompt": "Blank-এ কী বসবে যাতে ফাংশনটা compile হয় আর config-এর সংখ্যাটা `i32` হিসেবে পাওয়া যায়? (`content` একটা String)",
     "code": "use std::fs;\n\nfn read_config() -> Result<i32, Box<dyn std::error::Error>> {\n    let content = fs::read_to_string(\"config.txt\")?;\n    let number: i32 = ____\n    Ok(number)\n}",
-    "accept": ["content.trim().parse()?;", "content.trim().parse()?"],
+    "accept": [
+      "content.trim().parse()?;",
+      "content.trim().parse()?"
+    ],
     "explanation": "`parse()` নিজে `Result` দেয়, তাই `?` দিয়ে unwrap করতে হবে। Err হলে `From::from` ওটাকে `Box<dyn Error>`-এ মুড়ে দেয় — যেকোনো error, boxed; তাই-ই এই return type-এ `?` চলে।"
   },
   {
@@ -113,22 +113,20 @@
     "type": "code",
     "prompt": "`read_config() -> Result<i32, AppError>`-এ `parse()?` কাজ করানোর জন্য নিচের From impl-এর blank-এ কী বসবে?",
     "code": "#[derive(Debug)]\nenum AppError {\n    Io(std::io::Error),\n    Parse(std::num::ParseIntError),\n    NotFound(String),\n}\n\nimpl From<std::num::ParseIntError> for AppError {\n    fn from(e: std::num::ParseIntError) -> Self {\n        ____\n    }\n}\n\nfn read_config() -> Result<i32, AppError> {\n    let content = std::fs::read_to_string(\"config.txt\")?;\n    let number: i32 = content.trim().parse()?;\n    Ok(number)\n}",
-    "accept": ["AppError::Parse(e)"],
+    "accept": [
+      "AppError::Parse(e)"
+    ],
     "explanation": "`?`-এর `From::from(err)` এই impl-টাকেই call করে। `Self` মানে এখানে `AppError`, আর parse-এর error যাবে `Parse` variant-এ। এই impl থাকলেই `read_config`-এর দুই ধরনের error-ই `?` দিয়ে চেইন করা যায় — thiserror-এর `#[from]` একই কাজ macro দিয়ে করে দেয়।"
   },
   {
     "id": "error-handling-10",
     "difficulty": "hard",
-    "type": "output",
-    "prompt": "Default unwind setting-এ এই প্রোগ্রামটা চালালে কী হবে?",
-    "code": "struct Guard;\n\nimpl Drop for Guard {\n    fn drop(&mut self) {\n        println!(\"dropped\");\n    }\n}\n\nfn main() {\n    let g = Guard;\n    panic!(\"boom\");\n}",
-    "options": [
-      "stderr-এ panic message ছাপা হবে, আর unwind-এর সময় stdout-এ \"dropped\" ছাপা হবে — exit code 101",
-      "শুধু stderr-এ panic message — \"dropped\" কখনোই ছাপা হবে না",
-      "stdout-এ আগে \"dropped\", তারপর stderr-এ panic message",
-      "Compile error — panic-এর পরে কোনো code থাকতে পারে না"
-    ],
-    "answer": 0,
-    "explanation": "Panic হলে unwinding চলে: message ছাপার পর call stack উল্টো দিকে walk করার পথে `g`-এর `Drop::drop` call হয়, তাই \"dropped\" ছাপা হয়। এভাবেই open file, lock, heap memory সব cleanup হয়; শেষে exit 101। `panic = \"abort\"` হলে \"dropped\" ছাপা হতো না — কোনো drop-ই চলত না।"
+    "type": "code",
+    "prompt": "File::open ফাংশন থেকে এরর আসলে তা সরাসরি কলার ফাংশনে propagate করতে ? অপারেটরটি কোথায় বসাবে?",
+    "code": "use std::fs::File;\nuse std::io;\n\nfn open_my_file() -> Result<File, io::Error> {\n    let f = File::open(\"hello.txt\")____;\n    Ok(f)\n}",
+    "explanation": "? অপারেটর ব্যবহার করলে রেজাল্ট Ok হলে মান আনপ্যাক হয়, আর Err হলে ফাংশন থেকে সরাসরি return Err(e) হয়ে যায়।",
+    "accept": [
+      "?"
+    ]
   }
 ]

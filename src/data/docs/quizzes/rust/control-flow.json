@@ -2,32 +2,25 @@
   {
     "id": "control-flow-1",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "কোডটা trace করো — কী ছাপা হবে?",
-    "code": "fn main() {\n    let score = 75;\n    let grade = if score >= 80 { \"A\" } else { \"B\" };\n    println!(\"{}\", grade);\n}",
-    "options": [
-      "B",
-      "A",
-      "75",
-      "compile error — if থেকে value নেওয়া যায় না"
-    ],
-    "answer": 0,
-    "explanation": "Rust-এ `if` একটা expression — দুই branch-এর একটার value-ই `grade`-এ বসে। score 75 < 80, তাই else branch → \"B\"। Python-এ এর জন্য আলাদা ternary লাগত; Rust-এ if-ই ternary, আলাদা operator নেই।"
+    "type": "code",
+    "prompt": "`score` এর মান 80 বা তার বেশি হলে \"A\", অন্যথায় \"B\" রিটার্ন করতে if এক্সপ্রেশনটি লিখো:",
+    "code": "let score = 75;\nlet grade = ____;\nprintln!(\"{}\", grade); // B",
+    "explanation": "Rust-এ if/else একটি এক্সপ্রেশন যা সরাসরি মান রিটার্ন করতে পারে। উভয় ব্রাঞ্চের রিটার্ন টাইপ অবশ্যই একই হতে হয়।",
+    "accept": [
+      "if score >= 80 { \"A\" } else { \"B\" }",
+      "if score >= 80 { \"A\" } else { \"B\" };"
+    ]
   },
   {
     "id": "control-flow-2",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "Loop শেষ হলে কী ছাপা হবে?",
-    "code": "fn main() {\n    let mut total = 0;\n    for i in 1..=5 {\n        total += i;\n    }\n    println!(\"{}\", total);\n}",
-    "options": [
-      "10",
-      "15",
-      "5",
-      "0"
-    ],
-    "answer": 1,
-    "explanation": "`1..=5` inclusive range — 1, 2, 3, 4, 5 সবই আসে, যোগফল 15। যদি `1..5` (exclusive) হতো, 4 পর্যন্তই আসত — যোগফল 10 হতো। এই দুই range-এর পার্থক্যই এই প্রশ্নের মূল ফাঁদ।"
+    "type": "code",
+    "prompt": "1 থেকে 5 পর্যন্ত (5 সহ) প্রতিটি সংখ্যা লুপ চালানোর জন্য inclusive range এক্সপ্রেশনটি লিখো:",
+    "code": "let mut total = 0;\nfor i in ____ {\n    total += i;\n}\nprintln!(\"{}\", total); // 15",
+    "explanation": "Rust-এ 1..=5 হলো inclusive range (1, 2, 3, 4, 5 পর্যন্ত সবগুলো আসবে)। 1..5 দিলে exclusive range হতো (4 পর্যন্ত)।",
+    "accept": [
+      "1..=5"
+    ]
   },
   {
     "id": "control-flow-3",
@@ -47,17 +40,13 @@
   {
     "id": "control-flow-4",
     "difficulty": "medium",
-    "type": "output",
-    "prompt": "কোডটা trace করো — কী ছাপা হবে?",
-    "code": "fn main() {\n    let mut counter = 0;\n\n    let result = loop {\n        counter += 1;\n        if counter == 10 {\n            break counter * 2;\n        }\n    };\n\n    println!(\"{}\", result);\n}",
-    "options": [
-      "10",
-      "compile error — loop থেকে value return করা যায় না",
-      "20",
-      "19"
-    ],
-    "answer": 2,
-    "explanation": "`break counter * 2` মানে loop-এর value হলো ওই expression — counter 10 হলে break দেয় 20, তাই result = 20। Python/C++-এ loop থেকে value ফেরানো যায় না বলে বাইরে mut variable লাগে; Rust-এ loop নিজেই expression — break-গুলোর type-ই তার type।"
+    "type": "code",
+    "prompt": "`number` এর মান যতক্ষণ পর্যন্ত 0 এর চেয়ে বড় থাকবে ততক্ষণ লুপ চালাতে while কন্ডিশনটি লিখো:",
+    "code": "let mut number = 3;\nwhile ____ {\n    println!(\"{}\", number);\n    number -= 1;\n}",
+    "explanation": "while লুপে কন্ডিশন true থাকা পর্যন্ত লুপের বডি রান করে। কোনো বন্ধনী (parentheses) দরকার হয় না।",
+    "accept": [
+      "number > 0"
+    ]
   },
   {
     "id": "control-flow-5",
@@ -76,17 +65,13 @@
   {
     "id": "control-flow-6",
     "difficulty": "medium",
-    "type": "output",
-    "prompt": "কোডটা trace করো — কোন ক্রমে কী হবে?",
-    "code": "fn main() {\n    let mut stack = vec![1, 2, 3];\n\n    while let Some(top) = stack.pop() {\n        println!(\"{}\", top);\n    }\n}",
-    "options": [
-      "3, 2, 1 ছাপবে — তারপর None পেয়ে নিজে থেমে যাবে",
-      "1, 2, 3 ছাপবে — তারপর থেমে যাবে",
-      "3, 2, 1 ছাপার পরে panic — খালি stack-এ pop",
-      "compile error — None case handle করা হয়নি"
-    ],
-    "answer": 0,
-    "explanation": "`pop()` শেষ থেকে value দেয়, খালি হলে crash না — `None`। `while let` প্রতি ধাপে match করে: Some পেলে body চালায়, None পেলে loop ভাঙে। Python-এ `list.pop()` খালি হলে IndexError দেয় — Rust-এ Option-এ মোড়ানো বলে এই class-এর bug type system-ই আটকায়।"
+    "type": "code",
+    "prompt": "`stack.pop()` থেকে পাওয়া মানগুলো যতক্ষণ Some(top) আসবে ততক্ষণ আনপ্যাক করে লুপ চালানোর জন্য pattern matching কন্ডিশনটি লিখো:",
+    "code": "let mut stack = vec![1, 2, 3];\nwhile let ____ = stack.pop() {\n    println!(\"{}\", top);\n}",
+    "explanation": "while let Some(top) = stack.pop() লুপটি প্রতি ধাপে চেক করে; যতক্ষণ মান থাকে ততক্ষণ top-এ আনপ্যাক করে বডি চালায়, আর None হলে লুপ থামিয়ে দেয়।",
+    "accept": [
+      "Some(top)"
+    ]
   },
   {
     "id": "control-flow-7",
@@ -102,17 +87,14 @@
   {
     "id": "control-flow-8",
     "difficulty": "hard",
-    "type": "output",
-    "prompt": "Nested loop-এ label ব্যবহার হয়েছে — trace করো, কী ছাপা হবে?",
-    "code": "fn main() {\n    let mut count = 0;\n\n    'outer: loop {\n        count += 1;\n        let mut remaining = 10;\n\n        loop {\n            if remaining == 9 {\n                break;\n            }\n            if count == 3 {\n                break 'outer;\n            }\n            remaining -= 1;\n        }\n    }\n\n    println!(\"{}\", count);\n}",
-    "options": [
-      "3",
-      "4",
-      "30",
-      "infinite loop — কখনো থামবে না"
-    ],
-    "answer": 0,
-    "explanation": "খালি `break` শুধু ভেতরের loop ভাঙে — বাইরেরটা আবার শুরু হয়। count = 1 ও 2 হলে ভেতরের loop remaining == 9 হওয়ায় ভাঙে, বাইরেরটা চলতে থাকে। তৃতীয় iteration-এ count == 3, তখন `break 'outer` বাইরের loop-ও ভাঙে — count = 3 ছাপা হয়।"
+    "type": "code",
+    "prompt": "বাইরের লুপের লেবেল 'outer দেওয়া আছে। ভেতর থেকে সরাসরি বাইরের লুপটি ব্রেক করতে কী লিখবে?",
+    "code": "'outer: loop {\n    loop {\n        if count == 3 {\n            ____;\n        }\n    }\n}",
+    "explanation": "নেস্টেড লুপের ক্ষেত্রে সরাসরি নির্দিষ্ট কোনো বাইরের লুপ থামাতে break 'label সিনট্যাক্স ব্যবহার করা হয়।",
+    "accept": [
+      "break 'outer",
+      "break 'outer;"
+    ]
   },
   {
     "id": "control-flow-9",
@@ -128,16 +110,12 @@
   {
     "id": "control-flow-10",
     "difficulty": "hard",
-    "type": "output",
-    "prompt": "FizzBuzz-এর মতো tuple match — কী ছাপা হবে?",
-    "code": "fn main() {\n    let n = 15;\n\n    let result = match (n % 3, n % 5) {\n        (0, 0) => \"FizzBuzz\",\n        (0, _) => \"Fizz\",\n        (_, 0) => \"Buzz\",\n        _ => \"Number\",\n    };\n\n    println!(\"{}\", result);\n}",
-    "options": [
-      "Fizz — প্রথম condition-এ শুধু 3 ভাগ করা যায় কিনা দেখা হয়",
-      "Buzz",
-      "FizzBuzz",
-      "Number — শেষ arm আগের সবাইকে override করে"
-    ],
-    "answer": 2,
-    "explanation": "n = 15 হলে (15 % 3, 15 % 5) = (0, 0) — প্রথম arm-ই মেলে, ফলে \"FizzBuzz\"। Match উপর থেকে নিচে যায় আর প্রথম মেলা arm-ই জেতে; শেষ arm কিছু override করে না। আর শেষে `_` থাকায় exhaustiveness-ও পূরণ — tuple-এর চারটা সম্ভাব্য রূপই cover।"
+    "type": "code",
+    "prompt": "সংখ্যাটি 3 এবং 5 উভয় দ্বারা বিভাজ্য (রিমাইন্ডার 0) কিনা চেক করতে tuple matching এর প্রথম প্যাটার্নটি কী লিখবে?",
+    "code": "let result = match (n % 3, n % 5) {\n    ____ => \"FizzBuzz\",\n    (0, _) => \"Fizz\",\n    (_, 0) => \"Buzz\",\n    _ => \"Number\",\n};",
+    "explanation": "Tuple matching-এ (0, 0) প্যাটার্নটি নির্দেশ করে যে উভয় এক্সপ্রেশনের মান 0 হতে হবে, যা FizzBuzz কন্ডিশন পূরণ করে।",
+    "accept": [
+      "(0, 0)"
+    ]
   }
 ]

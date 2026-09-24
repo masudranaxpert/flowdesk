@@ -73,47 +73,36 @@
   {
     "id": "strings-6",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "প্রোগ্রামটা কী প্রিন্ট করবে?",
-    "code": "fn main() {\n    let mut s = String::from(\"foo\");\n    s.push_str(\"bar\");\n    s.push('!');\n    println!(\"{}\", s);\n}",
-    "options": [
-      "foo",
-      "foobar",
-      "foobar!",
-      "Compile error — `push`-এ String লাগে"
-    ],
-    "answer": 2,
-    "explanation": "`push_str` একটা `&str` append করে, `push` একটা `char`। String mutable buffer — শেষে লেখে: \"foo\" → \"foobar\" → \"foobar!\"।"
+    "type": "code",
+    "prompt": "`s` স্ট্রিংটির শেষে \"bar\" যুক্ত করতে কোন মেথড কল করবে?",
+    "code": "let mut s = String::from(\"foo\");\ns.____(\"bar\");",
+    "explanation": "স্ট্রিং বাফারের শেষে স্ট্রিং স্লাইস যোগ করতে .push_str(&str) মেথড ব্যবহার করা হয়।",
+    "accept": [
+      "push_str"
+    ]
   },
   {
     "id": "strings-7",
     "difficulty": "medium",
-    "type": "output",
-    "prompt": "প্রোগ্রামটা কী প্রিন্ট করবে?",
-    "code": "fn main() {\n    let bangla = String::from(\"বাংলা\");\n    println!(\"{} {}\", bangla.len(), bangla.chars().count());\n}",
-    "options": [
-      "5 5",
-      "5 15",
-      "15 5",
-      "15 15"
-    ],
-    "answer": 2,
-    "explanation": "`len()` বলে byte count — বাংলা প্রতিটা character UTF-8-এ ৩ byte, ৫ char × ৩ byte = ১৫। `chars().count()` পুরো string decode করে আসল character সংখ্যা গোনে — ৫ (ব, া, ং, ল, া)। \"কয়টা character\" কোথাও stored থাকে না — গোনা মানেই পুরো string ঘাঁটা, O(n)।"
+    "type": "code",
+    "prompt": "`s` স্ট্রিংটির ক্যারেক্টারগুলো একে একে ইটারেট করতে কোন মেথড কল করবে?",
+    "code": "let s = \"hello\";\nfor c in s.____ {\n    println!(\"{}\", c);\n}",
+    "explanation": ".chars() মেথড স্ট্রিংয়ের ইউনিকোড ক্যারেক্টারগুলোর উপর ইটারেটর প্রদান করে।",
+    "accept": [
+      "chars()"
+    ]
   },
   {
     "id": "strings-8",
     "difficulty": "hard",
-    "type": "output",
-    "prompt": "এই code-এর কী হবে?",
-    "code": "fn main() {\n    let s = String::from(\"নমস্কার\");\n    let slice = &s[0..4];\n    println!(\"{}\", slice);\n}",
-    "options": [
-      "নম",
-      "ন",
-      "Compile error — slice-এ index দেওয়া যায় না",
-      "Runtime panic — index 4 'ম' character-টার মাঝখানে পড়ে, character boundary না"
-    ],
-    "answer": 3,
-    "explanation": "Slice করার আগে দুটো check চলে: `start <= end`, আর দুই index-ই character boundary-তে (lead byte-এ) আছে কিনা। 'ন' byte 0–2, 'ম' byte 3–5 — 4 মাঝখানে, তাই runtime panic। `&s[0..3]` হলে \"ন\" পেতে — সেটাও শুধু zero-cost slice।"
+    "type": "code",
+    "prompt": "&str স্ট্রিং লিটারেলকে একটি নতুন heap-allocated String অবজেক্টে রূপান্তর করতে কোন মেথড কল করবে?",
+    "code": "let literal = \"hello\";\nlet s = literal.____;",
+    "explanation": "স্ট্রিং স্লাইস থেকে মালিকানাসহ নতুন String অবজেক্ট বানাতে .to_string() বা .to_owned() মেথড ব্যবহার করা হয়।",
+    "accept": [
+      "to_string()",
+      "to_owned()"
+    ]
   },
   {
     "id": "strings-9",

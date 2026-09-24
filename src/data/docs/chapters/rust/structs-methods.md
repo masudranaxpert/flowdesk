@@ -128,7 +128,12 @@ struct Rectangle {
 }
 
 impl Rectangle {
-    // Method — &self parameter
+    // Constructor (Associated function) — no self, returns Self
+    fn new(width: f64, height: f64) -> Self {
+        Rectangle { width, height }
+    }
+
+    // Method — &self parameter (borrows instance immutably)
     fn area(&self) -> f64 {
         self.width * self.height
     }
@@ -137,16 +142,18 @@ impl Rectangle {
         self.width > other.width && self.height > other.height
     }
 
-    // Associated function (Python এর @staticmethod এর মতো) — no self
+    // Associated function — no self
     fn square(size: f64) -> Rectangle {
         Rectangle { width: size, height: size }
     }
 }
 
 fn main() {
-    let rect1 = Rectangle { width: 30.0, height: 50.0 };
-    let rect2 = Rectangle { width: 10.0, height: 40.0 };
+    // Call constructor using :: syntax
+    let rect1 = Rectangle::new(30.0, 50.0);
+    let rect2 = Rectangle::new(10.0, 40.0);
 
+    // Call methods using . syntax
     println!("Area: {}", rect1.area());           // 1500
     println!("Can hold: {}", rect1.can_hold(&rect2)); // true
 
@@ -155,8 +162,13 @@ fn main() {
 }
 ```
 
+> [!important]
+> **`Self` (বড় হাতের) vs `self` (ছোট হাতের) — কখনোই গুলিয়ে ফেলবে না:**
+> - **`Self` (টাইপ)**: `impl` ব্লক যে স্ট্রাক্টের জন্য লেখা হয়েছে, সেই মূল টাইপের সংক্ষিপ্ত রূপ (Type Alias)। যেমন `Rectangle`-এর ব্লকে `-> Self` লেখা মানে `-> Rectangle`।
+> - **`self` (মান বা রেফারেন্স)**: মেথডটি যে নির্দিষ্ট ইনস্ট্যান্সের উপর কল করা হয়েছে, সেই ইনস্ট্যান্সের অবজেক্ট বা রেফারেন্স। যেমন `self.width`।
+
 > [!example]
-> খেয়াল করো — method এ `&self` (immutable reference), আর associated function এ `self` নেই। Python এ সব method এ `self` parameter বাধ্য, কিন্তু Rust এ `self` optional। Associated function ডাকা হয় `::` দিয়ে (`Rectangle::square`), method ডাকা হয় `.` দিয়ে (`rect1.area()`)।
+> খেয়াল করো — method এ `&self` (immutable reference), আর associated function এ `self` নেই। Python এ সব method এ `self` parameter বাধ্য, কিন্তু Rust এ `self` optional। Associated function ডাকা হয় `::` দিয়ে (`Rectangle::new`), আর method ডাকা হয় `.` দিয়ে (`rect1.area()`)।
 
 ### Method Call এর ভেতরে আসলে কী হয়?
 

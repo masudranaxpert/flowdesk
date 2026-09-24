@@ -30,17 +30,14 @@
   {
     "id": "iterators-closures-3",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "এই কোডের output কী?",
-    "code": "fn main() {\n    let v = vec![1, 2, 3, 4, 5];\n    let doubled: Vec<i32> = v.iter().map(|x| x * 2).collect();\n    println!(\"{:?}\", doubled);\n    println!(\"{:?}\", v);\n}",
-    "options": [
-      "[2, 4, 6, 8, 10]\n[1, 2, 3, 4, 5]",
-      "[2, 4, 6, 8, 10]\nCompile error — v move হয়ে গেছে",
-      "[1, 2, 3, 4, 5]\n[1, 2, 3, 4, 5]",
-      "[2, 4, 6, 8, 10]"
-    ],
-    "answer": 0,
-    "explanation": "`v.iter()` শুধু `&T` borrow করে, ownership নেয় না — তাই map/collect-এর পরেও `v` valid, দুই লাইনই ছাপা যায়। Closure পায় `&i32`, `x * 2` চলে যায়; collect বানায় নতুন `[2, 4, 6, 8, 10]`।"
+    "type": "code",
+    "prompt": "`v` ভেক্টরের প্রতিটি উপাদানকে দ্বিগুণ করতে map অ্যাডাপ্টারে যে ক্লোজারটি পাঠাতে হবে তা লিখো:",
+    "code": "let v = vec![1, 2, 3, 4, 5];\nlet doubled: Vec<i32> = v.iter().map(____).collect();",
+    "explanation": "map অ্যাডাপ্টারে |x| x * 2 ক্লোজারটি প্রতিটি উপাদান ইনপুট হিসেবে নিয়ে তার দ্বিগুণ মান প্রদান করে।",
+    "accept": [
+      "|x| x * 2",
+      "|&x| x * 2"
+    ]
   },
   {
     "id": "iterators-closures-4",
@@ -59,17 +56,14 @@
   {
     "id": "iterators-closures-5",
     "difficulty": "medium",
-    "type": "output",
-    "prompt": "এই কোডের output কী?",
-    "code": "fn main() {\n    let result: Vec<i32> = (1..=10)\n        .filter(|x| x % 2 == 0)\n        .map(|x| x * x)\n        .filter(|x| *x > 20)\n        .collect();\n    println!(\"{:?}\", result);\n}",
-    "options": [
-      "[36, 64, 100]",
-      "[4, 16, 36, 64, 100]",
-      "[2, 4, 6, 8, 10]",
-      "[16, 36, 64, 100]"
-    ],
-    "answer": 0,
-    "explanation": "ধাপে ধাপে: even → 2, 4, 6, 8, 10; square → 4, 16, 36, 64, 100; 20-এর বড় → 36, 64, 100। একটাই item পুরো chain একস্রোতে পার করে — মাঝপথে কোনো intermediate Vec নেই।"
+    "type": "code",
+    "prompt": "1 থেকে 10 পর্যন্ত রেঞ্জ থেকে শুধু জোড় সংখ্যাগুলো ফিল্টার করতে filter মেথডের ভেতরে ক্লোজারটি লিখো:",
+    "code": "let evens: Vec<i32> = (1..=10)\n    .filter(____)\n    .collect();",
+    "explanation": "filter অ্যাডাপ্টারে যে ক্লোজারটি boolean রিটার্ন করে (যেমন |x| x % 2 == 0), শুধু সেই উপাদানগুলোই রক্ষিত হয়।",
+    "accept": [
+      "|x| x % 2 == 0",
+      "|&x| x % 2 == 0"
+    ]
   },
   {
     "id": "iterators-closures-6",
@@ -91,7 +85,10 @@
     "type": "code",
     "prompt": "Blank-এ কোন iterator method বসালে ছাপা হবে 15? (fold ছাড়া সবচেয়ে সংক্ষিপ্ত উপায়)",
     "code": "fn main() {\n    let v = vec![1, 2, 3, 4, 5];\n    let total: i32 = v.iter().____;\n    println!(\"{}\", total);\n}",
-    "accept": ["sum()", "sum::<i32>()"],
+    "accept": [
+      "sum()",
+      "sum::<i32>()"
+    ],
     "explanation": "`sum()` একটা consumer — ভেতরে `fold(0, |acc, x| acc + x)`-কেই চালায়। Type annotation (`: i32` বা turbofish) বলে দেয় কোন সংখ্যায় জমা হবে। `product()`-ও একই পথে fold ব্যবহার করে।"
   },
   {
@@ -114,22 +111,22 @@
     "type": "code",
     "prompt": "নিচের `Counter` iterator 1 থেকে 5 পর্যন্ত সংখ্যা দেবে (এরপর None)। Blank-এ কী বসবে?",
     "code": "struct Counter {\n    count: u32,\n}\n\nimpl Iterator for Counter {\n    type Item = u32;\n\n    fn next(&mut self) -> Option<Self::Item> {\n        if self.count < 5 {\n            self.count += 1;\n            ____\n        } else {\n            None\n        }\n    }\n}\n\nfn main() {\n    let result: Vec<u32> = Counter { count: 0 }\n        .map(|x| x * 2)\n        .filter(|x| x > 4)\n        .collect();\n    println!(\"{:?}\", result); // [6, 8, 10]\n}",
-    "accept": ["Some(self.count)"],
+    "accept": [
+      "Some(self.count)"
+    ],
     "explanation": "count আগেই বাড়ানো হয়েছে, তাই প্রথম call-এ পাওয়া যাবে 1 — ফেরত দিতে হবে `Some(self.count)`। এভাবে 1, 2, 3, 4, 5 এরপর None; `map(|x| x * 2)` → 2, 4, 6, 8, 10; `filter(|x| x > 4)` → [6, 8, 10]। শুধু `next()` লিখলেই এই সব adapter free।"
   },
   {
     "id": "iterators-closures-10",
     "difficulty": "medium",
-    "type": "output",
-    "prompt": "এই কোডের output কী?",
-    "code": "fn main() {\n    let mut count = 0;\n    let mut increment = || {\n        count += 1;\n    };\n    increment();\n    increment();\n    increment();\n    println!(\"{}\", count);\n}",
-    "options": [
-      "3",
-      "0",
-      "2",
-      "Compile error — closure-এর ভেতরে বাইরের variable বদলানো যায় না"
-    ],
-    "answer": 0,
-    "explanation": "Closure-টা `count`-কে `&mut` ধরে ধরে (FnMut) বাড়ায় — তিনবার call-এ 3। Closure আসলে একটা anonymous struct যার field হিসেবে `count`-এর mutable borrow থাকে, তাই ভেতরের পরিবর্তন বাইরের `count`-তেই দেখা যায়। Rust-এ environment modify করা closure নিষিদ্ধ না — শুধু FnMut হতে হয়।"
+    "type": "code",
+    "prompt": "count ভেরিয়েবলের মান 1 বৃদ্ধি করার জন্য আর্গুমেন্টহীন একটি ক্লোজার তৈরি করো:",
+    "code": "let mut count = 0;\nlet mut increment = ____;\nincrement();",
+    "explanation": "ক্লোজারে কোনো আর্গুমেন্ট না থাকলে || দিয়ে শুরু করে সরাসরি বডিতে পরিবেশের ভেরিয়েবল মিউটেট করা যায়।",
+    "accept": [
+      "|| count += 1",
+      "|| { count += 1; }",
+      "|| { count += 1 }"
+    ]
   }
 ]

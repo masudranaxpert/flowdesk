@@ -72,47 +72,35 @@
   {
     "id": "enums-pattern-matching-6",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "কী প্রিন্ট হবে?",
-    "code": "fn main() {\n    let n = 5;\n    match n {\n        1 | 2 | 3 => println!(\"Small\"),\n        4..=7 => println!(\"Medium\"),\n        8..=100 => println!(\"Large\"),\n        _ => println!(\"Huge or negative\"),\n    }\n}",
-    "options": [
-      "Small",
-      "Medium",
-      "Large",
-      "Huge or negative"
-    ],
-    "answer": 1,
-    "explanation": "`1 | 2 | 3` — multiple pattern একসাথে; `4..=7` inclusive range। n = 5 সীমার ভেতরে, আর pattern গুলো উপর থেকে নিচে মেলানো হয় — আগে মিললেই সেই arm চলে, তাই \"Medium\"।"
+    "type": "code",
+    "prompt": "match স্টেটমেন্টে 4 থেকে 7 পর্যন্ত (inclusive) যেকোনো সংখ্যার জন্য ম্যাচ করাতে pattern টি কী লিখবে?",
+    "code": "match n {\n    1 | 2 | 3 => println!(\"Small\"),\n    ____ => println!(\"Medium\"),\n    _ => println!(\"Other\"),\n}",
+    "explanation": "প্যাটার্ন ম্যাচিংয়ে 4..=7 সিনট্যাক্স 4 থেকে 7 পর্যন্ত সব মান ইনক্লুসিভভাবে কভার করে।",
+    "accept": [
+      "4..=7"
+    ]
   },
   {
     "id": "enums-pattern-matching-7",
     "difficulty": "medium",
-    "type": "output",
-    "prompt": "শেষ লাইনে কী প্রিন্ট হবে?",
-    "code": "#[derive(Debug)]\nenum GameState {\n    Menu,\n    Playing { score: u32, lives: u8 },\n    Paused { score: u32, lives: u8 },\n    GameOver { final_score: u32 },\n}\n\nimpl GameState {\n    fn next(self) -> Self {\n        match self {\n            GameState::Menu => GameState::Playing { score: 0, lives: 3 },\n            GameState::Playing { score, lives } if lives == 0 => {\n                GameState::GameOver { final_score: score }\n            }\n            GameState::Playing { score, lives } => GameState::Paused { score, lives },\n            GameState::Paused { score, lives } => GameState::Playing { score, lives },\n            GameState::GameOver { .. } => GameState::Menu,\n        }\n    }\n}\n\nfn main() {\n    let state = GameState::Menu;\n    let state = state.next();\n    let state = GameState::Playing { score: 100, lives: 0 };\n    let state = state.next();\n    println!(\"{:?}\", state);\n}",
-    "options": [
-      "Paused { score: 100, lives: 0 }",
-      "GameOver { final_score: 100 }",
-      "Menu",
-      "Compile error — একই variant দুইবার pattern-এ আসতে পারে না"
-    ],
-    "answer": 1,
-    "explanation": "`Playing { score: 100, lives: 0 }`-এর `next()`-এ প্রথম arm-এর guard `if lives == 0` মিলে যায় — guard-সহ arm সাধারণ `Playing` arm-এর আগেই আছে, তাই GameOver। Guard না থাকলে পরের arm-এ পড়ে Paused হতো। (আগের `state`-গুলো shadow হয়ে গেছে।)"
+    "type": "code",
+    "prompt": "if let ব্যবহার করে Option<u8> থেকে শুধু Some(max) ভ্যালু আনপ্যাক করার প্যাটার্নটি লিখো:",
+    "code": "let config_max = Some(3u8);\nif let ____ = config_max {\n    println!(\"Max is {}\", max);\n}",
+    "explanation": "if let Some(max) সিনট্যাক্স দিয়ে একটি নির্দিষ্ট ভ্যারিয়েন্ট ম্যাচ হলে তার ভেতরের ভ্যালুটি max ভেরিয়েবলে বাইন্ড করা হয়।",
+    "accept": [
+      "Some(max)"
+    ]
   },
   {
     "id": "enums-pattern-matching-8",
     "difficulty": "medium",
-    "type": "output",
-    "prompt": "প্রোগ্রামটা কী ছাপাবে?",
-    "code": "fn main() {\n    let mut stack = vec![1, 2, 3];\n    while let Some(top) = stack.pop() {\n        print!(\"{}\", top);\n    }\n}",
-    "options": [
-      "123",
-      "321",
-      "1 2 3",
-      "Compile error — `pop()` কিন্তু `Option` দেয়"
-    ],
-    "answer": 1,
-    "explanation": "`pop()` শেষ থেকে তোলে আর `Option` ফেরত দেয়। `while let Some(top)` হলো match-এরই sugar — প্রতি ঘূর্ণনে tag check করে, `None` (Vec খালি) এলেই থামে। তাই 3, 2, 1 ক্রমে ছাপা হয়: 321।"
+    "type": "code",
+    "prompt": "Option<i32> এর মান None হলে ডিফল্ট হিসেবে 0 রিটার্ন করতে unwrap_or মেথডটি কীভাবে কল করবে?",
+    "code": "let some_number: Option<i32> = None;\nlet val = some_number.____;\nprintln!(\"{}\", val); // 0",
+    "explanation": "unwrap_or(default_val) মেথড Some থাকলে তার মান বের করে, আর None থাকলে প্রদত্ত ডিফল্ট মান রিটার্ন করে।",
+    "accept": [
+      "unwrap_or(0)"
+    ]
   },
   {
     "id": "enums-pattern-matching-9",

@@ -84,47 +84,36 @@
   {
     "id": "collections-7",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "প্রোগ্রামটা কী প্রিন্ট করবে?",
-    "code": "fn main() {\n    let mut v = vec![1, 2, 3];\n    v.push(4);\n    v.insert(0, 0);\n    println!(\"{:?}\", v);\n}",
-    "options": [
-      "[0, 1, 2, 3, 4]",
-      "[1, 2, 3, 4, 0]",
-      "[4, 0, 1, 2, 3]",
-      "[0, 4, 1, 2, 3]"
-    ],
-    "answer": 0,
-    "explanation": "`push` শেষে জোড়ে → [1, 2, 3, 4]; `insert(0, 0)` index 0-তে বসিয়ে বাকি সবাইকে ডানে এক ঘর সরায় → [0, 1, 2, 3, 4]।"
+    "type": "code",
+    "prompt": "`v` ভেক্টরের শেষে নতুন একটি উপাদান হিসেবে 4 যুক্ত করতে push মেথড কলটি লিখো:",
+    "code": "let mut v = vec![1, 2, 3];\n____;\nprintln!(\"{:?}\", v); // [1, 2, 3, 4]",
+    "explanation": "ভেক্টরের শেষে উপাদান যোগ করতে ভেক্টরের .push(val) মেথড ব্যবহার করা হয়।",
+    "accept": [
+      "v.push(4)",
+      "v.push(4);"
+    ]
   },
   {
     "id": "collections-8",
     "difficulty": "medium",
-    "type": "output",
-    "prompt": "প্রোগ্রামটা কী প্রিন্ট করবে?",
-    "code": "fn main() {\n    let mut v = vec![1, 2, 1, 1, 3, 3];\n    v.dedup();\n    println!(\"{:?}\", v);\n}",
-    "options": [
-      "[1, 2, 3]",
-      "[1, 2, 1, 3]",
-      "[1, 1, 3]",
-      "[1, 2, 1, 1, 3, 3]"
-    ],
-    "answer": 1,
-    "explanation": "`dedup()` শুধু **পাশাপাশি (adjacent)** duplicate মুছে — [1, 2, 1, 1, 3, 3]-এ পাশাপাশি 1,1 আর 3,3 পড়ে, কিন্তু 2-এর আগে-পরের 1-রা পাশাপাশি না। পুরো থেকে দূরের duplicate বাদ দিতে চাইলে আগে `sort()` করে `dedup()`, নাহলে `HashSet`-এ collect করো (order হারাবে)।"
+    "type": "code",
+    "prompt": "`v` ভেক্টরটির ২ নম্বর ইনডেক্সের মান প্যানিক ছাড়া নিরাপদভাবে Option<&i32> আকারে পেতে কোন মেথড কল করবে?",
+    "code": "let v = vec![10, 20, 30, 40];\nlet third: Option<&i32> = ____;",
+    "explanation": "ভেক্টর ইনডেক্সিং ভেক্টর সীমার বাইরে গেলে প্যানিক করে, কিন্তু .get(index) কল করলে নিরাপদভাবে Option রেফারেন্স প্রদান করে।",
+    "accept": [
+      "v.get(2)"
+    ]
   },
   {
     "id": "collections-9",
     "difficulty": "hard",
-    "type": "output",
-    "prompt": "প্রোগ্রামটা কী প্রিন্ট করবে?",
-    "code": "fn main() {\n    let mut v = vec![1, 2, 3];\n    let a = v.pop();\n    let b = v.pop();\n    let c = v.pop();\n    let d = v.pop();\n    println!(\"{:?} {:?} {:?} {:?}\", a, b, c, d);\n}",
-    "options": [
-      "3 2 1 0",
-      "Some(3) Some(2) Some(1) None",
-      "Some(3) Some(2) Some(1) Some(0)",
-      "Compile error — খালি Vec-এ pop করা যায় না"
-    ],
-    "answer": 1,
-    "explanation": "`pop()` শেষ element-টা `Option<T>`-এ মুড়ে দেয় — খালি Vec-তে panic না করে `None`। তাই 3, 2, 1-এর পর চতুর্থটা None। খালি হওয়াটা এখানে বৈধ case — enum chapter-এর `Option`-ই সেটা type-এ ধরে রাখে।"
+    "type": "code",
+    "prompt": "`v` ভেক্টরের শেষ থেকে একটি উপাদান পপ করে Option<i32> আকারে বের করে নিতে মেথড কলটি লিখো:",
+    "code": "let mut v = vec![1, 2, 3];\nlet last = ____; // Some(3)",
+    "explanation": ".pop() মেথড ভেক্টরের শেষ উপাদান অপসারণ করে Option হিসেবে ফেরত দেয়; ভেক্টর খালি হলে None প্রদান করে।",
+    "accept": [
+      "v.pop()"
+    ]
   },
   {
     "id": "collections-10",

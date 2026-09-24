@@ -31,17 +31,13 @@
   {
     "id": "concurrency-3",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "প্রোগ্রামটা কী print করবে?",
-    "code": "use std::thread;\n\nfn main() {\n    let handle = thread::spawn(|| {\n        let mut sum = 0;\n        for i in 1..=4 {\n            sum += i;\n        }\n        sum\n    });\n\n    let result = handle.join().unwrap();\n    println!(\"Thread returned: {}\", result);\n}",
-    "options": [
-      "Thread returned: 10",
-      "Thread returned: 4",
-      "কিছু print হয় না — thread শেষ হওয়ার আগেই main exit করে যায়",
-      "compile error — spawn-এর closure থেকে value return করা যায় না"
-    ],
-    "answer": 0,
-    "explanation": "closure-এর শেষ expression-টাই thread-এর return value। thread শেষ হলে মানটা দুই thread-এর মাঝের shared slot-এ বসে, join() সেটা তুলে দেয়। এখানে 1+2+3+4 = 10। join() থাকায় main thread শেষ হওয়ার আগেই spawn-এর কাজ নিশ্চিত হয়ে যায়।"
+    "type": "code",
+    "prompt": "নতুন একটি থ্রেড তৈরি করার জন্য স্ট্যান্ডার্ড লাইব্রেরির spawn ফাংশনটি কল করার সিনট্যাক্স লিখো:",
+    "code": "use std::thread;\nlet handle = ____(|| {\n    println!(\"Hello from thread!\");\n});",
+    "explanation": "Rust-এ নতুন OS থ্রেড তৈরি করতে thread::spawn(|| { ... }) ব্যবহার করা হয়।",
+    "accept": [
+      "thread::spawn"
+    ]
   },
   {
     "id": "concurrency-4",
@@ -74,17 +70,13 @@
   {
     "id": "concurrency-6",
     "difficulty": "medium",
-    "type": "output",
-    "prompt": "stdout-এ কী print হবে?",
-    "code": "use std::sync::mpsc;\nuse std::thread;\n\nfn main() {\n    let (tx, rx) = mpsc::channel();\n\n    thread::spawn(move || {\n        for i in 1..=3 {\n            tx.send(i * 10).unwrap();\n        }\n    });\n\n    for received in rx {\n        println!(\"Got: {}\", received);\n    }\n    println!(\"Done\");\n}",
-    "options": [
-      "Done — message গুলো আসার আগেই main exit করে যায়",
-      "Got: 10\nGot: 20\nGot: 30\nDone",
-      "Got: 30\nGot: 20\nGot: 10\nDone",
-      "compile error — rx-কে for loop-এ ব্যবহার করা যায় না"
-    ],
-    "answer": 1,
-    "explanation": "Receiver-এর Iterator impl আছে: queue খালি হলে block করে, সব Sender drop হয়ে গেলে None return করে — loop শেষ। spawned thread তিনটা message পাঠিয়ে শেষ হলে tx drop হয়, তখন iterator ফুরায়। channel FIFO, তাই order 10, 20, 30 — শেষে Done।"
+    "type": "code",
+    "prompt": "চ্যানেলের রিসিভার rx থেকে ব্লক করে মেসেজ গ্রহণ করতে কোন মেথড কল করবে?",
+    "code": "let (tx, rx) = mpsc::channel();\ntx.send(42).unwrap();\nlet val = rx.____.unwrap();",
+    "explanation": "rx.recv() মেসেজ আসার আগ পর্যন্ত অপেক্ষা করে এবং Result হিসেবে মেসেজ রিটার্ন করে।",
+    "accept": [
+      "recv()"
+    ]
   },
   {
     "id": "concurrency-7",
@@ -92,7 +84,9 @@
     "type": "code",
     "prompt": "thread-এর ভেতরে data ব্যবহার করতে blank-এ কী বসালে কোড compile হবে?",
     "code": "use std::thread;\n\nfn main() {\n    let data = vec![1, 2, 3];\n\n    let handle = thread::spawn(____ || {\n        println!(\"{:?}\", data);\n    });\n\n    handle.join().unwrap();\n}",
-    "accept": ["move"],
+    "accept": [
+      "move"
+    ],
     "explanation": "spawn-এর closure bound হলো F: FnOnce() -> T + Send + 'static — thread-টা main-এর বাঁচা ছাড়িয়ে যেতে পারে, তাই borrowed data নিষেধ। move দিলে Vec-এর pointer+len+capacity ownership সহ thread-এ চলে যায় (element copy হয় না)। move ছাড়া compiler error দেয় — closure may outlive the current function।"
   },
   {
@@ -115,7 +109,9 @@
     "type": "code",
     "prompt": "১০টা thread একটা Arc<Mutex<i32>> counter বাড়াচ্ছে — শেষে Final: 10 print হতে হলে blank-এ কী বসবে?",
     "code": "use std::sync::{Arc, Mutex};\nuse std::thread;\n\nfn main() {\n    let counter = Arc::new(Mutex::new(0));\n    let mut handles = vec![];\n\n    for _ in 0..10 {\n        let counter = Arc::clone(&counter);\n        handles.push(thread::spawn(move || {\n            let mut num = counter.lock().unwrap();\n            ____;\n        }));\n    }\n\n    for handle in handles {\n        handle.join().unwrap();\n    }\n\n    println!(\"Final: {}\", *counter.lock().unwrap());\n}",
-    "accept": ["*num += 1"],
+    "accept": [
+      "*num += 1"
+    ],
     "explanation": "lock() একটা MutexGuard return করে — guard-এর ভেতরের মান বদলাতে deref করতে হয়, তাই *num += 1। guard scope শেষে drop হলে lock automatically release হয় (RAII), তাই প্রতিটা thread-এর বাড়ানো হারায় না। Arc নিজে কাউকে share করাতে পারে না — atomic refcount দিয়ে Arc অনেক thread-কে একই Mutex-এর মালিকানা দেয়।"
   },
   {

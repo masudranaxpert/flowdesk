@@ -86,47 +86,38 @@
   {
     "id": "structs-methods-7",
     "difficulty": "easy",
-    "type": "output",
-    "prompt": "প্রোগ্রামটা কী প্রিন্ট করবে?",
-    "code": "#[derive(Debug)]\nstruct Point {\n    x: i32,\n    y: i32,\n}\n\nfn main() {\n    let p = Point { x: 3, y: 4 };\n    println!(\"{:?}\", p);\n}",
-    "options": [
+    "type": "code",
+    "prompt": "Point struct এর একটি ইনস্ট্যান্স তৈরি করো যেখানে x এর মান 3 এবং y এর মান 4:",
+    "code": "#[derive(Debug)]\nstruct Point {\n    x: i32,\n    y: i32,\n}\n\nfn main() {\n    let p = ____;\n    println!(\"{:?}\", p);\n}",
+    "explanation": "Struct এর ফিল্ড নাম উল্লেখ করে curly braces এর মধ্যে মান প্রদান করে ইনস্ট্যান্স তৈরি করতে হয়।",
+    "accept": [
       "Point { x: 3, y: 4 }",
-      "Point(3, 4)",
-      "Compile error — struct সরাসরি প্রিন্ট করা যায় না",
-      "{x: 3, y: 4}"
-    ],
-    "answer": 0,
-    "explanation": "`{:?}` Debug format ব্যবহার করে, আর `#[derive(Debug)]` থাকায় compiler সেই implementation লিখে দিয়েছে — named-field struct এভাবেই ছাপা হয়। Tuple struct হলে `Point(3, 4)` আকারে আসত।"
+      "Point { x: 3, y: 4 };",
+      "Point{x: 3, y: 4}"
+    ]
   },
   {
     "id": "structs-methods-8",
     "difficulty": "medium",
-    "type": "output",
-    "prompt": "প্রোগ্রামটা কী প্রিন্ট করবে?",
-    "code": "struct Rectangle {\n    width: f64,\n    height: f64,\n}\n\nimpl Rectangle {\n    fn square(size: f64) -> Rectangle {\n        Rectangle { width: size, height: size }\n    }\n\n    fn area(&self) -> f64 {\n        self.width * self.height\n    }\n}\n\nfn main() {\n    let s = Rectangle::square(25.0);\n    println!(\"{}\", s.area());\n}",
-    "options": [
-      "Compile error — `square`-কে `.` দিয়ে ডাকতে হয়",
-      "50",
-      "625",
-      "625.0"
-    ],
-    "answer": 2,
-    "explanation": "`square` associated function (`self` parameter নেই) — তাই `Rectangle::square(25.0)` এভাবে `::` দিয়ে ডাকা হয়েছে। দুই বাহুই 25.0, area = 625.0; আর `f64`-এর Display এটাকে `625`-ই ছাপায়, `.0` বসায় না।"
+    "type": "code",
+    "prompt": "`square` একটি associated function (যার মধ্যে self নেই)। 25.0 বাহু বিশিষ্ট একটি বর্গ Rectangle তৈরি করতে ফাংশনটি কল করার সিনট্যাক্সটি লিখো:",
+    "code": "let s = ____;",
+    "explanation": "Associated function (যেমন constructor) টাইপের নামের পরে double colon (::) সিনট্যাক্স দিয়ে কল করতে হয়।",
+    "accept": [
+      "Rectangle::square(25.0)",
+      "Rectangle::square(25.0);"
+    ]
   },
   {
     "id": "structs-methods-9",
     "difficulty": "hard",
-    "type": "output",
-    "prompt": "64-bit এ কী প্রিন্ট হবে? (ধরো struct-এ কোনো `#[repr]` attribute নেই)",
-    "code": "struct S {\n    a: u8,\n    b: u64,\n    c: u8,\n}\n\nfn main() {\n    println!(\"{}\", std::mem::size_of::<S>());\n}",
-    "options": [
-      "10",
-      "16",
-      "24",
-      "26"
-    ],
-    "answer": 1,
-    "explanation": "ঘোষণার ক্রমেই রাখলে হতো u8 + 7 padding + u64 + u8 + 7 padding = 24। কিন্তু `repr(Rust)` layout-এ compiler নিজেই field reorder করে padding minimize করে: u64 (৮) + a (১) + c (১) + ৬ padding = 16। Field order নিয়ে চিন্তা কমিয়ে দেওয়ার কারণ এটাই।"
+    "type": "code",
+    "prompt": "`Rectangle` এর `area` মেথডটিতে struct এর ফিল্ড শুধু রিড করার জন্য প্রথম প্যারামিটার হিসেবে কী লিখবে?",
+    "code": "impl Rectangle {\n    fn area(____) -> f64 {\n        self.width * self.height\n    }\n}",
+    "explanation": "কোনো মেথডে struct এর ফিল্ড শুধু রিড করার জন্য immutable borrow হিসেবে &self ব্যবহার করা হয়।",
+    "accept": [
+      "&self"
+    ]
   },
   {
     "id": "structs-methods-10",
