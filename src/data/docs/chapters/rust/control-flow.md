@@ -37,7 +37,7 @@ let grade = if score >= 80 { "A" } else { "B" };
 > Python এ এটা করতে হতো `grade = "A" if score >= 80 else "B"`। Rust এ `if` ই হলো ternary — আলাদা operator নেই। কিন্তু দুই branch এর **type একই হতে হবে**:
 
 ```rust
-// ERROR — দুই branch এ ভিন্ন type
+// Compilation error: if and else branches have mismatched types
 let value = if true { 5 } else { "hello" };
 ```
 
@@ -111,10 +111,10 @@ let mut count = 0;
 
     loop {
         if remaining == 9 {
-            break;  // ভেতরের loop থেকে বেরো
+            break; // Terminate innermost loop
         }
         if count == 3 {
-            break 'outer;  // বাইরের loop থেকে বেরো!
+            break 'outer; // Break out of labeled outer loop
         }
         remaining -= 1;
     }
@@ -146,7 +146,7 @@ for i in 1..=5 {
     println!("{}", i);  // 1, 2, 3, 4, 5
 }
 
-// Exclusive range (1..5 মানে 1 থেকে 4)
+// Exclusive range: 1..5 includes 1 through 4
 for i in 1..5 {
     println!("{}", i);  // 1, 2, 3, 4
 }
@@ -172,10 +172,10 @@ Rust এ `for` নিজে কোনো loop machine না — সবসময
 
 ```rust
 // for i in 1..=5 { println!("{}", i); }
-// ভেতরে মোটামুটি এটা হয় (simplified desugar):
+// Desugared iterator loop mechanics:
 {
-    let mut iter = (1..=5).into_iter(); // ছোট struct — শুধু দুই মাথা জানে, allocation নেই
-    while let Some(i) = iter.next() {   // প্রতি ধাপে একটা value, শেষ হলে None
+    let mut iter = (1..=5).into_iter(); // Stack-allocated range iterator (zero-cost)
+    while let Some(i) = iter.next() {   // Yield next item until iterator returns None
         println!("{}", i);
     }
 }
@@ -295,7 +295,7 @@ match some_value {
     None => {},
 }
 
-// if let দিয়ে — ছোট
+// Concise pattern match with if let:
 if let Some(val) = some_value {
     println!("Value: {}", val);
 }
@@ -308,7 +308,7 @@ if let Some(val) = some_value {
 
 ```rust
 // if let Some(val) = some_value { body }
-// আসলে এটা হয় (simplified):
+// Desugared equivalent pattern:
 match some_value {
     Some(val) => { body },
     _ => {},

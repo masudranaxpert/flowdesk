@@ -61,7 +61,7 @@ Trait এ default implementation দেওয়া যায়:
 trait Summary {
     fn summarize(&self) -> String;
 
-    // Default method — override না করলে এটাই ব্যবহার হবে
+    // Default trait method implementation:
     fn preview(&self) -> String {
         format!("{}...", &self.summarize()[..50.min(self.summarize().len())])
     }
@@ -71,7 +71,7 @@ impl Summary for Tweet {
     fn summarize(&self) -> String {
         format!("@{}: {}", self.username, self.text)
     }
-    // preview() override করিনি — default ব্যবহার হবে
+    // Inherits default preview() method implementation
 }
 ```
 
@@ -91,7 +91,7 @@ fn print_summary(item: &impl Summary) {
 ### Trait Bound Syntax
 
 ```rust
-// উপরেরটার সমতুল্য — explicit
+// Explicit trait bound equivalent:
 fn print_summary<T: Summary>(item: &T) {
     println!("{}", item.summarize());
 }
@@ -106,7 +106,7 @@ fn display_info<T: Summary + std::fmt::Display>(item: &T) {
 > `impl Trait` হলো syntactic sugar — ছোট আর পঠনযোগ্য। কিন্তু যদি একাধিক parameter same type হতে হবে, trait bound `<T: Trait>` ব্যবহার করো:
 
 ```rust
-// দুটো parameter same type — trait bound দরকার
+// Both parameters must share the exact same concrete type:
 fn longest<T: PartialOrd>(a: T, b: T) -> T {
     if a > b { a } else { b }
 }
@@ -117,10 +117,10 @@ fn longest<T: PartialOrd>(a: T, b: T) -> T {
 Trait bound বেশি হলে `where` clause পরিষ্কার:
 
 ```rust
-// এটা পড়তে কষ্ট
+// Inline trait bounds can become cluttered:
 fn complex<T: Summary + Clone, U: std::fmt::Debug + Display>(a: T, b: U) -> String { ... }
 
-// where clause — পরিষ্কার
+// Cleaner signature formatting via where clause:
 fn complex<T, U>(a: T, b: U) -> String
 where
     T: Summary + Clone,
@@ -201,7 +201,7 @@ impl<T> Point<T> {
     }
 }
 
-// শুধু f64 এর জন্য method
+// Specific method implementation for Point<f64>:
 impl Point<f64> {
     fn distance_from_origin(&self) -> f64 {
         (self.x.powi(2) + self.y.powi(2)).sqrt()
@@ -210,25 +210,25 @@ impl Point<f64> {
 ```
 
 > [!example]
-> // খেয়াল করো — `impl<T> Point<T>` সব type এর জন্য। কিন্তু `impl Point<f64>` শুধু f64 এর জন্য। এটা Rust এর একটা দারুণ feature — specific type এর জন্য extra method দেওয়া যায়।
+> খেয়াল করো — `impl<T> Point<T>` সব type এর জন্য। কিন্তু `impl Point<f64>` শুধু f64 এর জন্য। এটা Rust এর একটা দারুণ feature — specific type এর জন্য extra method দেওয়া যায়।
 
 ## Monomorphization — Zero-Cost Abstraction
 
 Rust এর generics compile time এ specific type এ expand হয় — এটাকে **monomorphization** বলে। Runtime এ কোনো overhead নেই।
 
 ```rust
-// তোমার কোড
+// User application code:
 fn largest<T: PartialOrd>(list: &[T]) -> &T { ... }
 let a = largest(&[1, 2, 3]);        // i32
 let b = largest(&[1.0, 2.0, 3.0]); // f64
 
-// Compiler generate করে (conceptually):
+// Monomorphization: compiler generates specialized monomorphic code:
 fn largest_i32(list: &[i32]) -> &i32 { ... }
 fn largest_f64(list: &[f64]) -> &f64 { ... }
 ```
 
 > [!tip]
-> // এটাই "zero-cost abstraction" — generic code লেখো, compiler specific version বানায়। C++ এর template এর মতো, কিন্তু Python এর generic (duck typing) এর চেয়ে অনেক fast কারণ runtime type check নেই।
+> এটাই "zero-cost abstraction" — generic code লেখো, compiler specific version বানায়। C++ এর template এর মতো, কিন্তু Python এর generic (duck typing) এর চেয়ে অনেক fast কারণ runtime type check নেই।
 
 ### Monomorphization এর পেছনে
 
@@ -282,26 +282,26 @@ fn main() {
 | Use when | Type known at compile time | Runtime polymorphism needed |
 
 > [!note]
-> // সাধারণ নিয়ম — `impl Trait` prefer করো (fast)। শুধু তখনই `dyn Trait` যখন একই collection এ একাধিক type রাখতে হবে। এটা C++ এর virtual function, Python এর duck typing এর মতো।
+> সাধারণ নিয়ম — `impl Trait` prefer করো (fast)। শুধু তখনই `dyn Trait` যখন একই collection এ একাধিক type রাখতে হবে। এটা C++ এর virtual function, Python এর duck typing এর মতো।
 
 ### vtable আর Fat Pointer — `dyn` এর ভেতরে
 
 প্রথম প্রশ্ন: trait object এর size কেন জানা যায় না? কারণ `dyn Summary` এর পেছনে `Article` আসতে পারে (৩টা String) আবার `Tweet` (২টা String) — ভিন্ন type এর size ভিন্ন, compile time এ একটা সংখ্যা বলা অসম্ভব। এই ধরনের type কে বলে **DST (dynamically sized type)** — তাই trait object সবসময় কোনো pointer এর পেছনে থাকতে হয়: `&dyn`, `Box<dyn>`, `Rc<dyn>`।
 
-তাহলে pointer ধরে সঠিক method খুঁজে পায় কীভাবে? মেমরিতে `&dyn Summary` আসলে **দুইটা word (x86-64 এ ১৬ bytes)** এর একটা জোড়া — fat pointer:
+তাহলে pointer ধরে সঠিক method খুঁজে পায় কীভাবে? memory-তে `&dyn Summary` আসলে **দুইটা word (x86-64 এ ১৬ bytes)** এর একটা জোড়া — fat pointer:
 
 ```rust
-// Simplified — ভেতরে যা থাকে
+// Conceptual fat pointer dynamic dispatch layout:
 struct FatPtr {
-    data: *const (),           // ১ম word: আসল object এর ঠিকানা (Article বা Tweet)
-    vtable: &'static VTable,   // ২য় word: ওই type এর method table
+    data: *const (),           // Pointer to concrete object instance data
+    vtable: &'static VTable,   // Pointer to static virtual method table (vtable)
 }
 
 struct VTable {
     drop: fn(*mut ()),                   // destructor
-    size: usize,                         // object এর আসল size
+    size: usize,                         // Size of underlying concrete type
     align: usize,                        // alignment
-    summarize: fn(*const ()) -> String,  // প্রতিটা trait method একটা slot
+    summarize: fn(*const ()) -> String,  // Function pointer slot for trait method
 }
 ```
 
@@ -329,7 +329,7 @@ impl fmt::Display for City {
 }
 
 // Debug — developer-friendly ({:?} format)
-// #[derive(Debug)] দিলে automatically হয়
+// Automated implementation via derive macro:
 ```
 
 > [!note]
@@ -346,7 +346,7 @@ struct Color {
 }
 
 let c1 = Color { r: 255, g: 0, b: 0 };
-let c2 = c1;  // copy — c1 এখনো valid
+let c2 = c1;  // Bitwise copy: c1 remains valid after assignment
 ```
 
 > [!note]
@@ -400,11 +400,11 @@ fn print_all_dyn(items: &[Box<dyn Summary>]) {
 ```
 
 > [!tip]
-> // সিদ্ধান্ত:
-> // - একই type এর list → generic (`Vec<T>`)
-> // - মিশ্র type এর list → trait object (`Vec<Box<dyn Trait>>`)
-> // - Performance-critical → generic
-> // - Flexibility-critical → trait object
+> সিদ্ধান্ত:
+> - একই type এর list → generic (`Vec<T>`)
+> - মিশ্র type এর list → trait object (`Vec<Box<dyn Trait>>`)
+> - Performance-critical → generic
+> - Flexibility-critical → trait object
 
 ## বাস্তব উদাহরণ — Plugin System
 
@@ -450,7 +450,7 @@ fn main() {
 ```
 
 > [!example]
-> // এখানে দুটো ভিন্ন type (UppercasePlugin আর ReversePlugin) একই `Vec` এ store করা হয়েছে — `Box<dyn Plugin>` দিয়ে। এটাই trait object এর শক্তি — runtime polymorphism, C++ এর virtual function এর মতো।
+> এখানে দুটো ভিন্ন type (UppercasePlugin আর ReversePlugin) একই `Vec` এ store করা হয়েছে — `Box<dyn Plugin>` দিয়ে। এটাই trait object এর শক্তি — runtime polymorphism, C++ এর virtual function এর মতো।
 
 ## Python vs Rust — Abstraction তুলনা
 
@@ -463,7 +463,7 @@ fn main() {
 | Polymorphism | Implicit | `dyn Trait` or generic |
 
 > [!note]
-> // Rust এ inheritance নেই! এটা deliberate decision। এর বদলে composition + trait ব্যবহার করো। এটা আরো flexible আর কম confusing।
+> Rust এ inheritance নেই! এটা deliberate decision। এর বদলে composition + trait ব্যবহার করো। এটা আরো flexible আর কম confusing।
 
 ## Summary
 

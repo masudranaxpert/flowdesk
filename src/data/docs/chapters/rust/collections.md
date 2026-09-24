@@ -32,12 +32,12 @@ let v4: Vec<i32> = (1..=5).collect();
 
 ```rust
 let mut v = Vec::new();
-v.push(1);       // শেষে যোগ
+v.push(1);       // Append to end of vector (amortized O(1))
 v.push(2);
 v.push(3);
 
-v.insert(0, 0);  // index 0 তে insert → [0, 1, 2, 3]
-v.extend([4, 5]); // একাধিক যোগ → [0, 1, 2, 3, 4, 5]
+v.insert(0, 0);  // Insert at index 0 (O(n) shifts elements right)
+v.extend([4, 5]); // Extend vector with iterator elements
 ```
 
 > [!note]
@@ -54,15 +54,15 @@ v.extend([4, 5]); // একাধিক যোগ → [0, 1, 2, 3, 4, 5]
 ```rust
 let v = vec![10, 20, 30, 40, 50];
 
-// Index — panic হতে পারে
+// Direct indexing panics if index is out of bounds:
 let third = v[2];            // 30
 
-// get — safe (Option return করে)
+// Safe indexing returning Option<&T>:
 let fourth = v.get(3);       // Some(40)
 let out_of_bounds = v.get(100); // None
 
-// নেতিবাচক index নেই! v[-1] error
-// শেষ element:
+// Rust indices must be non-negative usize
+// Access final element via last():
 let last = v.last().unwrap(); // 50
 ```
 
@@ -78,7 +78,7 @@ let last = v.last().unwrap(); // 50
 let mut v = vec![1, 2, 3, 4, 5];
 
 let last = v.pop();          // Some(5), v = [1, 2, 3, 4]
-v.remove(0);                 // v = [2, 3, 4] (O(n) — shift করে)
+v.remove(0);                 // Remove at index 0 (shifts elements, O(n))
 v.truncate(2);               // v = [2, 3]
 v.clear();                   // v = []
 ```
@@ -99,24 +99,24 @@ for val in &v {
 // Mutable borrow
 let mut v2 = vec![1, 2, 3];
 for val in &mut v2 {
-    *val *= 2;  // `val` হলো `&mut i32` — তাই মান পরিবর্তন করতে `*` (dereference) দিতে হয়
+    *val *= 2;  // Dereference mutable reference (*val) to mutate underlying value
 }
 // v2 = [2, 4, 6]
 
-// Ownership নিয়ে নেওয়া (consume)
+// Consume vector ownership (into_iter):
 for val in v {
     println!("{}", val);
 }
-// v এখন invalid — লুপের ভেতরে উপাদানগুলোর মালিকানা মুভ হয়ে গেছে
+// Vector consumed; elements moved into loop scope
 ```
 
 > [!note]
-> **কেন `*val` লিখতে হলো?** `for val in &mut v2` লুপে `val` সরাসরি সংখ্যা নয়, বরং মেমোরির একটি রেফারেন্স (`&mut i32`)। রেফারেন্সের পেছনের আসল সংখ্যাটিকে পরিবর্তন করতে ডিরিফারেন্স অপারেটর `*` ব্যবহার করা হয়।
+> **কেন `*val` লিখতে হলো?** `for val in &mut v2` loop-এ `val` সরাসরি সংখ্যা নয়, বরং memory-র একটি রেফারেন্স (`&mut i32`)। রেফারেন্সের পেছনের আসল সংখ্যাটিকে পরিবর্তন করতে ডিরিফারেন্স অপারেটর `*` ব্যবহার করা হয়।
 > 
 > **তিন রকম ইটারেশন মনে রাখবে:**
 > 1. `for val in &v` — শুধু পড়ার জন্য ধারের রেফারেন্স (`&T`), ভেক্টর অক্ষত থাকে।
 > 2. `for val in &mut v` — প্রতিটি উপাদান পরিবর্তন করতে (`&mut T`), ভেক্টর অক্ষত থাকে।
-> 3. `for val in v` — মালিকানা মুভ হয় (`T`), লুপ শেষে পুরো ভেক্টর মেমোরি থেকে মুছে যায়।
+> 3. `for val in v` — মালিকানা move হয় (`T`), loop শেষে পুরো ভেক্টর memory থেকে মুছে যায়।
 
 ### Iteration with Index
 
@@ -197,7 +197,7 @@ scores.insert(String::from("Rahim"), 87);
 ### Access
 
 ```rust
-// get — Option return করে
+// Returns Option<&V> without panicking:
 let karim_score = scores.get("Karim");  // Some(&95)
 let unknown = scores.get("Unknown");     // None
 
@@ -213,12 +213,12 @@ for (name, score) in &scores {
 ### Insert আর Update
 
 ```rust
-// Overwrite — আগের value হারিয়ে যায়
+// Overwrites existing value for key:
 scores.insert(String::from("Karim"), 100);
 
-// entry — শুধু তখনই insert যদি key না থাকে
-scores.entry(String::from("Rahim")).or_insert(50);  // আগে থেকে আছে, বদলবে না
-scores.entry(String::from("Sadia")).or_insert(78);  // নতুন, insert হবে
+// Entry API: insert only if key does not exist
+scores.entry(String::from("Rahim")).or_insert(50);  // Key exists; keeps existing value
+scores.entry(String::from("Sadia")).or_insert(78);  // Key absent; inserts default 78
 ```
 
 > [!tip]
@@ -227,7 +227,7 @@ scores.entry(String::from("Sadia")).or_insert(78);  // নতুন, insert হ�
 `entry().or_insert()` এর ভেতরে আসলে এই কোড চলে (simplified):
 
 ```rust
-// একবারই hash + lookup হয় — দুবার না
+// Single hash calculation for both lookup and insertion
 pub fn entry(&mut self, key: K) -> Entry<'_, K, V> {
     match self.get_inner(&key) {
         Some(_) => Entry::Occupied(/* slot এর location মনে রাখে */),
@@ -312,7 +312,7 @@ use std::collections::HashSet;
 let mut fruits: HashSet<&str> = HashSet::new();
 fruits.insert("apple");
 fruits.insert("banana");
-fruits.insert("apple");  // duplicate — ঢুকবে না
+fruits.insert("apple");  // Duplicate element ignored by Set
 
 println!("{}", fruits.len());  // 2
 

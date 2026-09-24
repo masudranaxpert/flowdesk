@@ -1,12 +1,12 @@
 # Abstract Classes ও Interfaces
 
-সফটওয়্যার ইঞ্জিনিয়ারিংয়ে অ্যাবস্ট্রাকশন (Abstraction) হলো অপ্রয়োজনীয় বাস্তবায়ন বা জটিলতা আড়াল করে কেবল প্রয়োজনীয় চুক্তি বা ইন্টারফেস প্রকাশ করা। Java-তে চুক্তিভিত্তিক আর্কিটেকচার গড়ে তোলার জন্য দুটি প্রধান হাতিয়ার রয়েছে: **অ্যাবস্ট্রাক্ট ক্লাস (Abstract Class)** এবং **ইন্টারফেস (Interface)**।
+সফটওয়্যার ইঞ্জিনিয়ারিংয়ে Abstraction হলো অপ্রয়োজনীয় বাস্তবায়ন বা জটিলতা আড়াল করে কেবল প্রয়োজনীয় চুক্তি বা interface প্রকাশ করা। Java-তে চুক্তিভিত্তিক আর্কিটেকচার গড়ে তোলার জন্য দুটি প্রধান হাতিয়ার রয়েছে: **Abstract Class** এবং **Interface**।
 
 ---
 
 ## ১. Abstract Class — অসম্পূর্ণ ব্লুপ্রিন্ট
 
-অ্যাবস্ট্রাক্ট ক্লাস হলো এমন একটি ক্লাস যার সরাসরি কোনো অবজেক্ট (`new`) তৈরি করা যায় না। এটি সাধারণ ক্লাসের মতো স্টেট (ফিল্ড) ও পূর্ণাঙ্গ মেথড ধারণ করতে পারে, সাথে কিছু মেথডকে অসম্পূর্ণ (`abstract`) রেখে চাইল্ড ক্লাসকে তা বাস্তবায়ন করতে বাধ্য করে:
+abstract class হলো এমন একটি class যার সরাসরি কোনো object (`new`) তৈরি করা যায় না। এটি সাধারণ class-এর মতো স্টেট (ফিল্ড) ও পূর্ণাঙ্গ method ধারণ করতে পারে, সাথে কিছু method-কে অসম্পূর্ণ (`abstract`) রেখে চাইল্ড class-কে তা বাস্তবায়ন করতে বাধ্য করে:
 
 ```java
 // Abstract base class
@@ -49,7 +49,7 @@ public class BkashPayment extends PaymentProcessor {
 
 ## ২. Interface — আচরণের খাঁটি চুক্তি
 
-ইন্টারফেস হলো মেথডের একটি বিশুদ্ধ চুক্তি — "কোনো ক্লাস কী কী কাজ করতে পারবে"। এটি কোনো ইনস্ট্যান্স স্টেট ধরে রাখে না:
+interface হলো method-এর একটি বিশুদ্ধ চুক্তি — "কোনো class কী কী কাজ করতে পারবে"। এটি কোনো ইনস্ট্যান্স স্টেট ধরে রাখে না:
 
 ```java
 public interface Drivable {
@@ -64,12 +64,12 @@ public interface Drivable {
 
 ---
 
-## ৩. ইন্টারফেসের বিবর্তন (Java 8 এবং Java 9)
+## ৩. interface-এর বিবর্তন (Java 8 এবং Java 9)
 
-পূর্বে ইন্টারফেসে কোনো মেথডের বডি থাকা নিষিদ্ধ ছিল। কিন্তু আধুনিক Java-তে ইন্টারফেস অত্যন্ত শক্তিশালী:
+পূর্বে interface-এ কোনো method-এর বডি থাকা নিষিদ্ধ ছিল। কিন্তু আধুনিক Java-তে interface অত্যন্ত শক্তিশালী:
 
 ### ক. Default Methods (Java 8):
-বিদ্যমান ক্লায়েন্ট কোড না ভেঙে ইন্টারফেসে নতুন মেথড যোগ করতে `default` মেথড আনা হয় (যেমন Java Collections-এ `stream()` মেথড যোগ করার জন্য):
+বিদ্যমান ক্লায়েন্ট কোড না ভেঙে interface-এ নতুন method যোগ করতে `default` method আনা হয় (যেমন Java Collections-এ `stream()` method যোগ করার জন্য):
 
 ```java
 public interface Vehicle {
@@ -83,7 +83,7 @@ public interface Vehicle {
 ```
 
 ### খ. Static Methods (Java 8):
-ইউটিলিটি বা ফ্যাক্টরি মেথড সরাসরি ইন্টারফেসে রাখতে:
+ইউটিলিটি বা ফ্যাক্টরি method সরাসরি interface-এ রাখতে:
 ```java
 public interface Formatter {
     static String clean(String text) {
@@ -93,7 +93,7 @@ public interface Formatter {
 ```
 
 ### গ. Private Methods (Java 9):
-একাধিক ডিফল্ট মেথডের কমন কোড ডুপ্লিকেশন কমাতে ইন্টারফেসে প্রাইভেট মেথড লেখা যায়:
+একাধিক ডিফল্ট method-এর কমন কোড ডুপ্লিকেশন কমাতে interface-এ প্রাইভেট method লেখা যায়:
 ```java
 public interface Logger {
     default void logInfo(String msg) { log("INFO", msg); }
@@ -108,9 +108,9 @@ public interface Logger {
 
 ---
 
-## ৪. মাল্টিপল ইন্টারফেস বাস্তবায়ন (Multiple Inheritance of Type)
+## ৪. মাল্টিপল interface বাস্তবায়ন (Multiple Inheritance of Type)
 
-Java-তে একাধিক ক্লাস ইনহেরিট করা নিষিদ্ধ হলেও, একটি ক্লাস যত ইচ্ছা ততগুলো ইন্টারফেস `implements` করতে পারে:
+Java-তে একাধিক class ইনহেরিট করা নিষিদ্ধ হলেও, একটি class যত ইচ্ছা ততগুলো interface `implements` করতে পারে:
 
 ```java
 public class Smartphone implements Camera, GPS, Phone {
@@ -120,8 +120,8 @@ public class Smartphone implements Camera, GPS, Phone {
 }
 ```
 
-### ডিফল্ট মেথড কনফ্লিক্ট সমাধান:
-যদি দুটি ইন্টারফেসে একই নামের `default` মেথড থাকে, তবে ইমপ্লিমেন্টিং ক্লাসকে অবশ্যই মেথডটি ওভাররাইড করে স্পষ্টভাবে বলতে হবে সে কারটা ব্যবহার করবে:
+### ডিফল্ট method কনফ্লিক্ট সমাধান:
+যদি দুটি interface-এ একই নামের `default` method থাকে, তবে ইমপ্লিমেন্টিং class-কে অবশ্যই method-টি ওভাররাইড করে স্পষ্টভাবে বলতে হবে সে কারটা ব্যবহার করবে:
 ```java
 @Override
 public void display() {
@@ -133,13 +133,13 @@ public void display() {
 
 ## ৫. Functional Interface ও `@FunctionalInterface`
 
-যে ইন্টারফেসে **একটিমাত্র অ্যাবস্ট্রাক্ট মেথড** (Single Abstract Method বা SAM) থাকে, তাকে ফাংশনাল ইন্টারফেস বলে। এটি ল্যাম্বডা এক্সপ্রেশনের ভিত্তি:
+যে interface-এ **একটিমাত্র abstract method** (Single Abstract Method বা SAM) থাকে, তাকে ফাংশনাল interface বলে। এটি ল্যাম্বডা এক্সপ্রেশনের ভিত্তি:
 
 ```java
 @FunctionalInterface
 public interface Validator<T> {
     boolean validate(T value);
-    // Object ক্লাসের মেথড বা default/static মেথড থাকতে পারে, কিন্তু abstract মেথড মাত্র ১টি!
+    // Can include default/static methods, but exactly 1 abstract method is allowed
 }
 ```
 
@@ -150,17 +150,17 @@ public interface Validator<T> {
 | বৈশিষ্ট্য | Abstract Class | Interface |
 | :--- | :--- | :--- |
 | **গতি ও সম্পর্ক** | "is-a" সম্পর্ক (Dog is an Animal) | "can-do" সম্পর্ক (Plane can Fly) |
-| **মাল্টিপল ইনহেরিটেন্স** | না, মাত্র একটি ক্লাস extends করা যায় | **হ্যাঁ, একাধিক ইন্টারফেস implements করা যায়** |
+| **মাল্টিপল inheritance** | না, মাত্র একটি class extends করা যায় | **হ্যাঁ, একাধিক interface implements করা যায়** |
 | **ইনস্ট্যান্স ফিল্ড (State)**| হ্যাঁ, non-static, non-final ফিল্ড রাখা যায় | না, কেবল `public static final` কনস্ট্যান্ট |
-| **কনস্ট্রাকটর** | হ্যাঁ, কনস্ট্রাকটর থাকতে পারে | না, কোনো কনস্ট্রাকটর থাকতে পারে না |
-| **ব্যবহারের সেরা ক্ষেত্র** | চাইল্ডদের মাঝে স্টেট ও বেস কোড শেয়ার করতে | সম্পূর্ণ অসম্পর্কিত ক্লাসের আচরণ সংজ্ঞায়িত করতে |
+| **constructor** | হ্যাঁ, constructor থাকতে পারে | না, কোনো constructor থাকতে পারে না |
+| **ব্যবহারের সেরা ক্ষেত্র** | চাইল্ডদের মাঝে স্টেট ও বেস কোড শেয়ার করতে | সম্পূর্ণ অসম্পর্কিত class-এর আচরণ সংজ্ঞায়িত করতে |
 
 ---
 
 ## সারসংক্ষেপ
 
-- অ্যাবস্ট্রাক্ট ক্লাস স্টেট ও বেস লজিক শেয়ার করে ("is-a" রিলেশন)।
-- ইন্টারফেস খাঁটি আচরণ ও মেথড চুক্তি নির্ধারণ করে ("can-do" রিলেশন)।
-- Java 8+ ইন্টারফেসে `default`, `static` এবং Java 9 এ `private` মেথড সমর্থন করে।
-- ফাংশনাল ইন্টারফেসে ঠিক একটিমাত্র অ্যাবস্ট্রাক্ট মেথড থাকে যা ল্যাম্বডার জন্য প্রযোজ্য।
+- abstract class স্টেট ও বেস লজিক শেয়ার করে ("is-a" রিলেশন)।
+- interface খাঁটি আচরণ ও method চুক্তি নির্ধারণ করে ("can-do" রিলেশন)।
+- Java 8+ interface-এ `default`, `static` এবং Java 9 এ `private` method সমর্থন করে।
+- ফাংশনাল interface-এ ঠিক একটিমাত্র abstract method থাকে যা ল্যাম্বডার জন্য প্রযোজ্য।
 - পরবর্তী অধ্যায়ে আমরা শিখব আধুনিক ডেটা মডেলিং — Records ও Sealed Classes।

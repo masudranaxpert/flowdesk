@@ -35,11 +35,11 @@ for val in v.iter() {
     println!("{}", val);
 }
 
-// into_iter() — ownership নেয়
+// into_iter() consumes vector and takes ownership:
 for val in v.into_iter() {
     println!("{}", val);
 }
-// v এখন invalid
+// v is no longer accessible after move
 
 // &mut T — mutable reference
 let mut v2 = vec![1, 2, 3];
@@ -49,20 +49,20 @@ for val in v2.iter_mut() {
 ```
 
 > [!tip]
-> // তিন রকম iteration:
-> // - `.iter()` — `&T` (immutable borrow, v valid থাকে)
-> // - `.into_iter()` — ownership (v consume হয়)
-> // - `.iter_mut()` — `&mut T` (mutable borrow)
+> তিন রকম iteration:
+> - `.iter()` — `&T` (immutable borrow, v valid থাকে)
+> - `.into_iter()` — ownership (v consume হয়)
+> - `.iter_mut()` — `&mut T` (mutable borrow)
 > //
-> // Python এ সব `for x in v` দিয়ে হয়, কিন্তু Rust এ ownership type সচেতনভাবে choose করতে হয়।
+> Python এ সব `for x in v` দিয়ে হয়, কিন্তু Rust এ ownership type সচেতনভাবে choose করতে হয়।
 
 > [!note]
-> **`for` লুপের ভেতরে কী হয়?** Compiler লুপটাকে expand করে:
+> **`for` loop-এর ভেতরে কী হয়?** Compiler লুপটাকে expand করে:
 > ```rust
-> // simplified desugar
+> simplified desugar
 > {
->     let mut iter = IntoIterator::into_iter(v.iter());  // iterator object তৈরি
->     while let Some(val) = iter.next() {                // বারবার next() টানা
+>     let mut iter = IntoIterator::into_iter(v.iter());  // Construct iterator instance
+>     while let Some(val) = iter.next() {                // Advance iterator until exhaustion
 >         println!("{}", val);
 >     }
 > }
@@ -100,20 +100,20 @@ let result: Vec<i32> = (1..=10)
 ```
 
 > [!example]
-> // এটা Python এর list comprehension `[x*x for x in range(1,11) if x%2==0]` এর মতো, কিন্তু Rust এ প্রতিটা step explicit। আর compiler এটাকে একটাই optimized loop এ compile করে — কোনো intermediate allocation ছাড়াই! (zero-cost abstraction)
+> এটা Python এর list comprehension `[x*x for x in range(1,11) if x%2==0]` এর মতো, কিন্তু Rust এ প্রতিটা step explicit। আর compiler এটাকে একটাই optimized loop এ compile করে — কোনো intermediate allocation ছাড়াই! (zero-cost abstraction)
 
 ### Chain এর ভেতরে — Lazy Adapter
 
 প্রথম চমক: `.filter(...)`, `.map(...)` call করার মুহূর্তে **কোনো computation হয় না**। প্রতিটা adapter শুধু একটা ছোট struct return করে যেটা ভেতরের iterator আর closure টা ধরে রাখে — chain মানে একটার ভেতরে আরেকটা wrapper, পেঁয়াজের খোসার মতো:
 
 ```rust
-// Simplified — std এর আসল কোডের ধাঁচ
-struct Map<I, F> { iter: I, f: F }       // ভেতরের iterator + closure — এই তো
+// Simplified standard library Map iterator pattern:
+struct Map<I, F> { iter: I, f: F }       // Adapter holding inner iterator and transformation closure
 
 impl<I: Iterator, B, F: FnMut(I::Item) -> B> Iterator for Map<I, F> {
     type Item = B;
     fn next(&mut self) -> Option<B> {
-        self.iter.next().map(&mut self.f)     // এক টানে এক item, সাথে transform
+        self.iter.next().map(&mut self.f)     // Pull next item and apply closure transformation
     }
 }
 
@@ -124,8 +124,8 @@ impl<I: Iterator, P: FnMut(&I::Item) -> bool> Iterator for Filter<I, P> {
     fn next(&mut self) -> Option<I::Item> {
         loop {
             match self.iter.next() {
-                Some(x) if (self.predicate)(&x) => return Some(x),  // মিললেই বের
-                Some(_) => continue,          // মিলেনি — ভেতরের থেকে আরেকটা টানো
+                Some(x) if (self.predicate)(&x) => return Some(x),  // Return first match satisfying predicate
+                Some(_) => continue,          // Skip unmatched elements
                 None => return None,
             }
         }
@@ -133,9 +133,9 @@ impl<I: Iterator, P: FnMut(&I::Item) -> bool> Iterator for Filter<I, P> {
 }
 ```
 
-আসল খেলা শুরু হয় **consumer** এ — `collect`, `sum`, `for` লুপ। ওরা `next()` টানতে থাকে, আর প্রতিটা টান ভেতর থেকে পুরো chain ভেদ করে উৎস পর্যন্ত যায়, পথে প্রতিটা স্তর নিজের কাজটা করে। তাই element গুলো এক স্রোতে বয়ে যায় — একটা item filter→map→filter একসাথে পার হয়, মাঝপথে কোনো intermediate `Vec` তৈরি হয় না।
+আসল খেলা শুরু হয় **consumer** এ — `collect`, `sum`, `for` loop। ওরা `next()` টানতে থাকে, আর প্রতিটা টান ভেতর থেকে পুরো chain ভেদ করে উৎস পর্যন্ত যায়, পথে প্রতিটা স্তর নিজের কাজটা করে। তাই element গুলো এক স্রোতে বয়ে যায় — একটা item filter→map→filter একসাথে পার হয়, মাঝপথে কোনো intermediate `Vec` তৈরি হয় না।
 
-**Zero-cost কোথায়?** প্রতিটা adapter আলাদা concrete type, তাই monomorphization + inlining এর পর compiler পুরো chain কে **একটাই plain `for` লুপ** বানিয়ে দেয় — হাতে লেখা লুপের সমান machine code, একটা function call পর্যন্ত বাকি থাকে না।
+**Zero-cost কোথায়?** প্রতিটা adapter আলাদা concrete type, তাই monomorphization + inlining এর পর compiler পুরো chain কে **একটাই plain `for` loop** বানিয়ে দেয় — হাতে লেখা loop-এর সমান machine code, একটা function call পর্যন্ত বাকি থাকে না।
 
 আর `collect` নিজেও চালাক: শুরুতেই উৎসের `size_hint()` দেখে (কমপক্ষে/সর্বোচ্চ কত element আসবে) একবারে ঠিক capacity দিয়ে `Vec` allocate করে — তাই fill করার সময় বারবার grow হয় না।
 
@@ -146,13 +146,13 @@ Closure হলো anonymous function — Python এর `lambda` বা JavaScrip
 ### Syntax
 
 ```rust
-// সম্পূর্ণ form
+// Fully explicit closure syntax:
 let add = |x: i32, y: i32| -> i32 { x + y };
 
 // Type inferred
 let add = |x, y| x + y;
 
-// কোনো parameter না থাকলে
+// Zero-parameter closure:
 let greet = || println!("Hello!");
 
 // Multiline
@@ -169,33 +169,31 @@ Closure তার চারপাশের variable capture করতে পা�
 
 ```rust
 let name = String::from("Karim");
-let greet = || println!("Hello, {}!", name);  // name capture করেছে
+let greet = || println!("Hello, {}!", name); // Borrows name from enclosing scope
 greet();
 ```
 
-### Fn, FnMut, FnOnce — তিন রকম Closure
-
-Closure environment কে কীভাবে capture করে তার উপর নির্ভর করে তিন trait:
+### Fn, FnMut, FnOnce — তিন রকম Closure environment কে কীভাবে capture করে তার উপর নির্ভর করে তিন trait:
 
 ```rust
-// FnOnce — ownership নিয়ে নেয় (শুধু একবার call)
+// FnOnce captures variables by value (callable once):
 let name = String::from("Karim");
-let greet = move || {  // move keyword — ownership take করে
+let greet = move || {  // 'move' forces capture by value (ownership transfer)
     println!("{}", name);
 };
 greet();
-// name এখন invalid (move হয়েছে)
+// name is moved into closure environment
 
-// FnMut — mutable borrow করে
+// FnMut captures variables by mutable reference:
 let mut count = 0;
 let mut increment = || { count += 1; };
 increment();
 increment();
 println!("{}", count);  // 2
 
-// Fn — immutable borrow করে
+// Fn captures variables by immutable reference:
 let pi = 3.14159;
-let area = |r: f64| pi * r * r;  // pi borrow করেছে
+let area = |r: f64| pi * r * r;  // Immutably borrows pi from scope
 println!("{}", area(5.0));
 ```
 
@@ -206,7 +204,7 @@ println!("{}", area(5.0));
 | `FnOnce` | `T` (ownership) | Consume environment |
 
 > [!note]
-> // Rust compiler automatically সবচেয়ে কম restrictive trait choose করে। তোমাকে explicit করতে হয় না। শুধু `move` keyword দরকার হয় যখন closure এর ownership নিতে হবে (যেমন thread spawn)।
+> Rust compiler automatically সবচেয়ে কম restrictive trait choose করে। তোমাকে explicit করতে হয় না। শুধু `move` keyword দরকার হয় যখন closure এর ownership নিতে হবে (যেমন thread spawn)।
 
 ### Closure আসলে একটা Anonymous Struct
 
@@ -216,14 +214,14 @@ Closure দেখতে magic, ভেতরে সাদামাটা — comp
 let mut count = 0;
 let mut increment = || { count += 1; };
 
-// Compiler ভেতরে মোটামুটি এমন কিছু generate করে (simplified):
+// Conceptual compiler-generated closure struct:
 struct Closure1<'a> {
-    count: &'a mut i32,      // captured variable = struct field (এখানে mutable borrow)
+    count: &'a mut i32,      // Captured environment stored as struct field
 }
 
 impl<'a> FnMut<()> for Closure1<'a> {
     fn call_mut(&mut self) {
-        *self.count += 1;    // field এর মধ্য দিয়েই environment access
+        *self.count += 1;    // Mutate captured state through reference
     }
 }
 ```
@@ -243,19 +241,19 @@ Compiler closure এর body দেখে ঠিক করে: শুধু প�
 ```rust
 let data = vec![1, 2, 3];
 
-// move ছাড়া — borrow
+// Without move: borrows reference
 let print_borrow = || println!("{:?}", data);
 
-// move দিয়ে — ownership
+// With move: transfers ownership
 let print_owned = move || println!("{:?}", data);
 
 print_borrow();
 print_owned();
-// data এখন print_owned এর ভেতরে — invalid
+// data moved into print_owned closure
 ```
 
 > [!tip]
-> // `move` closure বিশেষ করে দরকার হয় thread spawn এ — কারণ thread এর lifetime parent function এর চেয়ে বেশি হতে পারে। Ownership move করলে safe।
+> `move` closure বিশেষ করে দরকার হয় thread spawn এ — কারণ thread এর lifetime parent function এর চেয়ে বেশি হতে পারে। Ownership move করলে safe।
 
 ## Powerful Iterator Methods
 
@@ -266,7 +264,7 @@ let v = vec![1, 2, 3, 4, 5];
 let sum: i32 = v.iter().fold(0, |acc, x| acc + x);
 // 15
 
-// অথবা sum method দিয়ে
+// Built-in iterator consumer sum():
 let sum: i32 = v.iter().sum();
 
 // Product
@@ -282,7 +280,7 @@ let concat: String = vec!["a", "b", "c"].iter().fold(
 ```
 
 > [!note]
-> **`fold` এর ভেতরে?** একদম plain লুপ — `acc = init` রেখে প্রতিটা `next()` এর item এ `acc = f(acc, x)`; O(n), zero allocation। `sum()` আর `product()` ভেতরে fold কেই call করে (`sum` ≈ `fold(0, |a, x| a + x)`)।
+> **`fold` এর ভেতরে?** একদম plain loop — `acc = init` রেখে প্রতিটা `next()` এর item এ `acc = f(acc, x)`; O(n), zero allocation। `sum()` আর `product()` ভেতরে fold কেই call করে (`sum` ≈ `fold(0, |a, x| a + x)`)।
 
 ### `enumerate` — Index সহ
 
@@ -391,7 +389,7 @@ impl Iterator for Counter {
 fn main() {
     let counter = Counter::new();
 
-    // এখন সব iterator method ব্যবহার করা যায়!
+    // Enables full iterator adapter chain
     let result: Vec<u32> = counter
         .map(|x| x * 2)
         .filter(|x| x > 4)
@@ -401,7 +399,7 @@ fn main() {
 ```
 
 > [!example]
-> // শুধু `next()` implement করলেই সব iterator method (map, filter, collect, sum...) free পেয়ে যাও! এটাই Rust এর trait system এর শক্তি।
+> শুধু `next()` implement করলেই সব iterator method (map, filter, collect, sum...) free পেয়ে যাও! এটাই Rust এর trait system এর শক্তি।
 
 ## Python vs Rust — Iterator তুলনা
 
@@ -440,7 +438,7 @@ for s in squares(10) {
 ```
 
 > [!note]
-> // দুটোই lazy evaluation। কিন্তু Rust এর iterator zero-cost — কোনো runtime overhead নেই। Python এর generator এ protocol overhead আছে। এবং Rust compiler lazy chain কে optimize করে single loop এ পরিণত করে।
+> দুটোই lazy evaluation। কিন্তু Rust এর iterator zero-cost — কোনো runtime overhead নেই। Python এর generator এ protocol overhead আছে। এবং Rust compiler lazy chain কে optimize করে single loop এ পরিণত করে।
 
 ## বাস্তব উদাহরণ — Data Pipeline
 
@@ -489,7 +487,7 @@ fn main() {
 ```
 
 > [!tip]
-> // খেয়াল করো — data pipeline এ এক লাইনে filter → map → sum সব হয়ে যাচ্ছে। এটাই functional programming এর শক্তি। প্রতিটা step পড়লেই বোঝা যায় কী হচ্ছে — ঠিক Python এর pandas pipeline এর মতো।
+> খেয়াল করো — data pipeline এ এক লাইনে filter → map → sum সব হয়ে যাচ্ছে। এটাই functional programming এর শক্তি। প্রতিটা step পড়লেই বোঝা যায় কী হচ্ছে — ঠিক Python এর pandas pipeline এর মতো।
 
 ## Summary
 

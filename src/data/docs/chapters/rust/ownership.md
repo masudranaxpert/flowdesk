@@ -28,10 +28,10 @@ Rust এ কোনো GC নেই, আর কোনো manual free ও নে�
 
 ```rust
 {
-    let s = String::from("hello");  // s হলো "hello" এর owner
-    // s এর scope এ থাকলে "hello" valid
+    let s = String::from("hello"); // s owns allocated String on heap
+    // s is valid within this lexical scope
     println!("{}", s);
-}   // s এর scope শেষ — "hello" drop (free) হয়ে যায়
+}   // s exits scope: memory automatically freed via Drop trait
 ```
 
 এখানে `String::from("hello")` এর ভেতরে কী হয় আর সাধারণ literal (`"hello"`) থেকে পার্থক্য কোথায় — এটা পরিষ্কার করা জরুরি:
@@ -47,9 +47,9 @@ Stack এ থাকে মাত্র তিনটা machine word (64-bit এ 
 
 ```rust
 let s1 = String::from("hello");
-let s2 = s1;  // ownership s1 থেকে s2 তে move হয়েছে!
+let s2 = s1;  // Move semantics: ownership transferred from s1 to s2
 
-println!("{}", s1);  // ERROR! s1 আর valid না
+println!("{}", s1);  // Compilation error: value borrowed after move
 ```
 
 > [!danger]
@@ -60,24 +60,24 @@ println!("{}", s1);  // ERROR! s1 আর valid না
 ```rust
 {
     let s = String::from("hello");
-}   // s drop হয়েছে — memory automatically free!
-// কোনো free() বা delete লাগে না
+}   // Out of scope: drop deallocates heap buffer automatically
+// RAII pattern eliminates manual memory deallocation
 ```
 
 **`drop` এর ভেতরে কী হয়?** Magic না — compiler প্রতিটা scope এর শেষে নিজে থেকে একটা cleanup call ঢুকিয়ে দেয়:
 
 ```rust
-// তুমি যা লেখো:
+// User source code:
 {
     let s = String::from("hello");
     println!("{}", s);
 }
 
-// compiler যা বানায় (simplified):
+// Compiler generated drop invocation:
 {
     let s = String::from("hello");
     println!("{}", s);
-    String::drop(s); // ← Drop trait এর method: heap buffer টা allocator কে ফেরত (free)
+    String::drop(s); // Drop trait implementation releases heap allocation
 }
 ```
 
@@ -124,8 +124,8 @@ Integer, float, bool, char এগুলো **stack** এ থাকে — সস
 
 ```rust
 let x = 5;
-let y = x;  // copy হয়েছে
-println!("{}", x);  // VALID! x এখনো valid
+let y = x;  // Types implementing Copy perform shallow bitwise copy
+println!("{}", x);  // Primitive integer x remains fully valid
 ```
 
 কিন্তু `String`, `Vec`, `HashMap` — যেগুলো heap data point করে — move হয়।
@@ -156,7 +156,7 @@ struct Point {
 }
 
 let p1 = Point { x: 1, y: 2 };
-let p2 = p1;  // copy — p1 এখনো valid!
+let p2 = p1;  // Copy trait allows p1 to remain accessible
 ```
 
 > [!note]
@@ -169,25 +169,25 @@ Function এ value pass করলে ownership function এর parameter এ চ
 ```rust
 fn main() {
     let s = String::from("hello");
-    takes_ownership(s);     // s এর ownership function এ চলে গেছে
-    // println!("{}", s);   // ERROR! s আর valid না
+    takes_ownership(s);     // Ownership of s transferred into function parameter
+    // println!("{}", s);   // Error: s is invalid following ownership transfer
 
     let x = 5;
-    makes_copy(x);           // x copy হয়েছে
-    println!("{}", x);       // VALID! x এখনো আছে
+    makes_copy(x);           // Integer copied by value onto callee stack frame
+    println!("{}", x);       // x remains valid in current scope
 }
 
 fn takes_ownership(some_string: String) {
     println!("{}", some_string);
-}   // some_string drop হয়েছে — memory free
+}   // some_string goes out of scope and frees heap buffer
 
 fn makes_copy(some_integer: i32) {
     println!("{}", some_integer);
-}   // some_integer scope শেষ, কিন্তু কিছু করার নেই (copy ছিল)
+}   // some_integer stack frame popped without heap cleanup
 ```
 
 > [!note]
-> এই function call গুলোর runtime খরচ কত? `takes_ownership(s)` মানে শুধু ২৪-byte header টা callee এর stack frame এ copy — ব্যস, এটাই move এর দাম। Function শেষ হলে compiler প্যারামিটারের জন্য drop call বসিয়ে দেয় (owner তখন ওই function)। `makes_copy(x)` আরো সস্তা — `i32` একটা register-এর ব্যাপার, drop করার কিছু নেই।
+> এই function call গুলোর runtime খরচ কত? `takes_ownership(s)` মানে শুধু ২৪-byte header টা callee এর stack frame এ copy — ব্যস, এটাই move এর দাম। Function শেষ হলে compiler parameter-এর জন্য drop call বসিয়ে দেয় (owner তখন ওই function)। `makes_copy(x)` আরো সস্তা — `i32` একটা register-এর ব্যাপার, drop করার কিছু নেই।
 
 ### Function থেকে Ownership ফেরত
 
@@ -195,10 +195,10 @@ Function return করলে ownership caller এর কাছে ফিরে �
 
 ```rust
 fn main() {
-    let s1 = gives_ownership();        // gives_ownership এর return এর owner s1
+    let s1 = gives_ownership();        // Takes ownership returned by function
 
     let s2 = String::from("hello");
-    let s3 = takes_and_gives_back(s2); // s2 এর ownership function এ গেছে, আবার ফিরে এসেছে s3 এ
+    let s3 = takes_and_gives_back(s2); // s2 moved into function, returned ownership stored in s3
 }
 
 fn gives_ownership() -> String {
@@ -221,7 +221,7 @@ fn takes_and_gives_back(a_string: String) -> String {
 let s1 = String::from("hello");
 let s2 = s1.clone();   // deep copy
 
-println!("s1 = {}, s2 = {}", s1, s2);  // দুটোই valid
+println!("s1 = {}, s2 = {}", s1, s2);  // Both bindings valid
 ```
 
 > [!warn]
@@ -230,11 +230,11 @@ println!("s1 = {}, s2 = {}", s1, s2);  // দুটোই valid
 **`clone()` এর ভেতরে কী হয়?** মোটামুটি এই কোড (simplified):
 
 ```rust
-// String::clone এর সরলীকৃত version:
+// Simplified implementation of String::clone:
 fn clone(&self) -> String {
-    let buf = alloc(self.len);       // ① নিজের মতো একটা নতুন heap buffer — ঠিক len ততটা
-    memcpy(buf, self.ptr, self.len); // ② bytes গুলো copy — এটাই আসল খরচ
-    String { ptr: buf, len: self.len, capacity: self.len } // ③ স্বাধীন নতুন String
+    let buf = alloc(self.len);       // 1. Allocate dedicated heap buffer matching capacity
+    memcpy(buf, self.ptr, self.len); // 2. Copy byte buffer contents to new heap location
+    String { ptr: buf, len: self.len, capacity: self.len } // 3. Return independent owned String
 }
 ```
 
@@ -268,22 +268,22 @@ fn main() {
 
     // Heap data — move
     let s1 = String::from("hello");
-    // যদি আমরা সরাসরি `calculate_length(s1)` দিতাম, তবে s1 এর মালিকানা ফাংশনে চলে যেত
-    // এবং নিচে println!-এ s1 ব্যবহার করতে গেলে কম্পাইলার error দিত: E0382 (borrow of moved value)
-    let len = calculate_length(s1.clone()); // তাই সাময়িকভাবে clone করা হয়েছে
+    // Moving s1 directly would invalidate caller variable binding
+    // Accessing moved s1 below causes compiler error E0382
+    let len = calculate_length(s1.clone()); // Explicit clone creates independent copy
 
     println!("'{}' এর length {}", s1, len);
 }
 
 fn calculate_length(s: String) -> usize {
     s.len()
-}   // ফাংশন শেষ: s মেমোরি থেকে ড্রপ হয়ে যায়
+}   // Function exit: owned parameter s dropped and freed
 ```
 
 ### কেন এই সতর্কতা?
-- যদি `s1.clone()` না লিখে `calculate_length(s1)` লেখা হতো, `s1` ফাংশনের প্যারামিটার `s`-এ মুভ হয়ে যেত।
-- ফাংশনের ব্র্যাকেট `}` শেষ হওয়া মাত্র `s` মেমোরি থেকে ড্রপ হয়ে যেত।
-- ফলস্বরূপ, `main` ফাংশনে এসে `println!("{}", s1);` কল করলে কম্পাইলার তীব্র আপত্তি জানাত:
+- যদি `s1.clone()` না লিখে `calculate_length(s1)` লেখা হতো, `s1` function-এর parameter `s`-এ move হয়ে যেত।
+- function-এর ব্র্যাকেট `}` শেষ হওয়া মাত্র `s` memory থেকে drop হয়ে যেত।
+- ফলস্বরূপ, `main` function-এ এসে `println!("{}", s1);` কল করলে compiler তীব্র আপত্তি জানাত:
   `error[E0382]: borrow of moved value: s1`
 - পরের অধ্যায়ে আমরা দেখব কীভাবে **Borrowing (`&s1`)** ব্যবহার করে এই অপ্রয়োজনীয় `clone()` সম্পূর্ণ পরিহার করা যায়।
 

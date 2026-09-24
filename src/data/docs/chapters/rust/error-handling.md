@@ -34,7 +34,7 @@ panic!("Error: {} not found", filename);
 > [!note]
 > **`unwrap()` এর ভেতরে কী হয়?** কোনো magic নেই — ঠিক এই match টাই চলে:
 > ```rust
-> // simplified — std এর আসল কোডের ধাঁচ
+> Simplified standard library Result implementation
 > pub fn unwrap(self) -> T {
 >     match self {
 >         Ok(v) => v,
@@ -67,15 +67,15 @@ panic!("crash and burn")
 
 ```rust
 enum Result<T, E> {
-    Ok(T),    // Success — value আছে
-    Err(E),   // Error — error value আছে
+    Ok(T),    // Success variant containing value
+    Err(E),   // Error variant containing error value
 }
 ```
 
 `Result` হলো Rust এর error handling এর মূল। এটা একটা enum — `Ok` হলো success, `Err` হলো error। দুটোই data বহন করে।
 
 > [!note]
-> **মেমরিতে `Result` কেমন?** মোটামুটি একটা tagged union — একটা tag (Ok না Err) + দুই variant এর মধ্যে বড়টার সমান জায়গা। কিন্তু compiler চালাক: কোনো type এ "কখনো বৈধ হতে পারে না" এমন bit pattern (niche) থাকলে tag রাখারই দরকার পড়ে না। যেমন `&T` pointer কখনো null হয় না, তাই `Option<&i32>` আসলে ঠিক ৮ byte — pointer এর null মানেই None। একই কাজ `Result` এও হয় যখন variant গুলোর type এ niche থাকে। একে বলে **niche optimization** — তাই Rust এ error সাথে করে বয়ে বেড়ানোর আলাদা জায়গা খরচ হয় না।
+> **memory-তে `Result` কেমন?** মোটামুটি একটা tagged union — একটা tag (Ok না Err) + দুই variant এর মধ্যে বড়টার সমান জায়গা। কিন্তু compiler চালাক: কোনো type এ "কখনো বৈধ হতে পারে না" এমন bit pattern (niche) থাকলে tag রাখারই দরকার পড়ে না। যেমন `&T` pointer কখনো null হয় না, তাই `Option<&i32>` আসলে ঠিক ৮ byte — pointer এর null মানেই None। একই কাজ `Result` এও হয় যখন variant গুলোর type এ niche থাকে। একে বলে **niche optimization** — তাই Rust এ error সাথে করে বয়ে বেড়ানোর আলাদা জায়গা খরচ হয় না।
 
 ### ব্যবহার
 
@@ -127,7 +127,7 @@ fn open_file(filename: &str) -> File {
 `?` operator error propagation কে একদম সহজ করে দেয়:
 
 ```rust
-// ছাড়া ? — verbose
+// Explicit error handling without '?' operator:
 fn read_username() -> Result<String, std::io::Error> {
     let mut file = match File::open("username.txt") {
         Ok(f) => f,
@@ -141,7 +141,7 @@ fn read_username() -> Result<String, std::io::Error> {
     }
 }
 
-// দিয়ে ? — একদম সোজা!
+// Idiomatic error propagation with '?' operator:
 fn read_username_short() -> Result<String, std::io::Error> {
     let mut file = File::open("username.txt")?;
     let mut username = String::new();
@@ -158,10 +158,10 @@ fn read_username_short() -> Result<String, std::io::Error> {
 `?` কোনো runtime feature না — compiler compile time এ প্রতিটা `expr?` কে expand করে:
 
 ```rust
-// file.read_to_string(&mut username)?;  →  ভেতরে ঠিক এটাই হয় (simplified):
+// Expansion of '?' operator:
 match file.read_to_string(&mut username) {
-    Ok(val) => val,                          // Ok — value বের করে এগিয়ে যাওয়া
-    Err(err) => return Err(From::from(err)), // Err — convert করে function থেকে বের
+    Ok(val) => val,                          // Unwraps inner value upon success
+    Err(err) => return Err(From::from(err)), // Converts and early-returns error
 }
 ```
 
@@ -327,21 +327,21 @@ fn main() -> Result<()> {
 ## unwrap বনাম ? — কখন কোনটা?
 
 ```rust
-// BAD — panic করতে পারে
+// Anti-pattern: unwrap panics if Result is Err:
 fn bad() {
     let file = File::open("config.txt").unwrap();
 }
 
-// GOOD — error propagate করে
+// Recommended: propagate error via '?' operator:
 fn good() -> Result<File, std::io::Error> {
     let file = File::open("config.txt")?;
     Ok(file)
 }
 
-// ALSO OK — test code এ unwrap fine
+// Acceptable: unwrap in unit tests to fail fast:
 #[test]
 fn test_parse() {
-    let n: i32 = "42".parse().unwrap();  // test এ OK
+    let n: i32 = "42".parse().unwrap();  // Safe in test suites with known valid inputs
     assert_eq!(n, 42);
 }
 ```

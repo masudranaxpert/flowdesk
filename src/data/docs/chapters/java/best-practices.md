@@ -23,7 +23,7 @@
 ## ২. আধুনিক জাভায় ডিজাইন প্যাটার্ন
 
 ### ১. Singleton Pattern: The Enum Approach
-জোশুয়া ব্লকের মতে জাভাতে থ্রেড-সেফ এবং সিরিয়ালাইজেশন-প্রুফ সিঙ্গেলটন তৈরির একমাত্র সেরা উপায় হলো **Enum Singleton**:
+জোশুয়া ব্লকের মতে জাভাতে thread-সেফ এবং সিরিয়ালাইজেশন-প্রুফ সিঙ্গেলটন তৈরির একমাত্র সেরা উপায় হলো **Enum Singleton**:
 
 ```java
 // Thread-safe, reflection-proof, and serialization-safe singleton
@@ -43,8 +43,8 @@ public enum DatabaseConnectionPool {
 }
 ```
 
-### ২. Builder Pattern: ফ্লেক্সিবল অবজেক্ট ক্রিয়েশন
-অনেকগুলো ফিল্ড এবং অপশনাল প্যারামিটার থাকলে টেলিস্কোপিং কনস্ট্রাক্টরের ঝামেলা এড়াতে বিল্ডার প্যাটার্ন ব্যবহার করা হয়:
+### ২. Builder Pattern: ফ্লেক্সিবল object ক্রিয়েশন
+অনেকগুলো ফিল্ড এবং অপশনাল parameter থাকলে টেলিস্কোপিং constructor-এর ঝামেলা এড়াতে বিল্ডার প্যাটার্ন ব্যবহার করা হয়:
 
 ```java
 public final class EmailMessage {
@@ -93,7 +93,7 @@ public final class EmailMessage {
 ```
 
 ### ৩. Strategy Pattern with Modern Lambdas
-আধুনিক জাভায় স্ট্র্যাটেজি প্যাটার্নের জন্য বড় বড় ক্লাস তৈরি না করে সরাসরি ফাংশনাল ইন্টারফেস ও ল্যাম্বডা ব্যবহার করা যায়:
+আধুনিক জাভায় স্ট্র্যাটেজি প্যাটার্নের জন্য বড় বড় class তৈরি না করে সরাসরি ফাংশনাল interface ও ল্যাম্বডা ব্যবহার করা যায়:
 
 ```java
 import java.util.Map;
@@ -119,31 +119,31 @@ public class PricingEngine {
 
 ## ৩. *Effective Java* সেরা অনুশীলনসমূহ
 
-### ১. কখনো কালেকশন বা অ্যারের পরিবর্তে `null` রিটার্ন করবেন না
+### ১. কখনো কালেকশন বা array-র পরিবর্তে `null` রিটার্ন করবেন না
 ```java
-// ❌ মারাত্মক ভুল: কলারকে প্রতিবার নাল চেক করতে বাধ্য করে
+// Anti-pattern: returning null forces caller to perform defensive checks
 public List<Order> getOrders(String userId) {
     if (orders.isEmpty()) return null;
     return orders;
 }
 
-// ✅ সঠিক: খালি কালেকশন রিটার্ন করুন
+// Recommended: return empty collection to avoid NullPointerException
 public List<Order> getOrders(String userId) {
     if (orders.isEmpty()) return Collections.emptyList(); // Immutable empty list
     return Collections.unmodifiableList(orders);
 }
 ```
 
-### ২. ইনহেরিটেন্সের চেয়ে কম্পোজিশন প্রিফার করুন (Favor Composition over Inheritance)
-সুপারক্লাসের মেথড ওভাররাইড করলে ইন্টারনাল ইমপ্লিমেন্টেশন পরিবর্তনের সাথে সাবক্লাসের আচরণ ভেঙে পড়তে পারে (Fragile Base Class Problem)। র‍্যাপার ক্লাস ও কম্পোজিশন কোডকে অনেক বেশি মজবুত ও স্বাধীন রাখে।
+### ২. inheritance-এর চেয়ে কম্পোজিশন প্রিফার করুন (Favor Composition over Inheritance)
+সুপারক্লাসের method ওভাররাইড করলে ইন্টারনাল ইমপ্লিমেন্টেশন পরিবর্তনের সাথে সাবক্লাসের আচরণ ভেঙে পড়তে পারে (Fragile Base Class Problem)। র‍্যাপার class ও কম্পোজিশন কোডকে অনেক বেশি মজবুত ও স্বাধীন রাখে।
 
 ### ৩. ইমিউটেবিলিটি (Immutability) গ্রহণ করুন
-- ডেটা ক্লাসগুলোর ক্ষেত্রে জাভা ১৬+ **Records** ব্যবহার করুন।
+- ডেটা class-গুলোর ক্ষেত্রে জাভা ১৬+ **Records** ব্যবহার করুন।
 - ফিল্ডগুলোকে সর্বদা `private final` রাখুন।
-- আনমডিফায়েবল কালেকশন (`List.of()`, `Set.copyOf()`) ব্যবহার করুন। ইমিউটেবল অবজেক্ট জন্মগতভাবেই থ্রেড-সেফ এবং ক্যাশিংয়ের জন্য সম্পূর্ণ নিরাপদ।
+- আনমডিফায়েবল কালেকশন (`List.of()`, `Set.copyOf()`) ব্যবহার করুন। immutable object জন্মগতভাবেই thread-সেফ এবং ক্যাশিংয়ের জন্য সম্পূর্ণ নিরাপদ।
 
 ### ৪. ডিটারমিনিস্টিক ভ্যালিডেশন: Eager Argument Validation
-মেথডের শুরুতে `Objects.requireNonNull()` বা প্রি-কন্ডিশন চেক করুন:
+method-এর শুরুতে `Objects.requireNonNull()` বা প্রি-কন্ডিশন চেক করুন:
 
 ```java
 public void transferMoney(Account source, Account target, double amount) {

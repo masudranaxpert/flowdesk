@@ -76,24 +76,24 @@ lto = true
 ```
 
 > [!tip]
-> // `Cargo.toml` হলো Python এর `pyproject.toml` বা Node এর `package.json`। এখানে dependency, version, build setting সব থাকে। `Cargo.lock` হলো exact version lock — `package-lock.json` এর মতো।
+> `Cargo.toml` হলো Python এর `pyproject.toml` বা Node এর `package.json`। এখানে dependency, version, build setting সব থাকে। `Cargo.lock` হলো exact version lock — `package-lock.json` এর মতো।
 
 ### Common Commands
 
 ```bash
-cargo new my_app          # নতুন project
-cargo build               # Compile
-cargo run                 # Compile আর run
-cargo build --release     # Optimized build
-cargo check               # Compile check (fast, no binary)
-cargo test                # সব test run
-cargo test -- --nocapture # test output দেখাও
-cargo fmt                 # Code format
-cargo clippy              # Linter check
-cargo doc --open          # Documentation generate আর open
-cargo add serde           # Dependency add
-cargo update              # Dependency update
-cargo tree                # Dependency tree দেখাও
+cargo new my_app          # Create new binary project
+cargo build               # Compile debug binary
+cargo run                 # Build and execute binary
+cargo build --release     # Build optimized release binary
+cargo check               # Fast compile check without codegen
+cargo test                # Run test suite
+cargo test -- --nocapture # Display test output on stdout
+cargo fmt                 # Format source code
+cargo clippy              # Run linter checks
+cargo doc --open          # Generate HTML docs and open in browser
+cargo add serde           # Add dependency to Cargo.toml
+cargo update              # Update Cargo.lock dependencies
+cargo tree                # Display dependency tree
 ```
 
 ### cargo build এর ভেতরে কী হয়
@@ -150,8 +150,8 @@ Rust এ সবকিছু default ভাবে private। `pub` দিয়�
 ```rust
 mod my_module {
     pub fn public_fn() {}       // accessible from outside
-    fn private_fn() {}           // শুধু module এর ভেতরে
-    pub(crate) fn crate_fn() {}  // শুধু এই crate এ
+    fn private_fn() {}           // Module-private visibility (default)
+    pub(crate) fn crate_fn() {}  // Visible throughout the current crate
 }
 ```
 
@@ -175,7 +175,7 @@ use std::collections::{HashMap, HashSet, BTreeMap};
 // Alias
 use std::io::Result as IoResult;
 
-// Glob import (সাবধান!)
+// Glob import (use with caution to avoid namespace pollution):
 use std::collections::*;
 
 // Nested
@@ -183,37 +183,35 @@ use std::{fs::File, io::Read, path::Path};
 ```
 
 > [!note]
-> // Python এর `from x import y` আর Rust এর `use x::y;` প্রায় একই। তবে Rust এ `use` শুধু path কে short করে — কোনো code execute করে না (Python এর মতো module side-effect নেই)।
+> Python এর `from x import y` আর Rust এর `use x::y;` প্রায় একই। তবে Rust এ `use` শুধু path কে short করে — কোনো code execute করে না (Python এর মতো module side-effect নেই)।
 
-### File-Based Module
-
-Module গুলো separate file এ রাখা যায়:
+### File-Based Module গুলো separate file এ রাখা যায়:
 
 ```
 src/
 ├── main.rs
 ├── lib.rs
-├── math_utils.rs        # mod math_utils এর implementation
+├── math_utils.rs        # Implementation of mod math_utils
 └── math_utils/
-    └── geometry.rs      # nested module
+    └── geometry.rs      # Nested submodule
 ```
 
 ```rust
-// src/main.rs বা src/lib.rs
-mod math_utils;  // math_utils.rs ফাইল থেকে load
+// Root crate declaration (src/main.rs or src/lib.rs):
+mod math_utils;  // Loads module from math_utils.rs
 
-// বা সাথে submodule
+// Submodule declaration:
 mod math_utils {
-    pub mod geometry;  // math_utils/geometry.rs থেকে
+    pub mod geometry;  // Loads from math_utils/geometry.rs
 }
 ```
 
 > [!tip]
-> // Rust 2018 edition থেকে দুটো way আছে module file organize করার:
-> // 1. `math_utils.rs` — flat file
-> // 2. `math_utils/mod.rs` — folder structure
+> Rust 2018 edition থেকে দুটো way আছে module file organize করার:
+> 1. `math_utils.rs` — flat file
+> 2. `math_utils/mod.rs` — folder structure
 > //
-> // Flat file (`math_utils.rs`) prefer করো — আরো পরিষ্কার।
+> Flat file (`math_utils.rs`) prefer করো — আরো পরিষ্কার।
 
 ### External Crate
 
@@ -239,11 +237,11 @@ mod internal {
     pub fn helper() {}
 }
 
-pub use internal::helper;  // external user দেখবে শুধু helper()
+pub use internal::helper;  // Re-export internal item into public interface
 ```
 
 > [!example]
-> // `pub use` হলো Python এর `__all__` বা `from x import y as y` এর মতো। Library এর internal structure hide করে clean public API বানাতে ব্যবহার হয়।
+> `pub use` হলো Python এর `__all__` বা `from x import y as y` এর মতো। Library এর internal structure hide করে clean public API বানাতে ব্যবহার হয়।
 
 > [!note]
 > **`pub use` এর ভেতরে কী হয়?** Re-export — item টা একবারই define থাকে, কিন্তু module tree তে তার **দ্বিতীয় একটা public path** খুলে দেয়: `math_lib::helper` আর `math_lib::internal::helper` দুটোই একই function নির্দেশ করে। `use` (বিনা `pub`) শুধু তোমার ফাইলের ভেতরের shortcut; `pub use` বাইরের user এর জন্য নতুন পথ খোলে। দুটোই compile-time path aliasing — binary তে কোনো খরচ নেই।
@@ -283,7 +281,7 @@ shared = { path = "../shared" }
 ```
 
 > [!note]
-> // Workspace দিয়ে একাধিক crate একসাথে build, test, share `target/` directory। বড় project এ এটা essential — যেমন monorepo structure।
+> Workspace দিয়ে একাধিক crate একসাথে build, test, share `target/` directory। বড় project এ এটা essential — যেমন monorepo structure।
 
 ## Attribute — Compiler Instruction
 
@@ -403,7 +401,7 @@ fn test_mean() {
 ```
 
 > [!example]
-> // খেয়াল করো — `lib.rs` এ `pub use` দিয়ে re-export করা হয়েছে। ব্যবহারকারী শুধু `use math_lib::add` লিখবে, পুরো path `math_lib::arithmetic::add` লিখতে হবে না। এটাই clean API design।
+> খেয়াল করো — `lib.rs` এ `pub use` দিয়ে re-export করা হয়েছে। ব্যবহারকারী শুধু `use math_lib::add` লিখবে, পুরো path `math_lib::arithmetic::add` লিখতে হবে না। এটাই clean API design।
 
 ## Python vs Rust — Module তুলনা
 
@@ -421,7 +419,7 @@ fn test_mean() {
 | Docs | sphinx | cargo doc |
 
 > [!tip]
-> // Rust এর সবচেয়ে বড় সুবিধা — সব tool একসাথে আসে! Python এ pip, venv, pytest, black, ruff আলাদা আলাদা install করতে হয়। Rust এ `cargo` একটাই টুল সব handle করে।
+> Rust এর সবচেয়ে বড় সুবিধা — সব tool একসাথে আসে! Python এ pip, venv, pytest, black, ruff আলাদা আলাদা install করতে হয়। Rust এ `cargo` একটাই টুল সব handle করে।
 
 ## Summary
 

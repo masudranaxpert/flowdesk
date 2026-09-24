@@ -1,12 +1,12 @@
 # Multithreading ও Classic Concurrency
 
-জাভাতে প্রথম দিন থেকেই কনকারেন্সি একটি ফার্স্ট-ক্লাস সিটিজেন। একাধিক থ্রেডের মাধ্যমে একই সাথে একাধিক কাজ পরিচালনা করে প্রসেসরের মাল্টি-কোর আর্কিটেকচারের সম্পূর্ণ সুবিধা নেওয়াই কনকারেন্সির লক্ষ্য।
+জাভাতে প্রথম দিন থেকেই concurrency একটি ফার্স্ট-class সিটিজেন। একাধিক thread-এর মাধ্যমে একই সাথে একাধিক কাজ পরিচালনা করে প্রসেসরের মাল্টি-কোর আর্কিটেকচারের সম্পূর্ণ সুবিধা নেওয়াই concurrency-এর লক্ষ্য।
 
 ---
 
-## ১. Thread Lifecycle ও থ্রেড সৃষ্টির নিয়ম
+## ১. Thread Lifecycle ও thread সৃষ্টির নিয়ম
 
-জাভাতে প্রতিটি প্ল্যাটফর্ম থ্রেড সরাসরি অপারেটিং সিস্টেমের কার্নেল থ্রেডের (OS thread) সাথে ১:১ ম্যাপ করা থাকে।
+জাভাতে প্রতিটি প্ল্যাটফর্ম thread সরাসরি অপারেটিং সিস্টেমের কার্নেল thread-এর (OS thread) সাথে ১:১ ম্যাপ করা থাকে।
 
 ```
         ┌──────────┐
@@ -38,8 +38,8 @@
   └──────────────┘
 ```
 
-### থ্রেড তৈরি: `Thread` বনাম `Runnable`
-জাভাতে ইনহেরিটেন্সের সীমাবদ্ধতা (`extends Thread`) এড়াতে সবসময় `Runnable` বা `Callable` ল্যাম্বডা ব্যবহার করা সর্বোত্তম প্র্যাকটিস:
+### thread তৈরি: `Thread` বনাম `Runnable`
+জাভাতে inheritance-এর সীমাবদ্ধতা (`extends Thread`) এড়াতে সবসময় `Runnable` বা `Callable` ল্যাম্বডা ব্যবহার করা সর্বোত্তম প্র্যাকটিস:
 
 ```java
 public class ThreadCreationDemo {
@@ -57,13 +57,13 @@ public class ThreadCreationDemo {
 ```
 
 > [!WARNING]
-> কখনো সরাসরি `thread.run()` মেথড কল করবেন না। `run()` কল করলে নতুন থ্রেড তৈরি না হয়ে বর্তমান কলিং থ্রেডেই সাধারণ মেথডের মতো রান করবে। নতুন থ্রেড স্পন করার জন্য সবসময় `thread.start()` কল করতে হয়।
+> কখনো সরাসরি `thread.run()` method কল করবেন না। `run()` কল করলে নতুন thread তৈরি না হয়ে বর্তমান কলিং থ্রেডেই সাধারণ method-এর মতো রান করবে। নতুন thread স্পন করার জন্য সবসময় `thread.start()` কল করতে হয়।
 
 ---
 
 ## ২. Race Condition ও Synchronization
 
-যখন একাধিক থ্রেড একই সাথে কোনো শেয়ার্ড মিউটেবল ডেটা রিড ও মডিফাই করে, তখন **Race Condition** ঘটে এবং ডেটা করাপ্ট হয়ে যায়।
+যখন একাধিক thread একই সাথে কোনো শেয়ার্ড mutable ডেটা রিড ও মডিফাই করে, তখন **Race Condition** ঘটে এবং ডেটা করাপ্ট হয়ে যায়।
 
 ```java
 import java.util.concurrent.locks.ReentrantLock;
@@ -105,7 +105,7 @@ public class BankAccountThreadSafety {
 ## ৩. `volatile` বনাম `Atomic` ক্লাসেস
 
 ### `volatile` কী করে:
-জাভাতে প্রতিটি CPU কোরের নিজস্ব L1/L2 ক্যাশ থাকে। একটি থ্রেড যখন ভেরিয়েবল আপডেট করে, তখন অন্য থ্রেড সেই পরিবর্তন দেখতে নাও পারে। `volatile` কিওয়ার্ড মেমোরি দৃশ্যমানতা (**Visibility Guarantee / Happens-Before**) নিশ্চিত করে। এটি সরাসরি মেইন মেমোরি থেকে রিড/রাইট করে।
+জাভাতে প্রতিটি CPU কোরের নিজস্ব L1/L2 ক্যাশ থাকে। একটি thread যখন variable আপডেট করে, তখন অন্য thread সেই পরিবর্তন দেখতে নাও পারে। `volatile` কিওয়ার্ড memory দৃশ্যমানতা (**Visibility Guarantee / Happens-Before**) নিশ্চিত করে। এটি সরাসরি মেইন memory থেকে রিড/রাইট করে।
 
 ```java
 public class WorkerFlag {
@@ -126,7 +126,7 @@ public class WorkerFlag {
 ```
 
 > [!CAUTION]
-> `volatile` শুধুমাত্র **Visibility** নিশ্চিত করে, **Atomicity** নিশ্চিত করে না। অর্থাৎ `count++` অপারেশনে (যা রিড, ইনক্রিমেন্ট এবং রাইট—৩টি স্টেপ) `volatile` থ্রেড-সেফ নয়।
+> `volatile` শুধুমাত্র **Visibility** নিশ্চিত করে, **Atomicity** নিশ্চিত করে না। অর্থাৎ `count++` অপারেশনে (যা রিড, ইনক্রিমেন্ট এবং রাইট—৩টি স্টেপ) `volatile` thread-সেফ নয়।
 
 ### `java.util.concurrent.atomic` (Lock-Free Thread Safety):
 অ্যাটমিক ক্লাসসমূহ কোনো লকিং ছাড়াই হার্ডওয়্যার লেভেলের **CAS (Compare-And-Swap)** ইন্সট্রাকশন ব্যবহার করে লক-ফ্রি পারফরম্যান্স দেয়:
@@ -152,7 +152,7 @@ public class AtomicCounterDemo {
 
 ## ৪. ExecutorService ও Thread Pool ম্যানেজমেন্ট
 
-ম্যানুয়ালি `new Thread()` তৈরি করা একটি অ্যান্টি-প্যাটার্ন; কারণ প্রতিটি থ্রেড তৈরিতে মেমোরি এলোকেশন এবং কন্টেক্সট সুইচিং ওভারহেড রয়েছে। প্রোডাকশনে সবসময় **ExecutorService** ব্যবহার করতে হয়।
+ম্যানুয়ালি `new Thread()` তৈরি করা একটি অ্যান্টি-প্যাটার্ন; কারণ প্রতিটি thread তৈরিতে memory এলোকেশন এবং কন্টেক্সট সুইচিং ওভারহেড রয়েছে। প্রোডাকশনে সবসময় **ExecutorService** ব্যবহার করতে হয়।
 
 ```java
 import java.util.concurrent.Callable;
@@ -200,5 +200,5 @@ public class ExecutorServiceDemo {
 ```
 
 ### ডেডলক (Deadlock) প্রিভেনশন টিপস:
-1. **Lock Ordering**: সবসময় সকল থ্রেডে একই অর্ডারে একাধিক লক অ্যাকোয়ার করুন (যেমন: Lock A তারপর Lock B)।
+1. **Lock Ordering**: সবসময় সকল thread-এ একই অর্ডারে একাধিক লক অ্যাকোয়ার করুন (যেমন: Lock A তারপর Lock B)।
 2. **Lock Timeout**: অনন্তকাল আটকে না থেকে `tryLock(timeout, unit)` ব্যবহার করুন।

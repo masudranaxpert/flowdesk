@@ -57,7 +57,7 @@ Rust statically typed — প্রতিটা value এর একটা নি
 ```rust
 let a: i32 = 42;
 let b: u32 = 100;
-let c: i64 = 1_000_000; // underscore দিয়ে readable
+let c: i64 = 1_000_000; // Visual digit separation using underscores
 ```
 
 > [!note]
@@ -90,7 +90,7 @@ let bangla = 'ক';
 ### Tuple আর Array
 
 ```rust
-// Tuple — একাধিক type এর value
+// Heterogeneous tuple grouping values of different types:
 let person: (&str, i32, f64) = ("Karim", 25, 5.9);
 let name = person.0;  // "Karim"
 let age = person.1;   // 25
@@ -98,7 +98,7 @@ let age = person.1;   // 25
 // Array — fixed size, same type
 let numbers: [i32; 5] = [1, 2, 3, 4, 5];
 let first = numbers[0];  // 1
-let zeros = [0; 10];     // 10টা 0 এর array
+let zeros = [0; 10];     // Initialize fixed-size array with 10 zeros
 ```
 
 > [!danger]
@@ -116,10 +116,10 @@ let zeros = [0; 10];     // 10টা 0 এর array
 Rust ভাষার keyword সংখ্যা মাত্র ~৩৫টা (`let`, `fn`, `match`, `pub`...)। `String`, `Vec`, `Option`, `Some`, `Result`, `Box` — এগুলোর **কোনোটাই keyword না**। সবগুলো সাধারণ type/function, শুধু আসে standard library (**std**) থেকে। আর যেগুলো খুব বেশি লাগে, সেগুলো **prelude** নামের একটা auto-import তালিকায় রাখা হয়েছে — প্রতিটা Rust ফাইলের উপরে না লিখেই compiler নিজে থেকে ঢুকিয়ে দেয়:
 
 ```rust
-// প্রত্যেক ফাইলের ভেতরে অদৃশ্যভাবে এটা চলে আছে:
+// Standard library prelude automatically imported into every module:
 use std::prelude::v1::*;
-// এই তালিকাতেই আছে: String, Vec, Option, Some, None, Result, Ok, Err,
-// Box, clone, drop, Drop, Into, ToString, ... আরও কিছু
+// Standard prelude exports: String, Vec, Option, Result, etc.
+// Core memory traits and smart pointer primitives
 ```
 
 মানে `Some(42)` লিখলে আসলে ঘটনা এটা — prelude থেকে `Some` নামটা এসেছে, আর সেটা একটা **enum variant**। (Enum কী — পরের chapter গুলোতে বিস্তারিত; আপাতত এটুকু জেনে রাখো: `Option` নামের একটা enum আছে যার দুটো variant `Some` আর `None`। মজার ব্যাপার — data বহন করা variant নিজেই একটা ছোট function, `Some(42)` মানে "42 ঢুকিয়ে একটা Some বানাও"। তাই `let x: Option<i32> = Some(42);` লেখা যায়।)
@@ -127,8 +127,8 @@ use std::prelude::v1::*;
 ### `::` আর `.` — দুই রকম ডাকার নিয়ম
 
 ```rust
-let s = String::from("hello");   // :: — Type এর namespace-এর function (associated function)
-let n = s.len();                 // .  — কোনো value-র উপর method
+let s = String::from("hello");   // :: Path separator for associated namespace function
+let n = s.len();                 // . Dot operator for instance method call
 ```
 
 - **`String::from(...)`** — `String` type-এর নাম ধরে ডাকা function। এটা কোনো value-র উপর চলে না; বরং **নতুন value বানিয়ে দেয়** (একে constructor-ও বলে)। `Vec::new()`, `Box::new(x)`, `Option::Some(x)` — সব এই প্যাটার্ন। ভেতরে কোনো magic নেই — `structs-methods` chapter এ দেখবে এগুলো `impl` block-এ লেখা সাধারণ function, `self` parameter ছাড়া।
@@ -148,8 +148,8 @@ let n = s.len();                 // .  — কোনো value-র উপর meth
 হতো! কিন্তু দুটো জিনিস আলাদা:
 
 ```rust
-let a = "hello";                 // &str — binary-র read-only section-এ বসে থাকা literal
-let b = String::from("hello");   // String — runtime-এ heap-এ নতুন buffer বানিয়ে copy
+let a = "hello";                 // &str slice referencing binary rodata literal
+let b = String::from("hello");   // Heap-allocated String buffer with independent ownership
 ```
 
 `"hello"` literal ওখানেই থাকবে যেখানে compile হওয়ার সময় বসানো হয়েছে — ওটা বদলানো, বাড়ানো যায় না। `String::from` heap-এ তোমার নিয়ন্ত্রণের একটা **বাড়ানো-যোগ্য copy** বানায়। কখন কোনটা — সেটাই `strings` chapter-এর মূল আলোচনা; ownership chapter-এ এর গভীর কারণ পাবে। আপাতত নিয়ম: শুধু পড়বে → literal/`&str` যথেষ্ট; modify করবে বা own করবে → `String`।
@@ -166,7 +166,7 @@ Rust এ একই নামের variable আবার declare করা য�
 let x = 5;
 let x = x + 1;       // x = 6
 let x = x * 2;       // x = 12
-let x = "twelve";    // x এখন string! type change করা গেলো!
+let x = "twelve";    // Variable shadowing allows changing type in new binding
 ```
 
 > [!tip]
@@ -209,10 +209,10 @@ let age = 22;
 // {} — Display format
 println!("আমার নাম {}, বয়স {}", name, age);
 
-// নাম দিয়ে (Rust 1.58+)
+// Named identifier interpolation (Rust 1.58+):
 println!("আমার নাম {name}, বয়স {age}");
 
-// Debug format (যেকোনো type এর জন্য)
+// Debug formatting for types implementing std::fmt::Debug:
 let arr = [1, 2, 3];
 println!("Array: {:?}", arr);  // Array: [1, 2, 3]
 
@@ -228,11 +228,11 @@ println!("Array: {:#?}", arr);
 নামের শেষের `!` বলে দিচ্ছে এটা function না — **macro**। Compile এর সময় rustc এই লাইনটাকে ভেঙে মোটামুটি এই কোড বানায়:
 
 ```rust
-// println!("আমার নাম {}, বয়স {}", name, age)
-// আসলে expand হয়ে এটা হয় (simplified):
+// Format argument interpolation:
+// Compile-time macro expansion:
 {
-    let args = format_args!("আমার নাম {}, বয়স {}", name, age); // format টুকরোগুলো compile time এই জোড়া লাগানো
-    std::io::_print(args); // stdout এ write — ভেতরে lock + write
+    let args = format_args!("Name: {}, Age: {}", name, age); // Arguments formatted into compiler string slices
+    std::io::_print(args); // Thread-safe print writing directly to stdout
 }
 ```
 
@@ -264,8 +264,8 @@ const PI: f64 = 3.14159265359;
 ```rust
 // Single line comment
 
-/// Doc comment (function/struct এর উপরে)
-/// cargo doc দিয়ে documentation generate হয়
+/// Documentation comment parsed by rustdoc
+/// Generates HTML API documentation via cargo doc
 
 //! Module level doc comment
 ```
@@ -279,7 +279,7 @@ Function লেখা হয় `fn` দিয়ে:
 
 ```rust
 fn add(a: i32, b: i32) -> i32 {
-    a + b   // শেষ expression হলো return value (semicolon নেই!)
+    a + b   // Trailing expression without semicolon is implicit return value
 }
 
 fn greet(name: &str) {
@@ -298,19 +298,19 @@ fn main() {
 ### Expression vs Statement
 
 ```rust
-// Statement — value return করে না (semicolon আছে)
+// Statement: ends with semicolon, evaluates to unit type ()
 let x = 5;
 
-// Expression — value return করে (semicolon নেই)
+// Expression: evaluates directly to a computed value
 let y = {
     let z = 3;
-    z + 1   // semicolon নেই → এটাই block এর value
+    z + 1   // Final expression evaluates to the block result value
 };          // y = 4
 
-// Statement হিসেবে লিখলে ব্লকের মান হয় unit type `()`
+// Statements evaluate to the unit type ():
 let w: i32 = {
     let z = 3;
-    z + 1;  // semicolon আছে → এটি statement, কোনো মান রিটার্ন করে না (রিটার্ন করে `()`)
+    z + 1;  // Semicolon suppresses return value; block evaluates to unit ()
 };          // COMPILER ERROR! expected `i32`, found `()`
 ```
 
@@ -318,7 +318,7 @@ let w: i32 = {
 > এই expression/statement পার্থক্য হলো Rust এর সবচেয়ে গুরুত্বপূর্ণ syntax rule। মনে রাখবে — **semicolon দিলে statement (মান হয় `()`), semicolon না দিলে expression (শেষ এক্সপ্রেশনের মানটিই ব্লকের রিটার্ন মান)**।
 
 > [!note]
-> ভেতরের ঘটনা: প্রতিটা block `{}` একটি expression, যার টাইপ হলো তার শেষ এক্সপ্রেশনের টাইপ। কিন্তু এক্সপ্রেশনের পরে `;` বসালে সেটি statement হয়ে যায় আর মান দেয় **`()`** — unit type, মানে "কিছুই না"। ফাংশন বা ব্লকে কোনো টাইপ প্রত্যাশা করলে unit type মেলায় না বলে কম্পাইলার এরর দেয়।
+> ভেতরের ঘটনা: প্রতিটা block `{}` একটি expression, যার টাইপ হলো তার শেষ এক্সপ্রেশনের টাইপ। কিন্তু এক্সপ্রেশনের পরে `;` বসালে সেটি statement হয়ে যায় আর মান দেয় **`()`** — unit type, মানে "কিছুই না"। function বা ব্লকে কোনো টাইপ প্রত্যাশা করলে unit type মেলায় না বলে compiler এরর দেয়।
 
 ## Type Casting — কোনো Implicit টাইপ রূপান্তর নেই
 
@@ -328,11 +328,11 @@ Python বা C/C++ এ ছোট টাইপ স্বয়ংক্রিয
 let a: i32 = 10;
 let b: f64 = 2.5;
 
-// ERROR! Rust এ দুটি ভিন্ন টাইপের মধ্যে সরাসরি অপারেশন করা যায় না
+// Compilation error: cannot apply arithmetic operator to mismatched types
 // let sum = a + b; 
 
-// সঠিক সমাধান: `as` কিওয়ার্ড দিয়ে explicit type casting:
-let sum = (a as f64) + b; // 12.5 (উভয়ই f64)
+// Explicit type casting via 'as' operator:
+let sum = (a as f64) + b; // Result: 12.5 (both operands promoted to f64)
 println!("Sum: {}", sum);
 ```
 
@@ -372,22 +372,22 @@ fn main() {
 
 ### BMI প্রোগ্রামের লাইন-বাই-লাইন বিশ্লেষণ:
 1. **`let weight: f64 = weight.trim().parse().expect("Not a number");`**:
-   - এখানে একই নামের `weight` ভেরিয়েবলকে **shadowing** করা হয়েছে।
-   - প্রথমে ইউজার থেকে নেওয়া `String` বাফারের স্পেস বাদ দিয়ে `.trim()` করা হয়, তারপর `.parse()` স্ট্রিং থেকে `f64` ফ্লোটিং-পয়েন্ট সংখ্যায় রূপান্তর করে।
-   - টাইপ অ্যানোটেশন `: f64` কম্পাইলারকে স্পষ্ট করে দেয় কোন সংখ্যায় পার্স করতে হবে।
+   - এখানে একই নামের `weight` variable-কে **shadowing** করা হয়েছে।
+   - প্রথমে ইউজার থেকে নেওয়া `String` বাফারের স্পেস বাদ দিয়ে `.trim()` করা হয়, তারপর `.parse()` string থেকে `f64` ফ্লোটিং-পয়েন্ট সংখ্যায় রূপান্তর করে।
+   - টাইপ অ্যানোটেশন `: f64` compiler-কে স্পষ্ট করে দেয় কোন সংখ্যায় পার্স করতে হবে।
 2. **`let bmi = weight / (height * height);`**:
    - গাণিতিক হিসাব। দুটি `f64` এর মধ্যে ভাগ ও গুণ হচ্ছে।
 3. **`println!("তোমার BMI: {:.2}", bmi);`**:
    - `{:.2}` ফরম্যাট স্পেসিফায়ার নির্দেশ করে দশমিকের পর ঠিক ২ ঘর পর্যন্ত সংখ্যাটি প্রিন্ট করতে হবে।
 4. **`let category = if bmi < 18.5 { ... } else { ... };`**:
-   - `if/else` এখানে একটি এক্সপ্রেশন হিসেবে কাজ করছে। প্রতিটি ব্রাঞ্চ থেকে একটি `&str` মান রিটার্ন হয়ে সরাসরি `category` ভেরিয়েবলে বসে যাচ্ছে। কোনো টেনারি অপারেটর বা বাহ্যিক মিউটেবল ভেরিয়েবল লাগে না।
+   - `if/else` এখানে একটি এক্সপ্রেশন হিসেবে কাজ করছে। প্রতিটি ব্রাঞ্চ থেকে একটি `&str` মান রিটার্ন হয়ে সরাসরি `category` variable-এ বসে যাচ্ছে। কোনো টেনারি অপারেটর বা বাহ্যিক mutable variable লাগে না।
 
 ## Summary
 
 এই অধ্যায়ে আমরা শিখলাম:
-- ভেরিয়েবল ডিফল্টভাবে immutable; পরিবর্তনযোগ্য করতে `let mut` লাগে।
+- variable ডিফল্টভাবে immutable; পরিবর্তনযোগ্য করতে `let mut` লাগে।
 - প্রিমিটিভ স্কেলার টাইপ (integers, floats, bool, char) এবং কম্পাউন্ড টাইপ (tuple, array)।
 - `as` কিওয়ার্ড দিয়ে explicit type casting করতে হয়; implicit casting নেই।
-- Shadowing দিয়ে একই ভেরিয়েবল নাম ব্যবহার করে টাইপ ও মান উভয়ই নিরাপদে প্রতিস্থাপন করা যায়।
+- Shadowing দিয়ে একই variable নাম ব্যবহার করে টাইপ ও মান উভয়ই নিরাপদে প্রতিস্থাপন করা যায়।
 - ব্লকের শেষ লাইনে সেমিকোলন না থাকলে তা রিটার্ন এক্সপ্রেশন, আর সেমিকোলন দিলে স্টেটমেন্ট (মান হয় `()`)।
 পরের অধ্যায়ে আমরা Rust-এর decision-making ও control flow (if/else, loops, match) বিস্তারিত শিখব।

@@ -61,9 +61,9 @@ public class ModernFileIoDemo {
 
 ---
 
-## ৩. বড় ফাইল মেমোরি-দক্ষভাবে রিড করা (`Files.lines`)
+## ৩. বড় ফাইল memory-দক্ষভাবে রিড করা (`Files.lines`)
 
-পুরো ফাইল একসাথে মেমোরিতে (`Files.readAllBytes` বা `Files.readAllLines`) লোড করলে গিগাবাইট সাইজের ফাইলের ক্ষেত্রে `OutOfMemoryError` দেখা দেয়। `Files.lines()` স্ট্রিম ব্যবহারের মাধ্যমে অলসভাবে (Lazily) লাইন-বাই-লাইন ডেটা লোড করে।
+পুরো ফাইল একসাথে memory-তে (`Files.readAllBytes` বা `Files.readAllLines`) লোড করলে গিগাবাইট সাইজের ফাইলের ক্ষেত্রে `OutOfMemoryError` দেখা দেয়। `Files.lines()` স্ট্রিম ব্যবহারের মাধ্যমে অলসভাবে (Lazily) লাইন-বাই-লাইন ডেটা লোড করে।
 
 ```java
 import java.io.IOException;
@@ -99,7 +99,7 @@ public class LargeFileReaderDemo {
 
 ## ৪. ডিরেক্টরি ট্রাভার্সাল: `Files.walk` ও `Files.find`
 
-কোনো ডিরেক্টরির গভীরে ঢুকে ফাইল বা ফোল্ডার সার্চ করার জন্য আধুনিক মেথড:
+কোনো ডিরেক্টরির গভীরে ঢুকে ফাইল বা ফোল্ডার সার্চ করার জন্য আধুনিক method:
 
 ```java
 import java.io.IOException;
@@ -158,4 +158,4 @@ public class FastChannelCopyDemo {
 ```
 
 > [!TIP]
-> `FileChannel.transferTo()` কার্নেল লেভেলে **Zero-Copy** মেকানিজম ব্যবহার করে। এটি ইউজার স্পেস মেমোরিতে ডেটা কপি না করে সরাসরি OS পেজ ক্যাশ থেকে ডেটা পাঠিয়ে দেয়, যা অত্যন্ত ফাস্ট।
+> `FileChannel.transferTo()` কার্নেল লেভেলে **Zero-Copy** মেকানিজম ব্যবহার করে। এটি ইউজার স্পেস memory-তে ডেটা কপি না করে সরাসরি OS পেজ ক্যাশ থেকে ডেটা পাঠিয়ে দেয়, যা অত্যন্ত ফাস্ট।

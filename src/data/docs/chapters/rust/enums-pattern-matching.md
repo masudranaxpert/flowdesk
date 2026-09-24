@@ -35,10 +35,10 @@ Rust এর enum শুধু label নয় — প্রতিটা variant 
 
 ```rust
 enum Message {
-    Quit,                          // কোনো data নেই
-    Move { x: i32, y: i32 },       // Named fields (struct এর মতো)
+    Quit,                          // Unit variant with no associated data
+    Move { x: i32, y: i32 },       // Struct-like variant with named fields
     Write(String),                 // Single value
-    ChangeColor(i32, i32, i32),    // Multiple values (tuple এর মতো)
+    ChangeColor(i32, i32, i32),    // Tuple-like variant with positional fields
 }
 
 fn main() {
@@ -90,14 +90,14 @@ Rust এ `null` নেই! এর বদলে `Option<T>` type আছে। Ton
 
 ```rust
 enum Option<T> {
-    Some(T),   // value আছে
-    None,      // value নেই
+    Some(T),   // Contains wrapped value
+    None,      // Represents absence of value
 }
 ```
 
 
 > [!note]
-> **`Some(42)`-র গোড়ার গল্প:** আগের chapter গুলোতে `Some(42)` ব্যবহার করেছিলাম বলেছিলাম "পূর্ণ গল্প এখানে" — এই নাও। `Some` আর `None` কোনো function বা keyword না — উপরের enum-এর **দুটো variant**, আর prelude-এর কল্যাণে বিনা import-এ পাওয়া যায়। মজার অংশ: data বহন করা variant (`Some(T)`) নিজেই একটা **ছোট function** — `Some(42)` লিখলে ভেতরে ৪২ ঢুকিয়ে tagged value বানিয়ে দেয়, ঠিক function call-এর মতোই (চলবেও `let f = Some; let x = f(42);` — সত্যি!)। আর কেন দরকার: Rust-এ null নেই বলে "মান না-থাকা" একটা **type-এ বাঁধা অবস্থা** — ফাংশন `Option<String>` return করলে caller কে `Some`/`None` দুটোই সামলাতেই হবে, compiler জোর করাবে। Python-এ `None` return করলে ভুলে গেলে পরে কোথাও `AttributeError` — Rust-এ সেই ভুল করার সুযোগই নেই।
+> **`Some(42)`-র গোড়ার গল্প:** আগের chapter গুলোতে `Some(42)` ব্যবহার করেছিলাম বলেছিলাম "পূর্ণ গল্প এখানে" — এই নাও। `Some` আর `None` কোনো function বা keyword না — উপরের enum-এর **দুটো variant**, আর prelude-এর কল্যাণে বিনা import-এ পাওয়া যায়। মজার অংশ: data বহন করা variant (`Some(T)`) নিজেই একটা **ছোট function** — `Some(42)` লিখলে ভেতরে ৪২ ঢুকিয়ে tagged value বানিয়ে দেয়, ঠিক function call-এর মতোই (চলবেও `let f = Some; let x = f(42);` — সত্যি!)। আর কেন দরকার: Rust-এ null নেই বলে "মান না-থাকা" একটা **type-এ বাঁধা অবস্থা** — function `Option<String>` return করলে caller কে `Some`/`None` দুটোই সামলাতেই হবে, compiler জোর করাবে। Python-এ `None` return করলে ভুলে গেলে পরে কোথাও `AttributeError` — Rust-এ সেই ভুল করার সুযোগই নেই।
 
 এই ছোট enum এর layout টা কিন্তু চমকপ্রদ:
 
@@ -123,10 +123,10 @@ fn main() {
         None => println!("User not found"),
     }
 
-    // unwrap — value বের করো (None হলে panic)
+    // unwrap extracts value or panics on None:
     let name = find_user(1).unwrap();  // "Karim"
 
-    // unwrap_or — default দাও
+    // unwrap_or provides fallback default on None:
     let name = find_user(99).unwrap_or_else(|| "Unknown".to_string());
 }
 ```
@@ -141,8 +141,8 @@ let x: Option<i32> = Some(5);
 
 x.is_some()       // true
 x.is_none()       // false
-x.unwrap()        // 5 (None হলে panic)
-x.unwrap_or(0)    // 5 (None হলে 0)
+x.unwrap()        // Extracts 5 (panics if None)
+x.unwrap_or(0)    // Extracts 5 (defaults to 0 if None)
 x.map(|v| v * 2)  // Some(10)
 x.and_then(|v| Some(v + 1))  // Some(6)
 x.filter(|v| *v > 3)         // Some(5)
@@ -151,7 +151,7 @@ x.filter(|v| *v > 3)         // Some(5)
 এই helper গুলোর ভেতরে সবাই একই কাঠামো — variant check + সেই অনুযায়ী কাজ:
 
 ```rust
-// ভেতরে মোটামুটি এমন (simplified):
+// Conceptual internal representation:
 pub fn unwrap(self) -> T {
     match self {
         Some(v) => v,
@@ -283,18 +283,18 @@ match age {
 ```rust
 let some_value = Some(42);
 
-// match দিয়ে
+// Exhaustive matching via match expression:
 match some_value {
     Some(v) => println!("{}", v),
     _ => {},
 }
 
-// if let দিয়ে — ছোট
+// Single-pattern handling via if let:
 if let Some(v) = some_value {
     println!("{}", v);
 }
 
-// while let — loop সহ
+// Pattern-driven loop via while let:
 let mut stack = vec![1, 2, 3];
 while let Some(top) = stack.pop() {
     println!("{}", top);
@@ -307,9 +307,9 @@ while let Some(top) = stack.pop() {
 ভেতরের কথা: `if let` আসলে match এরই **syntactic sugar** — compiler দুটোকে একইভাবে compile করে:
 
 ```rust
-// সাধারণ রূপ (sugar প্রসারিত হলে):
+// Desugared representation:
 if let PATTERN = value { body }
-// হয়ে যায়:
+// Expanded output:
 match value {
     PATTERN => body,
     _ => {}
@@ -338,7 +338,7 @@ impl Message {
 ## Python vs Rust — Enum তুলনা
 
 ```python
-# Python — dataclass দিয়ে approximate
+# Python approximation via dataclasses
 from dataclasses import dataclass
 from typing import Union
 
@@ -350,7 +350,7 @@ class Quit: pass
 
 Message = Union[Quit, Move, Write]
 
-# match নেই (Python 3.10 এ এসেছে, কিন্তু exhaustive না)
+# Non-exhaustive structural matching in Python
 ```
 
 ```rust

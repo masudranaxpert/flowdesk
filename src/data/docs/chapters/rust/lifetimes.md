@@ -11,10 +11,10 @@ Lifetimes হলো Rust এর সবচেয়ে কঠিন কনসে�
     let r;
     {
         let x = 5;
-        r = &x;      // r হলো x এর reference
-    }                // x এখানে drop হয়ে গেছে!
+        r = &x;      // r references x
+    }                // x goes out of scope and is dropped
 
-    println!("{}", r);  // ERROR! r একটা dead reference point করছে
+    println!("{}", r);  // Error: r refers to deallocated stack memory (dangling reference)
 }
 ```
 
@@ -48,7 +48,7 @@ runtime:       খালি pointer + তোমার আসল code — lifetim
 এই function দেখো:
 
 ```rust
-// এটা compile হবে না!
+// Fails borrow checker validation:
 fn longest(x: &str, y: &str) -> &str {
     if x.len() > y.len() {
         x
@@ -91,7 +91,7 @@ fn main() {
 
     let result = longest(s1.as_str(), s2.as_str());
     println!("Longest: {}", result);
-    // result valid যতক্ষণ s1 আর s2 দুটোই valid
+    // Lifetime constraint: result valid as long as both s1 and s2 are alive
 }
 ```
 
@@ -102,21 +102,21 @@ fn main() {
     {
         let s2 = String::from("xyz");
         result = longest(s1.as_str(), s2.as_str());
-        println!("Longest: {}", result); // OK — এখানে s1 ও s2 দুটোই জীবিত
-    } // s2 এর স্কোপ শেষ — s2 ড্রপ হয়ে গেছে!
+        println!("Longest: {}", result); // Valid: both s1 and s2 are in scope
+    } // s2 lifetime ends here and is dropped
 
-    // ERROR! যদি এখানে result ব্যবহার করার চেষ্টা করি:
+    // Error if result is accessed after s2 is dropped:
     // println!("Longest: {}", result); 
     // COMPILER ERROR: E0597 `s2` does not live long enough!
 }
 ```
 
 ### কেন এই এররটি ঘটল? (Aha! Moment):
-1. `longest` ফাংশনের সিগনেচারে বলা হয়েছে: `longest<'a>(x: &'a str, y: &'a str) -> &'a str`।
-2. এর অর্থ: রিটার্ন করা রেফারেন্সটির লাইফটাইম হবে ইনপুট `x` এবং `y` এর মধ্যে **যেটির জীবনকাল ছোট**, ঠিক সেটির সমান।
+1. `longest` function-এর সিগনেচারে বলা হয়েছে: `longest<'a>(x: &'a str, y: &'a str) -> &'a str`।
+2. এর অর্থ: রিটার্ন করা রেফারেন্সটির lifetime হবে ইনপুট `x` এবং `y` এর মধ্যে **যেটির জীবনকাল ছোট**, ঠিক সেটির সমান।
 3. এখানে `s1` বাইরের ব্লকে জীবিত, কিন্তু `s2` ভেতরের ব্লকে সীমাবদ্ধ। ফলে `'a` এর কার্যকর সীমা দাঁড়ায় ভেতরের ছোট্ট ব্লকটি।
-4. যখন ভেতরের ব্লকটি শেষ হয়, `s2` মেমোরি থেকে ড্রপ হয়ে যায়। সুতরাং `result` আর কোনোভাবেই ভ্যালিড থাকতে পারে না।
-5. কম্পাইলার রানটাইমে কোনো ক্র্যাশ বা ড্যাঙ্গলিং পয়েন্টার হতে দেওয়ার আগেই কম্পাইল টাইমে `E0597` এরর দিয়ে কোডটি আটকে দেয়।
+4. যখন ভেতরের ব্লকটি শেষ হয়, `s2` memory থেকে drop হয়ে যায়। সুতরাং `result` আর কোনোভাবেই ভ্যালিড থাকতে পারে না।
+5. compiler runtime-এ কোনো ক্র্যাশ বা ড্যাঙ্গলিং pointer হতে দেওয়ার আগেই compile-time-এ `E0597` এরর দিয়ে কোডটি আটকে দেয়।
 
 ## Lifetime Elision Rules
 
@@ -126,7 +126,7 @@ fn main() {
 
 ```rust
 fn foo(x: &str, y: &str)
-// পরিণত হয়:
+// Lifetime elision rule applied:
 fn foo<'a, 'b>(x: &'a str, y: &'b str)
 ```
 
@@ -134,7 +134,7 @@ fn foo<'a, 'b>(x: &'a str, y: &'b str)
 
 ```rust
 fn foo(x: &str) -> &str
-// পরিণত হয়:
+// Lifetime elision rule applied:
 fn foo<'a>(x: &'a str) -> &'a str
 ```
 
@@ -142,7 +142,7 @@ fn foo<'a>(x: &'a str) -> &'a str
 
 ```rust
 fn foo(&self, x: &str) -> &str
-// পরিণত হয়:
+// Lifetime elision rule applied:
 fn foo<'a, 'b>(&'a self, x: &'b str) -> &'a str
 ```
 
@@ -188,7 +188,7 @@ fn main() {
 ```
 
 > [!note]
-> এই ছোট্ট লাইনে তিনটা method প্রথমবার দেখা হলো — `.split('.')` string-কে `.`-এর কাটায় কাটা একটা **lazy iterator** দেয় (নতুন অ্যারে allocate করে না), `.next()` তার প্রথম টুকরা `Option<&str>` হিসেবে দেয় — টুকরা থাকলে `Some`, না থাকলে `None`। আর `.unwrap()` সেই `Option`-এর খোলস ছাড়িয়ে ভেতরের মান বের করে; খালি (`None`) পেলে panic। এখানে শুধু এই এক ব্যবহারের জন্য যথেষ্ট — `Option`-এর পূর্ণ গল্প enums chapter-এ, `unwrap`-এর নিরাপদ বিকল্প error-handling chapter-এ।
+> এই ছোট্ট লাইনে তিনটা method প্রথমবার দেখা হলো — `.split('.')` string-কে `.`-এর কাটায় কাটা একটা **lazy iterator** দেয় (নতুন array allocate করে না), `.next()` তার প্রথম টুকরা `Option<&str>` হিসেবে দেয় — টুকরা থাকলে `Some`, না থাকলে `None`। আর `.unwrap()` সেই `Option`-এর খোলস ছাড়িয়ে ভেতরের মান বের করে; খালি (`None`) পেলে panic। এখানে শুধু এই এক ব্যবহারের জন্য যথেষ্ট — `Option`-এর পূর্ণ গল্প enums chapter-এ, `unwrap`-এর নিরাপদ বিকল্প error-handling chapter-এ।
 
 > [!warn]
 > `Excerpt` struct এ `part` field টা `&'a str` — মানে struct টা যতক্ষণ alive থাকবে, মূল `str` ও ততক্ষণ alive থাকতে হবে। নাহলে dangling reference! এটাই lifetime annotation struct এ কেন দরকার।

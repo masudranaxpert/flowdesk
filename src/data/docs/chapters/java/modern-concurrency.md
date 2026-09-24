@@ -26,8 +26,8 @@
             [ Carrier Platform Thread ] ──► (OS Kernel Thread)
 ```
 
-### ক্যারিয়ার থ্রেড ও আনমাউন্টিং মেকানিজম:
-যখন কোনো ভার্চুয়াল থ্রেড ব্লকিং I/O (যেমন ডেটাবেস কোয়েরি, নেটওয়ার্ক রিকোয়েস্ট, বা `Thread.sleep`) কল করে, JVM ভার্চুয়াল থ্রেডটিকে আন্ডারলায়িং ক্যারিয়ার থ্রেড থেকে **Unmount** করে আলাদা রেখে দেয়। ক্যারিয়ার থ্রেডটি খালি হয়ে অন্য কোনো ভার্চুয়াল থ্রেড রান করতে শুরু করে। I/O শেষ হলে JVM আবার থ্রেডটিকে ক্যারিয়ারে **Mount** করে এক্সিকিউট করে।
+### ক্যারিয়ার thread ও আনমাউন্টিং মেকানিজম:
+যখন কোনো ভার্চুয়াল thread ব্লকিং I/O (যেমন ডেটাবেস কোয়েরি, নেটওয়ার্ক রিকোয়েস্ট, বা `Thread.sleep`) কল করে, JVM ভার্চুয়াল থ্রেডটিকে আন্ডারলায়িং ক্যারিয়ার thread থেকে **Unmount** করে আলাদা রেখে দেয়। ক্যারিয়ার thread-টি খালি হয়ে অন্য কোনো ভার্চুয়াল thread রান করতে শুরু করে। I/O শেষ হলে JVM আবার থ্রেডটিকে ক্যারিয়ারে **Mount** করে এক্সিকিউট করে।
 
 ---
 
@@ -63,26 +63,26 @@ public class VirtualThreadDemo {
 ```
 
 > [!WARNING]
-> **কখনো ভার্চুয়াল থ্রেড পুল করবেন না!**
-> ভার্চুয়াল থ্রেড হলো স্বল্পস্থায়ী অবজেক্টের মতো। এদের জন্য `newFixedThreadPool` বানাবেন না। সর্বদা `Executors.newVirtualThreadPerTaskExecutor()` ব্যবহার করুন।
+> **কখনো ভার্চুয়াল thread পুল করবেন না!**
+> ভার্চুয়াল thread হলো স্বল্পস্থায়ী object-এর মতো। এদের জন্য `newFixedThreadPool` বানাবেন না। সর্বদা `Executors.newVirtualThreadPerTaskExecutor()` ব্যবহার করুন।
 
 ---
 
 ## ৩. Thread Pinning সমস্যা ও সমাধান
 
-ভার্চুয়াল থ্রেড যখন নেটিভ মেথড অথবা ক্লাসিকাল `synchronized` ব্লকের ভেতর কোনো ব্লকিং I/O কল করে, তখন JVM ভার্চুয়াল থ্রেডটিকে ক্যারিয়ার থ্রেড থেকে আনমাউন্ট করতে পারে না। একে **Thread Pinning** বলে।
+ভার্চুয়াল thread যখন নেটিভ method অথবা ক্লাসিকাল `synchronized` ব্লকের ভেতর কোনো ব্লকিং I/O কল করে, তখন JVM ভার্চুয়াল থ্রেডটিকে ক্যারিয়ার thread থেকে আনমাউন্ট করতে পারে না। একে **Thread Pinning** বলে।
 
 ```java
 import java.util.concurrent.locks.ReentrantLock;
 
 public class ThreadPinningFix {
 
-    // ❌ ঝুঁকিপূর্ণ: synchronized ব্লকে I/O থাকলে ক্যারিয়ার থ্রেড পিন হয়ে যায়
+    // Anti-pattern: blocking I/O in synchronized blocks pins carrier thread
     public synchronized String blockedMethodOld() {
         return callExternalHttpService(); // Blocks entire carrier OS thread!
     }
 
-    // ✅ সমাধান: ReentrantLock ব্যবহার করুন
+    // Recommended: use ReentrantLock to avoid carrier thread pinning
     private final ReentrantLock lock = new ReentrantLock();
 
     public String blockedMethodModern() {
@@ -137,7 +137,7 @@ public class CompletableFuturePipeline {
 
 ## ৫. Structured Concurrency (Java 21 Preview)
 
-মাল্টি-থ্রেডিংয়ের সবচেয়ে বিপজ্জনক দিক হলো **Thread Leakage** বা অরফান থ্রেড (একটি সাবটাস্ক ফেইল করলেও অন্য সাবটাস্ক ব্যাকগ্রাউন্ডে আজীবন রান হতে থাকা)। **Structured Concurrency** নিশ্চিত করে যে সব সাবটাস্ক একই ব্লকে শুরু এবং একই ব্লকে শেষ হবে।
+মাল্টি-থ্রেডিংয়ের সবচেয়ে বিপজ্জনক দিক হলো **Thread Leakage** বা অরফান thread (একটি সাবটাস্ক ফেইল করলেও অন্য সাবটাস্ক ব্যাকগ্রাউন্ডে আজীবন রান হতে থাকা)। **Structured Concurrency** নিশ্চিত করে যে সব সাবটাস্ক একই ব্লকে শুরু এবং একই ব্লকে শেষ হবে।
 
 ```java
 import java.util.concurrent.StructuredTaskScope;
@@ -176,4 +176,4 @@ public class StructuredConcurrencyDemo {
 ```
 
 > [!TIP]
-> `StructuredTaskScope` কোডের অ্যাসিনক্রোনাস থ্রেড ম্যানেজমেন্টকে ক্লাসিকাল স্ট্রাকচার্ড ব্লকের (`try-catch` বা মেথড কলের) মতো পরিষ্কার ও অনুমেয় করে তোলে। কোনো সাবটাস্ক ফেইল করলে বাকিগুলো অটোমেটিক বাতিল হয়ে রিসোর্স সাশ্রয় হয়।
+> `StructuredTaskScope` কোডের অ্যাসিনক্রোনাস thread ম্যানেজমেন্টকে ক্লাসিকাল স্ট্রাকচার্ড ব্লকের (`try-catch` বা method কলের) মতো পরিষ্কার ও অনুমেয় করে তোলে। কোনো সাবটাস্ক ফেইল করলে বাকিগুলো অটোমেটিক বাতিল হয়ে রিসোর্স সাশ্রয় হয়।

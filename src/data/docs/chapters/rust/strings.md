@@ -33,7 +33,7 @@ s += " extra";         // s = "foobar! extra"
 ```rust
 pub fn push_str(&mut self, slice: &str) {
     if self.len + slice.len() > self.capacity {
-        self.reserve_and_grow();   // capacity প্রায় ২× করে বাড়ে, পুরনো byte memcpy হয়
+        self.reserve_and_grow();   // Doubles capacity and copies existing bytes (amortized O(1))
     }
     self.buffer[self.len..].copy_from_slice(slice.as_bytes()); // memcpy
     self.len += slice.len();
@@ -47,9 +47,9 @@ pub fn push_str(&mut self, slice: &str) {
 ### `&str` — Borrowed, Immutable
 
 ```rust
-let s: &str = "hello world";            // string literal — binary এ stored
+let s: &str = "hello world";            // String literal stored in static rodata section
 let s1 = String::from("hello");
-let s2: &str = &s1;                      // String এর borrow
+let s2: &str = &s1;                      // Borrowing String as immutable &str slice
 
 fn print_str(s: &str) {
     println!("{}", s);
@@ -73,12 +73,12 @@ print_str(&s1);          // &String → &str — OK
 ### Function Parameter হিসেবে
 
 ```rust
-// ভালো — &str accept করে String আর &str দুটোই
+// Idiomatic: accepts both &str and &String through deref coercion
 fn greet(name: &str) {
     println!("Hello, {}!", name);
 }
 
-// খারাপ — শুধু String accept করে, &str দিলে allocate করতে হবে
+// Anti-pattern: forces caller to allocate String if passing &str
 fn greet_bad(name: String) {
     println!("Hello, {}!", name);
 }
@@ -97,12 +97,12 @@ fn main() {
 ### Return Value হিসেবে
 
 ```rust
-// String return — owned, caller এর ownership এ চলে যায়
+// Returns owned String transferring ownership to caller
 fn make_greeting(name: &str) -> String {
     format!("Hello, {}!", name)
 }
 
-// &str return — শুধু input এর উপর ভিত্তি করে (lifetime দরকার)
+// Returns borrowed slice tied to input lifetime
 fn first_word(s: &str) -> &str {
     // ...
     s
@@ -112,20 +112,20 @@ fn first_word(s: &str) -> &str {
 ## String Creation আর Conversion
 
 ```rust
-// String তৈরি
+// String instantiation:
 let s1 = String::new();
 let s2 = String::from("hello");
 let s3 = "hello".to_string();
 let s4: String = "hello".into();
 let s5 = format!("{} {}", "hello", "world");
 
-// &str থেকে String
+// Convert borrowed &str to owned String:
 let literal = "hello";
 let owned = literal.to_string();
 let owned2 = String::from(literal);
 let owned3 = literal.to_owned();
 
-// String থেকে &str — auto (deref coercion)
+// Coerce owned String to borrowed &str slice:
 let owned = String::from("hello");
 let borrowed: &str = &owned;
 ```
@@ -136,16 +136,16 @@ let borrowed: &str = &owned;
 ## Concatenation
 
 ```rust
-// + operator — ownership নেয়
+// Addition operator consumes ownership of left operand:
 let s1 = String::from("Hello, ");
 let s2 = String::from("world!");
-let s3 = s1 + &s2;  // s1 এর ownership move হয়েছে, s2 এর borrow
+let s3 = s1 + &s2;  // s1 ownership consumed; s2 borrowed via reference
 
-// format! — সবচেয়ে নিরাপদ আর পঠনযোগ্য
+// format! macro preserves ownership of all operand arguments:
 let s1 = String::from("tic");
 let s2 = String::from("tac");
 let s3 = String::from("toe");
-let combined = format!("{}-{}-{}", s1, s2, s3);  // s1, s2, s3 সব valid
+let combined = format!("{}-{}-{}", s1, s2, s3);  // s1, s2, and s3 remain valid
 
 // push_str — mutate
 let mut s = String::from("foo");
@@ -158,13 +158,13 @@ s.push_str("bar");
 `+` কেন ownership নেয়? কারণ ভেতরে এই trait implementation টা কাজ করে:
 
 ```rust
-// std::string এ প্রায় এভাবেই লেখা (simplified):
+// Conceptual std::ops::Add implementation:
 impl Add<&str> for String {
     type Output = String;
 
     fn add(mut self, other: &str) -> String {
-        self.push_str(other);   // s1 এর নিজের buffer এই append হয়
-        self                    // পুরনো buffer ই ফেরত যায় — নতুন allocation নেই
+        self.push_str(other);   // Appends to existing heap buffer without extra allocation
+        self                    // Returns modified buffer reusing capacity
     }
 }
 ```
@@ -178,10 +178,10 @@ Rust এর string UTF-8 encoded। Python 3 এর মতোই। কিন্
 ```rust
 let hello = String::from("Hola");
 
-// ERROR! Rust এ string index করা যায় না
+// Error: direct integer indexing is disallowed to prevent UTF-8 boundary errors
 // let h = hello[0];
 
-// bytes — কাজ করে
+// Iterate by raw bytes:
 let bytes = hello.as_bytes();   // [72, 111, 108, 97]
 
 // chars — Unicode scalar value
@@ -189,7 +189,7 @@ for c in hello.chars() {
     println!("{}", c);
 }
 
-// Split — &str return করে
+// Split yields borrowed &str sub-slices:
 let hola = &hello[0..4];  // "Hola"
 ```
 
@@ -287,7 +287,7 @@ let lower = s.to_lowercase();     // "hello, world!"
 let trimmed = "  hi  ".trim();    // "hi"
 let replaced = s.replace("World", "Rust"); // "Hello, Rust!"
 
-// Split আর collect
+// Collect split tokens into vector:
 let parts: Vec<&str> = "a,b,c".split(',').collect();
 // ["a", "b", "c"]
 

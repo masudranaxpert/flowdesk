@@ -1,12 +1,12 @@
 # Error Handling ও Exception Architecture
 
-জাভাতে এরর হ্যান্ডলিং একটি অত্যন্ত শক্তিশালী ও সুসংগঠিত অবজেক্ট-ওরিয়েন্টেড আর্কিটেকচারের ওপর প্রতিষ্ঠিত। রানটাইমে কোনো অপ্রত্যাশিত ঘটনা ঘটলে প্রোগ্রামের স্বাভাবিক এক্সিকিউশন ফ্লো যাতে বিঘ্নিত না হয়ে গ্রেসফুলি হ্যান্ডল করা যায়, সে জন্য জাভার `Throwable` হায়ারার্কি ডিজাইন করা হয়েছে।
+জাভাতে এরর হ্যান্ডলিং একটি অত্যন্ত শক্তিশালী ও সুসংগঠিত object-ওরিয়েন্টেড আর্কিটেকচারের ওপর প্রতিষ্ঠিত। runtime-এ কোনো অপ্রত্যাশিত ঘটনা ঘটলে প্রোগ্রামের স্বাভাবিক এক্সিকিউশন ফ্লো যাতে বিঘ্নিত না হয়ে গ্রেসফুলি হ্যান্ডল করা যায়, সে জন্য জাভার `Throwable` হায়ারার্কি ডিজাইন করা হয়েছে।
 
 ---
 
 ## ১. Throwable হায়ারার্কি: Error বনাম Exception
 
-জাভাতে সব ধরণের এরর এবং এক্সেপশনের রুট ক্লাস হলো `java.lang.Throwable`। এর দুটি প্রধান শাখা রয়েছে:
+জাভাতে সব ধরণের এরর এবং এক্সেপশনের রুট class হলো `java.lang.Throwable`। এর দুটি প্রধান শাখা রয়েছে:
 
 ```
                   ┌────────────────────────┐
@@ -38,12 +38,12 @@
 | বৈশিষ্ট্য | `java.lang.Error` | `Checked Exception` | `Unchecked Exception` (RuntimeException) |
 | :--- | :--- | :--- | :--- |
 | **উৎস** | JVM লেভেলের গুরুতর ব্যর্থতা | এক্সটার্নাল ফ্যাক্টর (ফাইল, নেটওয়ার্ক) | প্রোগ্রামারের লজিক্যাল ভুল বা বাগ |
-| **কম্পাইলার চেক** | আনচেকড (কম্পাইলার চেক করে না) | কম্পাইল-টাইমে বাধ্যতামূলক চেকিং | কম্পাইলার বাধ্য করে না |
+| **compiler চেক** | আনচেকড (compiler চেক করে না) | compile-time-এ বাধ্যতামূলক চেকিং | compiler বাধ্য করে না |
 | **রিকভারিবিলিটি** | সাধারণত রিকভার করা অসম্ভব | এপ্লিকেশন হ্যান্ডল করে রিকভার করতে পারে | কোড ফিক্স বা ভ্যালিডেশন দিয়ে প্রিভেন্ট করা উচিত |
 | **উদাহরণ** | `OutOfMemoryError`, `StackOverflowError` | `IOException`, `SQLException` | `NullPointerException`, `IllegalArgumentException` |
 
 > [!WARNING]
-> কখনো `catch (Error e)` বা `catch (Throwable t)` সাধারণ অ্যাপ্লিকেশন কোডে ব্যবহার করবেন না। JVM লেভেলের মেমোরি ফেইলিউর বা থ্রেড ডেথ রিকভার করার চেষ্টা করলে সিস্টেম আরও বড় বিপর্যয়ের মুখে পড়তে পারে।
+> কখনো `catch (Error e)` বা `catch (Throwable t)` সাধারণ অ্যাপ্লিকেশন কোডে ব্যবহার করবেন না। JVM লেভেলের memory ফেইলিউর বা thread ডেথ রিকভার করার চেষ্টা করলে সিস্টেম আরও বড় বিপর্যয়ের মুখে পড়তে পারে।
 
 ---
 
@@ -80,7 +80,7 @@ public class ExceptionFlowDemo {
 ```
 
 ### কোড বিশ্লেষণ:
-1. `try` ব্লকে রিস্কি অপারেশনগুলো থাকে। এখানে দুটি পটেনশিয়াল এক্সেপশন হতে পারে: স্ট্রিং কনভার্সনে `NumberFormatException` এবং ভাগ করার সময় `ArithmeticException`।
+1. `try` ব্লকে রিস্কি অপারেশনগুলো থাকে। এখানে দুটি পটেনশিয়াল এক্সেপশন হতে পারে: string কনভার্সনে `NumberFormatException` এবং ভাগ করার সময় `ArithmeticException`।
 2. `catch` ব্লক সুনির্দিষ্ট এক্সেপশন ধরে। একাধিক ক্যাচ ব্লকের ক্ষেত্রে বেশি স্পেসিফিক সাবক্লাস প্রথমে এবং জেনেরিক সুপারক্লাস পরে দিতে হয়।
 3. `finally` ব্লক রিটার্ন স্টেটমেন্টের আগেই রান করে। যদি `try` ব্লকে `return 50;` থাকে, তাও JVM আগে `finally` এক্সিকিউট করে তারপর ভ্যালু রিটার্ন করে।
 
@@ -91,7 +91,7 @@ public class ExceptionFlowDemo {
 
 ## ৩. Try-With-Resources ও AutoCloseable
 
-জাভা ৭-এ পরিচিতি পাওয়া **Try-with-resources** স্টেটমেন্টটি রিসোর্স লিক পুরোপুরি দূর করে। যে সমস্ত ক্লাস `java.lang.AutoCloseable` অথবা `java.io.Closeable` ইন্টারফেস ইমপ্লিমেন্ট করে, সেগুলোকে ব্র্যাকেটের ভেতরে ইনিশিয়ালাইজ করলে ব্লক শেষে JVM স্বয়ংক্রিয়ভাবে `close()` মেথড ইনভোক করে।
+জাভা ৭-এ পরিচিতি পাওয়া **Try-with-resources** স্টেটমেন্টটি রিসোর্স লিক পুরোপুরি দূর করে। যে সমস্ত class `java.lang.AutoCloseable` অথবা `java.io.Closeable` interface ইমপ্লিমেন্ট করে, সেগুলোকে ব্র্যাকেটের ভেতরে ইনিশিয়ালাইজ করলে ব্লক শেষে JVM স্বয়ংক্রিয়ভাবে `close()` method ইনভোক করে।
 
 ```java
 import java.io.BufferedReader;
@@ -169,7 +169,7 @@ public class MultiCatchDemo {
 ```
 
 > [!NOTE]
-> Multi-catch ক্লজে প্যারামিটার ভেরিয়েবলটি (`ex`) ডিফল্টভাবে `final` থাকে। আপনি `ex = new IOException();` দিয়ে এটিকে পুনরায় অ্যাসাইন করতে পারবেন না।
+> Multi-catch ক্লজে parameter variable-টি (`ex`) ডিফল্টভাবে `final` থাকে। আপনি `ex = new IOException();` দিয়ে এটিকে পুনরায় অ্যাসাইন করতে পারবেন না।
 
 ---
 
@@ -239,13 +239,13 @@ public class PaymentGatewayService {
 
 ### ১. কখনো এক্সেপশন Swallow (গিলে ফেলা) করবেন না
 ```java
-// ❌ মারাত্মক ভুল: এরর হাইড হয়ে যায়, সিস্টেম ফেইল করলেও কোনো লগ বা ট্রেস থাকে না
+// Anti-pattern: swallowing exception hides failure root cause without trace
 try {
     process();
 } catch (Exception e) {
 }
 
-// ✅ সঠিক: কমপক্ষে এরর লগ করুন বা আপার লেয়ারে রি-থ্রো করুন
+// Recommended: log error context or rethrow to upper layer
 try {
     process();
 } catch (Exception e) {
@@ -256,15 +256,15 @@ try {
 
 ### ২. লগ এবং থ্রো একসাথে করবেন না (Log and Throw Anti-Pattern)
 ```java
-// ❌ ভুল: ক্যাচ করে লগও করলেন আবার থ্রোও করলেন
-// ফলে কল স্ট্যাকের প্রতি লেয়ারে ডুপ্লিকেট লগ তৈরি হয়
+// Anti-pattern: logging and rethrowing causes duplicate logs in stack traces
+// Every layer prints redundant error messages
 catch (IOException e) {
     logger.error("Failed to read", e);
     throw new ServiceException(e);
 }
 
-// ✅ সঠিক: হয় এখানে হ্যান্ডল করে লগ করুন, অথবা র্যাপ করে থ্রো করুন (টপ লেভেল গ্লোবাল হ্যান্ডলার লগ করবে)
+// Recommended: either handle and log locally, or wrap and rethrow
 ```
 
 ### ৩. সাধারণ ফ্লো কন্ট্রোলের জন্য Exception ব্যবহার করবেন না
-Exception তৈরি ও থ্রো করার সময় সম্পূর্ণ কল স্ট্যাক তৈরি করতে হয় (`fillInStackTrace()`), যা অত্যন্ত এক্সপেনসিভ। কন্ডিশনাল লজিকের ক্ষেত্রে `if/else` বা `Optional` ব্যবহার করুন।
+Exception তৈরি ও থ্রো করার সময় সম্পূর্ণ Call Stack তৈরি করতে হয় (`fillInStackTrace()`), যা অত্যন্ত এক্সপেনসিভ। কন্ডিশনাল লজিকের ক্ষেত্রে `if/else` বা `Optional` ব্যবহার করুন।

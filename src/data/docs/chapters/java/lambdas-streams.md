@@ -6,7 +6,7 @@
 
 ## ১. Functional Interfaces ও Lambda Syntax
 
-যে ইন্টারফেসে **একটি মাত্র অ্যাবস্ট্রাক্ট মেথড (SAM - Single Abstract Method)** থাকে, তাকে **Functional Interface** বলে। একে চিহ্নিত করার জন্য `@FunctionalInterface` অ্যানোটেশন ব্যবহার করা হয়।
+যে interface-এ **একটি মাত্র abstract method (SAM - Single Abstract Method)** থাকে, তাকে **Functional Interface** বলে। একে চিহ্নিত করার জন্য `@FunctionalInterface` অ্যানোটেশন ব্যবহার করা হয়।
 
 ```java
 @FunctionalInterface
@@ -20,8 +20,8 @@ public interface Transformer<T, R> {
 }
 ```
 
-### ল্যাম্বডা সিনট্যাক্স বিবর্তন:
-ল্যাম্বডা মূলত অ্যানোনিমাস ইনার ক্লাসের সংক্ষিপ্ত রূপ:
+### ল্যাম্বডা syntax বিবর্তন:
+ল্যাম্বডা মূলত অ্যানোনিমাস ইনার class-এর সংক্ষিপ্ত রূপ:
 
 ```java
 // Anonymous inner class (Pre-Java 8)
@@ -43,25 +43,25 @@ Transformer<String, Integer> stringLengthRef = String::length;
 
 ## ২. স্ট্যান্ডার্ড ফাংশনাল ইন্টারফেসসমূহ (`java.util.function`)
 
-জাভার স্ট্যান্ডার্ড লাইব্রেরি বহুল ব্যবহৃত কাজের জন্য তৈরি ইন্টারফেস প্রদান করে:
+জাভার স্ট্যান্ডার্ড লাইব্রেরি বহুল ব্যবহৃত কাজের জন্য তৈরি interface প্রদান করে:
 
-| ইন্টারফেস | মেথড সিগনেচার | উদ্দেশ্য | বাস্তব উদাহরণ |
+| interface | method সিগনেচার | উদ্দেশ্য | বাস্তব উদাহরণ |
 | :--- | :--- | :--- | :--- |
 | `Predicate<T>` | `boolean test(T t)` | কন্ডিশন টেস্ট করা | `x -> x > 10` |
 | `Function<T, R>` | `R apply(T t)` | ইনপুটকে অন্য টাইপে রূপান্তর | `user -> user.getEmail()` |
 | `Consumer<T>` | `void accept(T t)` | সাইড-ইফেক্ট সম্পাদন (কোনো রিটার্ন নেই) | `System.out::println` |
 | `Supplier<T>` | `T get()` | কোনো ইনপুট ছাড়াই ভ্যালু জেনারেট | `() -> UUID.randomUUID()` |
 | `UnaryOperator<T>` | `T apply(T t)` | একই টাইপের ডেটা মডিফাই | `str -> str.toUpperCase()` |
-| `BinaryOperator<T>` | `T apply(T t1, T t2)` | দুটি সমজাতীয় অবজেক্টের মিলন | `(a, b) -> a + b` |
+| `BinaryOperator<T>` | `T apply(T t1, T t2)` | দুটি সমজাতীয় object-এর মিলন | `(a, b) -> a + b` |
 
 > [!TIP]
-> অটবক্সিং ওভারহেড এড়াতে প্রিমিটিভ স্পেশালাইজেশন ইন্টারফেস ব্যবহার করুন: যেমন `IntPredicate`, `LongFunction`, `DoubleConsumer` ইত্যাদি। এতে অপ্রয়োজনীয় Heap এলোকেশন বাঁচে।
+> অটবক্সিং ওভারহেড এড়াতে প্রিমিটিভ স্পেশালাইজেশন interface ব্যবহার করুন: যেমন `IntPredicate`, `LongFunction`, `DoubleConsumer` ইত্যাদি। এতে অপ্রয়োজনীয় Heap এলোকেশন বাঁচে।
 
 ---
 
 ## ৩. Streams API আর্কিটেকচার
 
-স্ট্রিম কোনো ডেটা স্ট্রাকচার নয়; এটি ডেটা সোর্স (কালেকশন, অ্যারে বা I/O চ্যানেল) থেকে উপাদান গ্রহণ করে পাইপলাইনের মাধ্যমে প্রসেস করার একটি সিকোয়েন্স।
+স্ট্রিম কোনো ডেটা স্ট্রাকচার নয়; এটি ডেটা সোর্স (কালেকশন, array বা I/O চ্যানেল) থেকে উপাদান গ্রহণ করে পাইপলাইনের মাধ্যমে প্রসেস করার একটি সিকোয়েন্স।
 
 ```
   Data Source ───► [ Intermediate Op ] ───► [ Intermediate Op ] ───► [ Terminal Op ]
@@ -72,7 +72,7 @@ Transformer<String, Integer> stringLengthRef = String::length;
 ```
 
 ### পাইপলাইনের ৩টি অংশ:
-1. **Source**: কালেকশন (`list.stream()`), অ্যারে (`Arrays.stream(arr)`), বা ফ্যাক্টরি মেথড (`Stream.of()`).
+1. **Source**: কালেকশন (`list.stream()`), array (`Arrays.stream(arr)`), বা ফ্যাক্টরি method (`Stream.of()`).
 2. **Intermediate Operations**: উপাদান ফিল্টার বা ট্রান্সফর্ম করে আরেকটি নতুন স্ট্রিম প্রদান করে (Lazy).
 3. **Terminal Operation**: পাইপলাইন এক্সিকিউট করে ফাইনাল রেজাল্ট তৈরি করে বা কনজিউম করে।
 
