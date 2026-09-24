@@ -141,7 +141,35 @@ public class Constants {
 
 ---
 
-## ৬. কনসোল থেকে ইউজার ইনপুট গ্রহণ
+## ৬. অ্যারে (Arrays) ও মেমরি সংগঠন
+
+Java-তে অ্যারে হলো সমজাতীয় ডেটার সংকলন যা হিপ মেমরিতে অবজেক্ট হিসেবে সংরক্ষিত হয় এবং এর আকার নির্দিষ্ট (Fixed-size):
+
+```java
+import java.util.Arrays;
+
+public class ArrayBasicsDemo {
+    public static void main(String[] args) {
+        // Declaration and allocation
+        int[] scores = new int[5]; // Default initialized to [0, 0, 0, 0, 0]
+        scores[0] = 95;
+        scores[1] = 88;
+
+        // Array literal
+        String[] languages = {"Java", "Kotlin", "Scala"};
+
+        // Array length property
+        System.out.println("Array length: " + languages.length);
+
+        // Printing array elements nicely using Arrays.toString()
+        System.out.println("Scores: " + Arrays.toString(scores));
+    }
+}
+```
+
+---
+
+## ৭. কনসোল থেকে ইউজার ইনপুট গ্রহণ
 
 টার্মিনালে ইউজারের কাছ থেকে ডেটা রিড করার দুটি জনপ্রিয় উপায়:
 
