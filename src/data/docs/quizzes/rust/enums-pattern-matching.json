@@ -1,129 +1,126 @@
 [
   {
-    "id": "enums-pattern-matching-1",
+    "id": "enum-q1",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "Rust-এর enum-কে C++/Python-এর enum বা Union-এর চেয়ে শক্তিশালী বলা হয় কেন?",
-    "options": [
-      "Enum-এর ভেতরে method লেখা যায়",
-      "প্রতিটা variant নিজে data বহন করতে পারে — `Write(String)` বা `Move { x: i32, y: i32 }`-এর মতো",
-      "Enum-এর value গুলো runtime-এ বদলানো যায়",
-      "Rust enum-এ inheritance আছে"
-    ],
-    "answer": 1,
-    "explanation": "Rust-এর variant শুধু label না — struct বা tuple-এর মতো payload বহন করে। ভেতরে এটা tag + union, কিন্তু type-safe: `Direction` type-এর বাইরের কোনো মান ঢোকানোই সম্ভব না (C++ enum-এ ভুল integer দিলে UB হতে পারে)।"
+    "question": "সি বা জাভার এনামের সাথে রাস্টের এনামের সবচেয়ে বৈপ্লবিক পার্থক্য কী? কেন রাস্টের এনামকে অ্যালজেব্রাইক ডেটা টাইপ (Algebraic Data Type / Tagged Union) বলা হয়?",
+    "hint": "রাস্টে এনামের প্রতিটি ভ্যারিয়েন্ট স্বাধীনভাবে ভিন্ন ভিন্ন টাইপ ও সাইজের ডেটা (যেমন টুপল, স্ট্রাক্ট, প্রিমিটিভ) ধারণ করতে পারে, কেবল নাম্বারিং নয়।"
   },
   {
-    "id": "enums-pattern-matching-2",
-    "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "`Some(42)` আসলে কী?",
-    "options": [
-      "Null আছে কিনা check করা একটা builtin function",
-      "`Option` struct-এর একটা field",
-      "`std::option` মডিউলের একটা macro",
-      "`Option` enum-এর data-বহনকারী variant — আর variant-টা নিজে constructor-এর মতো কাজ করে: `Some(42)` লিখলে ভেতরে 42 ঢুকিয়ে tagged value বানিয়ে দেয়"
-    ],
-    "answer": 3,
-    "explanation": "`Some` আর `None` — `Option<T>` enum-এর দুটো variant, prelude-র কল্যাণে import ছাড়াই পাওয়া যায়। Data-বহনকারী variant নিজেই ছোট function-এর মতো — `let f = Some; let x = f(42);` সত্যিই চলে! Rust-এ null নেই, তাই \"মান নেই\" অবস্থাটা type-এই বাঁধা।"
-  },
-  {
-    "id": "enums-pattern-matching-3",
+    "id": "enum-q2",
     "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "`enum Message { Quit, Move { x: i32, y: i32 }, Write(String), ChangeColor(i32, i32, i32) }` — memory-তে কেমন সাজে?",
-    "options": [
-      "tag + payload union: একসময়ে একটাই variant থাকে, তাই সব variant সবচেয়ে বড় variant-টার জায়গা share করে",
-      "প্রতিটা variant-এর আলাদা জায়গা বরাদ্দ থাকে — size সব variant-এর size-এর যোগফল",
-      "সব variant heap-এ allocate হয়, stack-এ শুধু pointer থাকে",
-      "ভেতরে String থাকায় enum-টা কখনো stack-এ রাখা যায় না"
-    ],
-    "answer": 0,
-    "explanation": "Enum সাজে tag (discriminant) + payload union আকারে; size = tag + সবচেয়ে বড় variant (+ alignment)। বাড়তি মজা: `repr(Rust)`-এ `String`-এর মতো niche-ওয়ালা payload থাকলে compiler tag আলাদা করে বসায়ই না — তাই `size_of::<Message>()` মাত্র ২৪ byte, `String`-এর সমান।"
+    "question": "নিচের এনামটি লক্ষ্য করো:\n\n```rust\nenum WebEvent {\n    PageLoad,\n    KeyPress(char),\n    Click { x: i64, y: i64 },\n}\n```\n\nর্যামে এই এনামটির সাইজ কীভাবে নির্ধারিত হয়? কোন ভ্যারিয়েন্টের সাইজের ওপর ভিত্তি করে মেমরি এলোকেশন হয়?",
+    "code": "enum WebEvent {\n    PageLoad,\n    KeyPress(char),\n    Click { x: i64, y: i64 },\n}",
+    "hint": "ট্যাগড ইউনিয়ন (Tagged Union)। সবচেয়ে বড় ভ্যারিয়েন্টের সাইজ + ১টি ডিসক্রিমিন্যান্ট ট্যাগ (কোন ভ্যারিয়েন্ট তা শনাক্ত করার জন্য) এবং অ্যালাইনমেন্ট প্যাডিং।"
   },
   {
-    "id": "enums-pattern-matching-4",
-    "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "64-bit এ `std::mem::size_of::<Option<&T>>()` কত, আর কেন?",
-    "options": [
-      "১৬ byte — ৮ byte pointer + ৮ byte tag",
-      "৯ byte — ৮ byte pointer + ১ byte tag",
-      "T-র size-এর উপর নির্ভর করে",
-      "৮ byte — `&T`-এর সমান; `None` বোঝাতে ভেতরের pointer-কেই 0 (null address) করে দেওয়া হয়"
-    ],
-    "answer": 3,
-    "explanation": "এটাই niche optimization: valid reference কখনো 0 হতে পারে না — সেই ফাঁকা bit pattern-টাই `None` encode করতে ব্যবহার হয়, আলাদা tag byte লাগে না। `Option<Box<T>>`, `Option<NonZeroU32>`-ও একই সুবিধা পায়। কিন্তু `Option<i32>`-এ প্রতিটা bit pattern-ই valid মান, niche নেই — তাই tag লাগে (৮ byte)।"
-  },
-  {
-    "id": "enums-pattern-matching-5",
-    "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "`match` কোন শর্তে সরাসরি jump table-এ compile হয়?",
-    "options": [
-      "সবসময় — match এমনিতেই jump table",
-      "সব variant exhaustively cover থাকলে এবং arm-এ guard (`if ...`) না থাকলে",
-      "`_ =>` catch-all arm থাকলেই",
-      "আন্ডারস্কোর দিয়ে শুরু হওয়া variable name থাকলে"
-    ],
-    "answer": 1,
-    "explanation": "Exhaustiveness checker গাণিতিকভাবে প্রমাণ করে সব সম্ভাব্য মান cover হয়েছে — fallback path-এর দরকার থাকে না, তাই tag পড়ে index হিসেবে সরাসরি branch-এ jump করা যায়; if-else chain-এর চেয়ে দ্রুত। Guard (`if t < 0.0`) ঢুকলে jump table আর সম্ভব না — তখন branch chain।"
-  },
-  {
-    "id": "enums-pattern-matching-6",
+    "id": "enum-q3",
     "difficulty": "easy",
-    "type": "code",
-    "prompt": "match স্টেটমেন্টে 4 থেকে 7 পর্যন্ত (inclusive) যেকোনো সংখ্যার জন্য ম্যাচ করাতে pattern টি কী লিখবে?",
-    "code": "match n {\n    1 | 2 | 3 => println!(\"Small\"),\n    ____ => println!(\"Medium\"),\n    _ => println!(\"Other\"),\n}",
-    "explanation": "প্যাটার্ন ম্যাচিংয়ে 4..=7 সিনট্যাক্স 4 থেকে 7 পর্যন্ত সব মান ইনক্লুসিভভাবে কভার করে।",
-    "accept": [
-      "4..=7"
-    ]
+    "question": "সি বা জাভায় বহুল ব্যবহৃত \"Null Pointer\" কে তার আবিষ্কারক টনি হোর \"বিলিয়ন ডলারের ভুল\" (Billion Dollar Mistake) বলেছেন। রাস্টে কোনো নাল পয়েন্টার না রেখে অনুপস্থিত মান হ্যান্ডেল করতে কোন বিল্ট-ইন এনাম ব্যবহার করা হয়?",
+    "hint": "`enum Option<T> { Some(T), None }`।"
   },
   {
-    "id": "enums-pattern-matching-7",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "if let ব্যবহার করে Option<u8> থেকে শুধু Some(max) ভ্যালু আনপ্যাক করার প্যাটার্নটি লিখো:",
-    "code": "let config_max = Some(3u8);\nif let ____ = config_max {\n    println!(\"Max is {}\", max);\n}",
-    "explanation": "if let Some(max) সিনট্যাক্স দিয়ে একটি নির্দিষ্ট ভ্যারিয়েন্ট ম্যাচ হলে তার ভেতরের ভ্যালুটি max ভেরিয়েবলে বাইন্ড করা হয়।",
-    "accept": [
-      "Some(max)"
-    ]
-  },
-  {
-    "id": "enums-pattern-matching-8",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "Option<i32> এর মান None হলে ডিফল্ট হিসেবে 0 রিটার্ন করতে unwrap_or মেথডটি কীভাবে কল করবে?",
-    "code": "let some_number: Option<i32> = None;\nlet val = some_number.____;\nprintln!(\"{}\", val); // 0",
-    "explanation": "unwrap_or(default_val) মেথড Some থাকলে তার মান বের করে, আর None থাকলে প্রদত্ত ডিফল্ট মান রিটার্ন করে।",
-    "accept": [
-      "unwrap_or(0)"
-    ]
-  },
-  {
-    "id": "enums-pattern-matching-9",
-    "difficulty": "easy",
-    "type": "code",
-    "prompt": "Blank-এ কী বসালে `double(Some(21))` ঠিকমতো `Some(42)` দেবে?",
-    "code": "fn double(x: Option<i32>) -> Option<i32> {\n    match x {\n        Some(v) => ____,\n        None => None,\n    }\n}",
-    "accept": [
-      "Some(v * 2)",
-      "Some(2 * v)"
-    ],
-    "explanation": "`Some(v)` pattern-এ ভেতরের মান v-তে bind হয়। Return type `Option<i32>` — তাই দ্বিগুণ করা মানটা আবার `Some`-এ মুড়ে ফেরত দিতে হয়; খালি `v * 2` দিলে type মিলত না।"
-  },
-  {
-    "id": "enums-pattern-matching-10",
+    "id": "enum-q4",
     "difficulty": "hard",
-    "type": "code",
-    "prompt": "Blank-এ কোন pattern বসালে 15-এর জন্য \"Teen: 15\" ছাপা হবে?",
-    "code": "fn main() {\n    let age = 15u32;\n    match age {\n        n @ 0..=12 => println!(\"Child: {}\", n),\n        ____ => println!(\"Teen: {}\", n),\n        n @ 20..=100 => println!(\"Adult: {}\", n),\n        _ => println!(\"Invalid\"),\n    }\n}",
-    "accept": [
-      "n @ 13..=19",
-      "n@13..=19"
-    ],
-    "explanation": "`n @ 13..=19` — `@` দিয়ে range ম্যাচ করার সাথে সাথে সেই মানটা n-এ bind-ও করা হয়, তাই arm-এর ভেতরে `n` ব্যবহার করা যায়। শুধু `13..=19 =>` লিখলে range ম্যাচ হতো কিন্তু মানটা bind হতো না — `n` পাওয়া যেত না।"
+    "question": "নিস অপটিমাইজেশন (Niche Optimization): মেমরির দিক থেকে একটি সাধারণ রেফারেন্স `&i32` হলো ৮ বাইট। কিন্তু `Option<&i32>` ও র্যামে ঠিক ৮ বাইট জায়গা নেয়, কোনো এক্সট্রা ট্যাগ বাইট লাগে না কেন?",
+    "hint": "যেহেতু রাস্টের রেফারেন্স কখনোই শূন্য বা 0x0 (null) হতে পারে না, কম্পাইলার 0x0 অ্যাড্রেসটিকে `None` হিসেবে ব্যবহার করে। কোনো অতিরিক্ত ডিসক্রিমিন্যান্ট মেমরি লাগে না।"
+  },
+  {
+    "id": "enum-q5",
+    "difficulty": "medium",
+    "question": "নিচের কোডে ম্যাচিংয়ের সময় ডেটা এক্সট্র্যাক্ট করো:\n\n```rust\nenum Message {\n    Move { x: i32, y: i32 },\n    Write(String),\n}\n\nlet msg = Message::Move { x: 10, y: 20 };\n```\n\n`match` এক্সপ্রেশনের ভেতরে কীভাবে `x` এবং `y` এর মান ধরে তাদের যোগফল প্রিন্ট করবে?",
+    "code": "match msg {\n    Message::Move { x, y } => println!(\"{}\", x + y),\n    _ => (),\n}",
+    "hint": "প্যাটার্ন ডিসট্রাকচারিং সিনট্যাক্স: `Message::Move { x, y } => ...`।"
+  },
+  {
+    "id": "enum-q6",
+    "difficulty": "easy",
+    "question": "`Option<T>` থেকে নিরাপদ উপায়ে মান বের করার জন্য কোন মেথডটি সবচেয়ে বেশি ব্যবহৃত হয় যখন তুমি একটি ডিফল্ট ফলব্যাক মান দিতে চাও?",
+    "hint": "`.unwrap_or(default_value)` অথবা লেজি ইভ্যালুয়েশনের জন্য `.unwrap_or_else(|| ...)`।"
+  },
+  {
+    "id": "enum-q7",
+    "difficulty": "medium",
+    "question": "যদি তোমার কাছে একটি `Option<String>` থাকে এবং তুমি এর ওনারশিপ নষ্ট না করে ভেতরের মানের একটি রেফারেন্স পেতে চাও (`Option<&String>`), তবে কোন মেথড কল করতে হয়?",
+    "hint": "`.as_ref()` মেথড।"
+  },
+  {
+    "id": "enum-q8",
+    "difficulty": "hard",
+    "question": "রিকালসিভ এনাম (Recursive Enum): নিচের কোডটি কেন কম্পাইল হবে না?\n\n```rust\nenum List {\n    Cons(i32, List),\n    Nil,\n}\n```\n\nকম্পাইলার `recursive type List has infinite size` এরর দিচ্ছে কেন এবং কীভাবে `Box` ব্যবহার করে এটি সমাধান করা যায়?",
+    "code": "enum List {\n    Cons(i32, List), // Error!\n    Nil,\n}",
+    "hint": "কম্পাইল টাইমে এনামের সাইজ ফিক্সড হতে হয়। রিকার্সিভ ডেটা সরাসরি রাখলে সাইজ অসীম হয়ে যায়। `Box<List>` দিলে এটি হিপে চলে যায় এবং এনামে শুধু একটি ফিক্সড সাইজের পয়েন্টার থাকে।"
+  },
+  {
+    "id": "enum-q9",
+    "difficulty": "easy",
+    "question": "ম্যাচ স্টেটমেন্টে যখন কোনো একটি ভ্যারিয়েন্ট মেলাতে চাও এবং ভেতরের কোনো নির্দিষ্ট মানকে ফিল্টার করতে চাও, তখন প্যাটার্নের সাথে `if` জুড়ে দেওয়াকে কী বলে?",
+    "hint": "ম্যাচ গার্ড (Match Guard)। যেমন `Some(x) if x % 2 == 0 => ...`।"
+  },
+  {
+    "id": "enum-q10",
+    "difficulty": "medium",
+    "question": "`if let` এবং `while let` ছাড়াও রাস্ট ১.৬৫ ভার্সন থেকে `let-else` সিনট্যাক্স যুক্ত হয়েছে। নিচের কোডে `let-else` ব্যবহারের সুবিধা কী?\n\n```rust\nlet Some(value) = opt else {\n    return;\n};\n```",
+    "code": "let Some(value) = opt else { return; };",
+    "hint": "এটি আর্লি রিটার্ন (Early Return) বা গার্ড ক্লজ (Guard Clause) হিসেবে কাজ করে এবং কোনো নেস্টেড ইন্ডেন্টেশন ছাড়াই `value` কে নিচের পুরো স্কোপে অ্যাক্সেসিবল করে।"
+  },
+  {
+    "id": "enum-q11",
+    "difficulty": "medium",
+    "question": "`Result<T, E>` এনামের দুটি ভ্যারিয়েন্ট কী কী এবং এটি সিস্টেম প্রোগ্রামিংয়ে কেন ট্র্যাডিশনাল এক্সেপশনের চেয়ে বেশি কার্যকর?",
+    "hint": "`Ok(T)` এবং `Err(E)`। এটি এররকে ফার্স্ট-ক্লাস ভ্যালু হিসেবে রিটার্ন টাইপে স্পষ্টভাবে নির্দেশ করে, ফলে কম্পাইলার কলারকে বাধ্য করে এরর হ্যান্ডেল করতে।"
+  },
+  {
+    "id": "enum-q12",
+    "difficulty": "easy",
+    "question": "সি-এর মতো ইন্টিজার ভ্যালু অ্যাসাইন করা এনাম (C-like Enum: `enum HttpStatus { Ok = 200, NotFound = 404 }`) এ কাস্ট করতে কোন অপারেটর ব্যবহার করা যায়?",
+    "hint": "`HttpStatus::Ok as u16` বা `as i32`।"
+  },
+  {
+    "id": "enum-q13",
+    "difficulty": "hard",
+    "question": "একটি এনামে মেথড ডিফাইন করা কি সম্ভব? যেমন `impl WebEvent { fn inspect(&self) { ... } }`। এনামের মেথডের ভেতর কীভাবে সেলফ ইনস্ট্যান্সকে প্রসেস করা হয়?",
+    "hint": "হ্যাঁ, স্ট্রাক্টের মতোই `impl` ব্লকে মেথড লেখা যায় এবং মেথডের ভেতর `match self { ... }` দিয়ে প্রতিটি ভ্যারিয়েন্ট হ্যান্ডেল করা হয়।"
+  },
+  {
+    "id": "enum-q14",
+    "difficulty": "medium",
+    "question": "প্যাটার্ন ম্যাচিংয়ে `ref` কি-ওয়ার্ডের কাজ কী? যদি একটি ওনড এনামের ভেতরে থাকা ডেটা মুভ না করে শুধু রেফারেন্স নিতে চাও, তবে প্যাটার্নে কীভাবে লিখতে হয়?",
+    "hint": "`Some(ref name)` অথবা আধুনিক রাস্টে সরাসরি রেফারেন্সের ওপর ম্যাচ করা `match &opt { Some(name) => ... }`।"
+  },
+  {
+    "id": "enum-q15",
+    "difficulty": "easy",
+    "question": "ম্যাচ স্টেটমেন্টে যখন কোনো মানের নির্দিষ্ট অংশ তোমার দরকার নেই, তখন আন্ডারস্কোর `_` দিয়ে কীভাবে তা ইগনোর করা হয়?",
+    "hint": "যেমন টুপলে `(a, _)` অথবা অবজেক্টে `Message::Move { x, .. }`।"
+  },
+  {
+    "id": "enum-q16",
+    "difficulty": "hard",
+    "question": "এক্সহস্টিভ চেকিং বাইপাস করা: লাইব্রেরি ডেভেলপার হিসেবে ভবিষ্যতে তুমি এনামে নতুন ভ্যারিয়েন্ট যোগ করতে পারো, কিন্তু ক্লায়েন্ট কোড যেন না ভাঙে। এর জন্য কোন বিশেষ অ্যাট্রিবিউট ব্যবহার করা হয়?",
+    "hint": "`#[non_exhaustive]` অ্যাট্রিবিউট, যা ক্লায়েন্টকে তাদের ম্যাচ ব্লকে ওয়াইল্ডকার্ড `_` আর্ম বাধ্যতামূলকভাবে দিতে বাধ্য করে।"
+  },
+  {
+    "id": "enum-q17",
+    "difficulty": "medium",
+    "question": "টুপল এনাম ভ্যারিয়েন্টকে কনস্ট্রাকটর ফাংশন পয়েন্টার হিসেবে ব্যবহার: `let numbers = vec![1, 2, 3]; let options: Vec<Option<i32>> = numbers.into_iter().map(Some).collect();` এখানে `map(Some)` কীভাবে ফাংশন হিসেবে কাজ করল?",
+    "hint": "টুপল এনাম ভ্যারিয়েন্ট (যেমন `Some`) স্বয়ংক্রিয়ভাবে একটি ফাংশনের মতো আচরণ করে যা আর্গুমেন্ট গ্রহণ করে এনাম ইনস্ট্যান্স রিটার্ন করে।"
+  },
+  {
+    "id": "enum-q18",
+    "difficulty": "easy",
+    "question": "একটি `Option<i32>` এর মান যদি `Some(x)` হয়, তবে তার মানকে দ্বিগুণ করে নতুন অপশন বানাতে কোন ফাংশনাল মেথড ব্যবহার করা হয়?",
+    "hint": "`.map(|x| x * 2)` মেথড।"
+  },
+  {
+    "id": "enum-q19",
+    "difficulty": "hard",
+    "question": "যদি তোমার কাছে একটি নেস্টেড অপশন `Option<Option<i32>>` থাকে, তবে এটিকে সিঙ্গেল লেভেলে ফ্ল্যাটেন করতে কোন মেথড ব্যবহার করবে?",
+    "hint": "`.flatten()` অথবা মোনাডিক চেইনিংয়ে `.and_then()`।"
+  },
+  {
+    "id": "enum-q20",
+    "difficulty": "medium",
+    "question": "প্যাটার্ন ম্যাচিংয়ে মাল্টিপল রেঞ্জ টেস্ট: যেমন কোনো স্কোর ৯০ থেকে ১০০ হলে এক গ্রেড, ৮০ থেকে ৮৯ হলে অন্য গ্রেড। `match` এ ইনক্লুসিভ রেঞ্জ সিনট্যাক্স কীভাবে লেখা হয়?",
+    "hint": "`90..=100 => println!(\"A\"), 80..=89 => println!(\"B\")`।"
   }
 ]

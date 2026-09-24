@@ -1,128 +1,122 @@
 [
   {
-    "id": "smart-pointers-1",
+    "id": "smart-q1",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "`let x = Box::new(5);` — ভেতরে মেমরির হিসাবটা কেমন?",
-    "options": [
-      "`5` heap-এ allocate হয়, stack-এ `x` থাকে মাত্র একটা 8-byte pointer; scope শেষে Box drop হয়ে heap memory automatic free হয়",
-      "`5` stack-এই থাকে, Box শুধু একটা wrapper struct",
-      "`5` heap-এ যায়, আর free করতে হয় manually — C-এর মতো",
-      "পুরো `Box` (value সহ) heap-এ থাকে, stack-এ কিছুই না"
-    ],
-    "answer": 0,
-    "explanation": "`Box::new` দুই ধাপে কাজ করে: allocator দিয়ে `size_of::<T>()` জায়গা নেওয়া, তারপর value-টা ওই ঠিকানায় move করা। Stack-এ থাকে শুধু pointer; scope শেষে `Drop` dealloc করে দেয় — C/C++-এর `new`/`delete`-এর মতো, কিন্তু automatic cleanup সহ।"
+    "question": "রাস্টে সাধারণ রেফারেন্স (`&T`) এবং স্মার্ট পয়েন্টার (Smart Pointer: `Box`, `Rc`, `RefCell`) এর মধ্যে মূল তফাত কী? কোন দুটি ট্রেইট বাস্তবায়নের মাধ্যমে একটি টাইপ স্মার্ট পয়েন্টার হিসেবে আচরণ করে?",
+    "hint": "স্মার্ট পয়েন্টার মেমরির ওনারশিপ ধারণ করে এবং অতিরিক্ত মেটাডেটা/ক্যাপাবিলিটি রাখে। তারা `Deref` (রেফারেন্সের মতো আচরণ করা) এবং `Drop` (স্কোপ শেষে রিসোর্স ফ্রি করা) ট্রেইট বাস্তবায়ন করে।"
   },
   {
-    "id": "smart-pointers-2",
+    "id": "smart-q2",
+    "difficulty": "medium",
+    "question": "`Box<T>` কী এবং ডেটা স্ট্যাকের বদলে হিপ মেমরিতে এলোকেট করতে কেন এটি সবচেয়ে সহজ উপায়? স্ট্যাকে এবং হিপে `Box` এর মেমরি অবস্থান কীভাবে থাকে?",
+    "hint": "`Box<T>` হিপে আসল ডেটা রাখে এবং স্ট্যাকে শুধু একটি ৮ বাইটের পয়েন্টার রাখে। যখন বক্সটি স্কোপের বাইরে যায় তখন হিপের ডেটা স্বয়ংক্রিয়ভাবে ড্রপ হয়।"
+  },
+  {
+    "id": "smart-q3",
+    "difficulty": "hard",
+    "question": "রিকার্সিভ ডেটা স্ট্রাকচার (যেমন লিঙ্কড লিস্ট বা বাইনারি ট্রি) তৈরি করার সময় `Box` ব্যবহার না করলে কম্পাইলার কেন কোড বিল্ড করতে সম্পূর্ণ অস্বীকৃতি জানায়?",
+    "hint": "কম্পাইল টাইমে স্ট্রাক্টের সাইজ নিশ্চিত হতে হয়। রিকার্সিভ স্ট্রাক্ট সরাসরি নিজেকে কনটেইন করলে সাইজ অসীম হয়ে যায়। `Box` যোগ করলে সাইজ ফিক্সড ৮ বাইট পয়েন্টারে পরিণত হয়।"
+  },
+  {
+    "id": "smart-q4",
     "difficulty": "easy",
-    "type": "code",
-    "prompt": "মান 5 কে স্ট্যাকের পরিবর্তে হিপ মেমোরিতে সংরক্ষণ করতে Box স্মার্ট পয়েন্টারটি তৈরি করো:",
-    "code": "let b = ____;\nprintln!(\"b = {}\", b); // 5",
-    "explanation": "Box::new(value) স্ট্যাকের পরিবর্তে মেমোরির হিপ সেকশনে ডেটা সংরক্ষণ করে এবং স্ট্যাকে শুধু একটি পয়েন্টার রাখে।",
-    "accept": [
-      "Box::new(5)",
-      "Box::new(5);"
-    ]
+    "question": "রাস্টে মাল্টিপল ওনারশিপ (Multiple Ownership): সাধারণ ওনারশিপ রুলে একটি ডেটার একজনই ওনার থাকে। সিঙ্গেল-থ্রেডেড প্রোগ্রামে একই ডেটার একাধিক ওনার শেয়ার করতে স্ট্যান্ডার্ড লাইব্রেরির কোন স্মার্ট পয়েন্টার ব্যবহার করতে হয়?",
+    "hint": "`std::rc::Rc<T>` (Reference Counting Pointer)।"
   },
   {
-    "id": "smart-pointers-3",
+    "id": "smart-q5",
+    "difficulty": "medium",
+    "question": "`Rc::clone(&a)` কল করলে কি হিপে থাকা ডেটার একটি গভীর কপি (Deep Copy) তৈরি হয়? এর আসল অভ্যন্তরীণ মেকানিজম কী?",
+    "hint": "না, ডেটা কপি হয় না! এটি কেবল হিপে থাকা রেফারেন্স কাউন্টারটি ১ বৃদ্ধি করে এবং নতুন একটি পয়েন্টার তৈরি করে। এটি অত্যন্ত দ্রুত এবং ও(১) অপারেশনে কাজ করে।"
+  },
+  {
+    "id": "smart-q6",
+    "difficulty": "hard",
+    "question": "`Rc<T>` কে কেন মাল্টি-থ্রেডেড অ্যাপ্লিকেশনে একাধিক থ্রেডের মধ্যে শেয়ার করা নিষিদ্ধ? কম্পাইলারের কোন মার্কার ট্রেইট না থাকার কারণে `Rc` অন্য থ্রেডে পাঠাতে গেলে কম্পাইল এরর দেয়?",
+    "hint": "`Rc` এর রেফারেন্স কাউন্টার নন-অ্যাটোমিক। একাধিক থ্রেড একসাথে কাউন্ট আপডেট করলে ডেটা রেস হবে। `Send` ট্রেইট ইমপ্লিমেন্ট না থাকার কারণে কম্পাইলার এটি আটকে দেয়।"
+  },
+  {
+    "id": "smart-q7",
+    "difficulty": "medium",
+    "question": "মাল্টি-থ্রেডেড কনকারেন্ট অ্যাপ্লিকেশনে একাধিক থ্রেডের মাঝে রেফারেন্স কাউন্টিং শেয়ার করতে `Rc<T>` এর থ্রেড-সেফ বিকল্প হিসেবে কোনটি ব্যবহার করা হয়?",
+    "hint": "`std::sync::Arc<T>` (Atomic Reference Counting)।"
+  },
+  {
+    "id": "smart-q8",
+    "difficulty": "hard",
+    "question": "পারফরম্যান্স কনসিডারেশন: সিঙ্গেল থ্রেডের ক্ষেত্রে `Arc<T>` ব্যবহার না করে কেন ডেভেলপাররা সর্বদা `Rc<T>` ব্যবহার করেন? অ্যাটোমিক অপারেশনের কারণে সিপিইউ লেভেলে কী ওভারহেড তৈরি হয়?",
+    "hint": "অ্যাটোমিক অপারেশন সিপিইউ ক্যাশ সিঙ্ক্রোনাইজেশন এবং মেমরি ব্যারিয়ার ব্যবহার করে, যা সাধারণ ইনক্রিমেন্টের চেয়ে উল্লেখযোগ্য পরিমাণে বেশি সিপিইউ ক্লক সাইকেল খরচ করে।"
+  },
+  {
+    "id": "smart-q9",
+    "difficulty": "medium",
+    "question": "ইন্টারনাল মিউট্যাবিলিটি (Interior Mutability): `Rc<T>` কেবল ইমিউটেবল এক্সেস দেয়। যদি তুমি `Rc` দ্বারা শেয়ার করা ডেটা পরিবর্তনও করতে চাও, তবে `Rc` এর সাথে কোন স্মার্ট পয়েন্টার কম্বাইন করতে হয়?",
+    "hint": "`Rc<RefCell<T>>` প্যাটার্ন।"
+  },
+  {
+    "id": "smart-q10",
+    "difficulty": "hard",
+    "question": "`RefCell<T>` কীভাবে বরোয়িং নিয়মকে কম্পাইল টাইম থেকে রানটাইমে স্থানান্তরিত করে? যদি রানটাইমে একই সাথে দুটি সক্রিয় `borrow_mut()` কল ঘটে, তবে রাস্ট কম্পাইলার নয়, রানটাইম কী অ্যাকশন নেয়?",
+    "hint": "রানটাইমে বরো ফ্ল্যাগ ট্র্যাক করে। নিয়ম ভাঙলে সাথে সাথে রানটাইমে panic! ট্রিগার করে (panicked at AlreadyBorrowed)। ক্র্যাশ এড়াতে `try_borrow_mut()` ব্যবহার করা যায়।"
+  },
+  {
+    "id": "smart-q11",
     "difficulty": "easy",
-    "type": "code",
-    "prompt": "Recursive Cons list-কে compile করানোর জন্য blank-এ কী বসবে? (Box ছাড়া compiler বলবে \"recursive type has infinite size\")",
-    "code": "enum List {\n    Cons(i32, ____),\n    Nil,\n}\n\nuse List::{Cons, Nil};\n\nfn main() {\n    let list = Cons(1, Box::new(Cons(2, Box::new(Cons(3, Box::new(Nil))))));\n    if let Cons(head, _tail) = list {\n        println!(\"{}\", head);\n    }\n}",
-    "accept": [
-      "Box<List>"
-    ],
-    "explanation": "`Cons(i32, List)` হলে enum-এর size অসীম হয়ে যায় — ভেতরে নিজের মতো বড় field ঢুকতেই থাকে। `Box<List>` দিলে store হয় শুধু একটা pointer (8 bytes), তাই size finite হয়ে যায়।"
+    "question": "`Deref` ট্রেইটের কাজ কী? কেন একটি স্মার্ট পয়েন্টার `box_val` এর ওপর সরাসরি সাধারণ ডেটার মেথড কল করা যায়?",
+    "hint": "ডিরেফ কোয়ার্সন। কম্পাইলার স্বয়ংক্রিয়ভাবে `*(box_val.deref())` কল করে আসল টাইপের রেফারেন্সে নিয়ে যায়।"
   },
   {
-    "id": "smart-pointers-4",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "Rc স্মার্ট পয়েন্টারের রেফারেন্স কাউন্টার বৃদ্ধি করতে Rc::clone কলটি লিখো:",
-    "code": "use std::rc::Rc;\nlet data = Rc::new(String::from(\"shared\"));\nlet r1 = ____;",
-    "explanation": "Rc::clone(&data) ডেটা কপি না করে কেবল রেফারেন্স কাউন্ট ১ বৃদ্ধি করে।",
-    "accept": [
-      "Rc::clone(&data)"
-    ]
-  },
-  {
-    "id": "smart-pointers-5",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "`let s = Rc::new(String::from(\"hello\"));` — `Rc::clone(&s)` আর `(*s).clone()` এর মধ্যে পার্থক্য কী?",
-    "options": [
-      "`Rc::clone(&s)` শুধু reference count বাড়ায় (cheap, ১-২ cycle); `(*s).clone()` আসল String data copy করে (expensive, নতুন allocation)",
-      "দুটোই একই — দুটোই String data copy করে",
-      "`Rc::clone` নতুন heap allocation করে, `(*s).clone()` করে না",
-      "`(*s).clone()` reference count বাড়ায়, `Rc::clone` data copy করে"
-    ],
-    "answer": 0,
-    "explanation": "`Rc::clone(&s)` শুধু `strong += 1` — নতুন Rc মানে একই pointer-এর আরেকটা ৮-byte copy। কিন্তু `(*s).clone()` deref করে String-এর `clone` ডাকে — নতুন buffer allocate করে সব byte copy করে। Clippy এই ভুল ধরতে সাহায্য করে।"
-  },
-  {
-    "id": "smart-pointers-6",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "Graph-এ parent → child আর child → parent — দুই দিকেই `Rc` থাকলে কী হয়, আর সমাধান কী?",
-    "options": [
-      "দুজনের strong count কখনো ০ হয় না — কেউ drop-ই হতে পারে না, heap block leak হয়; সমাধান: এক দিকে (child → parent) `Weak` ব্যবহার করা",
-      "কিছু হয় না — Rust-এর GC cycle নিজেই ধরে ফেলে",
-      "Compile error — `Rc` দিয়ে cycle বানানো যায় না",
-      "Runtime-এ cycle detect করে automatic panic হয়"
-    ],
-    "answer": 0,
-    "explanation": "`Rc`-তে cycle detector নেই (Python-এর GC-র মতো না) — cycle হলে strong কখনো ০ হবে না, memory leak। `Weak` ownership নেয় না: clone-এ `weak` counter বাড়ে, strong না — তাই cycle ভেঙে যায়। চর্চা: নিচের দিকে strong (`Rc`), উপরের দিকে weak (`Weak`)।"
-  },
-  {
-    "id": "smart-pointers-7",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "RefCell এর ভেতরে থাকা ভ্যালু মিউটেবলভাবে পরিবর্তন করার জন্য কোন মেথড কল করবে?",
-    "code": "use std::cell::RefCell;\nlet data = RefCell::new(5);\n*data.____ += 1;",
-    "explanation": "RefCell রানটাইমে ধার নেওয়ার নিয়ম রক্ষা করে। পরিবর্তন করতে .borrow_mut() কল করতে হয়।",
-    "accept": [
-      "borrow_mut()"
-    ]
-  },
-  {
-    "id": "smart-pointers-8",
+    "id": "smart-q12",
     "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "`let data = RefCell::new(5); let b1 = data.borrow_mut(); let b2 = data.borrow_mut();` — দ্বিতীয় `borrow_mut()`-এ কী হবে?",
-    "options": [
-      "Runtime panic — RefCell-এর borrowing rule compile time-এ না চেক করে runtime-এ একটা integer flag দিয়ে চেক করে, আর সেখানেই ফেঁসে যায়",
-      "Compile error — borrow checker দুই mutable borrow আগেই ধরবে",
-      "দ্বিতীয় borrow_mut silently None return করে",
-      "Deadlock — দ্বিতীয়টা প্রথমটা release হওয়ার অপেক্ষায় বসে থাকে"
-    ],
-    "answer": 0,
-    "explanation": "RefCell-এ কোনো lock নেই — আছে মাত্র একটা flag (0 = ফাঁকা, n = n-টা shared borrow, -1 = একটা exclusive borrow)। `borrow_mut` flag ০ না দেখলেই panic করে। নিয়ম সেই একই borrowing নিয়ম, শুধু চেকটা runtime-এ — তাই এই ভুল compile-এ ধরা পড়ে না।"
+    "question": "রেফারেন্স সাইকেল ও মেমরি লিক (Reference Cycle & Memory Leak): দুটি নোড একে অপরকে `Rc<RefCell<Node>>` দিয়ে নির্দেশ করলে রেফারেন্স কাউন্ট কখনোই শূন্য হবে না। এই মেমরি লিক প্রতিরোধে স্ট্যান্ডার্ড লাইব্রেরির কোন দুর্বল পয়েন্টার ব্যবহার করতে হয়?",
+    "hint": "`std::rc::Weak<T>` (Weak Reference)। এটি ওনারশিপ দাবি করে না এবং রেফারেন্স কাউন্ট বৃদ্ধিতে ভূমিকা রাখে না।"
   },
   {
-    "id": "smart-pointers-9",
-    "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "`Arc`-এর reference count operation `Rc`-র চেয়ে ধীর কেন, তাও আবার thread-safe কেন?",
-    "options": [
-      "Count বাড়ানো/কমানো atomic instruction (fetch_add/fetch_sub) দিয়ে হয় — lock-prefixed, একটু দামি কিন্তু race অসম্ভব; শেষ-owner check-ও atomic, তাই double-free হয় না",
-      "Arc প্রতি clone-এ পুরো data copy করে বলে ধীর, কিন্তু copy তো safe",
-      "Arc ভেতরে একটা global Mutex ব্যবহার করে — ধীর কিন্তু thread-safe",
-      "আসলে Arc ধীর না — দুটো হুবহু একই instruction ব্যবহার করে"
-    ],
-    "answer": 0,
-    "explanation": "`Rc::clone` সাধারণ add — দুই thread-এ একসাথে করলে হিসাব ভেঙে যায়, তাই-ই `Rc` thread-এ পাঠানো যায় না (`!Send`)। `Arc` atomic op ব্যবহার করে (অন্য core-এর cache line invalidate করে, কয়েক গুণ দামি); শেষ-owner check-ও atomic — দুই thread একসাথে শেষ দুই owner drop করলেও free ঠিক একবারই হয়।"
+    "id": "smart-q13",
+    "difficulty": "medium",
+    "question": "একটি `Weak<T>` পয়েন্টার থেকে মূল ডেটা পড়ার পূর্বে কেন `.upgrade()` মেথড কল করতে হয় এবং এটি কী রিটার্ন করে?",
+    "hint": "কারণ মূল ডেটা ইতিমধ্যে ড্রপ হয়ে থাকতে পারে। `.upgrade()` একটি `Option<Rc<T>>` রিটার্ন করে — ডেটা বেঁচে থাকলে `Some(rc)` দেয়, নচেৎ `None`।"
   },
   {
-    "id": "smart-pointers-10",
+    "id": "smart-q14",
+    "difficulty": "easy",
+    "question": "প্রিমিটিভ টাইপের ক্ষেত্রে (যেমন `i32` বা `bool`) কোনো রানটাইম বরো ট্র্যাকিং ওভারহেড ছাড়াই ইন্টারনাল মিউট্যাবিলিটি পেতে `RefCell` এর হালকা বিকল্প কোনটি?",
+    "hint": "`std::cell::Cell<T>` — যা মান কপি বা মুভ করার মাধ্যমে ইন্টারনাল মিউটেশন নিশ্চিত করে।"
+  },
+  {
+    "id": "smart-q15",
+    "difficulty": "medium",
+    "question": "কাস্টম স্মার্ট পয়েন্টারে মেমরি ক্লিনআপ লজিক লেখার জন্য কোন ট্রেইটের কোন মেথড ইমপ্লিমেন্ট করতে হয়?",
+    "hint": "`std::ops::Drop` ট্রেইটের `fn drop(&mut self)` মেথড।"
+  },
+  {
+    "id": "smart-q16",
     "difficulty": "hard",
-    "type": "code",
-    "prompt": "Tree-তে child থেকে parent-এর দিকে reference রাখতে হবে যাতে cycle/leak না হয় — blank-এ কী বসবে?",
-    "code": "use std::rc::{Rc, Weak};\n\nstruct Node {\n    children: Vec<Rc<Node>>, // down the tree: strong ownership\n    parent: ____,            // up the tree: must not bump strong count\n}",
-    "accept": [
-      "Weak<Node>"
-    ],
-    "explanation": "উপরের দিকে `Weak` — clone-এ `weak` counter বাড়ে, strong না, তাই parent-কে বাঁচিয়ে রাখে না এবং `Rc` cycle ভেঙে যায়। Value দরকার হলে `parent.upgrade()`: strong count > 0 হলে `Some(Rc)`, data drop হয়ে গেলে `None` — dangling pointer-এর সুযোগই নেই।"
+    "question": "ম্যানুয়ালি `Drop::drop` কল করা কি বৈধ? যেমন `x.drop()` সরাসরি লিখতে গেলে কম্পাইলার কী বলে এবং এর নিরাপদ বিকল্প কী?",
+    "hint": "কম্পাইলার `explicit use of destructor method` এরর দেয়, কারণ এটি পরবর্তীতে স্বাভাবিক স্কোপ শেষে ডাবল ড্রপ ঘটাতে পারত। নিরাপদ বিকল্প হলো গ্লোবাল `drop(x)` কল করা।"
+  },
+  {
+    "id": "smart-q17",
+    "difficulty": "medium",
+    "question": "`Cow<T>` (Clone-on-Write) স্মার্ট পয়েন্টারের উদ্দেশ্য কী? রিড-অনলি ডেটা রিটার্ন করার সময় মেমরি এলোকেশন এড়াতে এবং শুধুমাত্র ডেটা পরিবর্তনের প্রয়োজন হলেই হিপে ক্লোন করতে এটি কীভাবে সাহায্য করে?",
+    "hint": "এটি একটি এনাম: `Cow::Borrowed(&'a B)` এবং `Cow::Owned(O)`। যতক্ষণ সম্ভব রেফারেন্স হিসেবে কাজ করে, কেবল মিউটেট করতে গেলেই নতুন কপি তৈরি করে মেমরি বাঁচায়।"
+  },
+  {
+    "id": "smart-q18",
+    "difficulty": "easy",
+    "question": "একটি `Box<[T]>` এবং একটি `Vec<T>` এর মধ্যে মেমরি কাঠামোর পার্থক্য কী? যখন কোনো ভেক্টরে আর নতুন এলিমেন্ট যোগ করা হবে না, তখন ক্যাপাসিটি ফিল্ড বাদ দিয়ে মেমরি অপটিমাইজ করতে কোন মেথড ব্যবহার করা যায়?",
+    "hint": "`Box<[T]>` এর কোনো ক্যাপাসিটি ফিল্ড থাকে না, শুধু পয়েন্টার ও লেন্থ থাকে। `v.into_boxed_slice()` দিয়ে এটি অর্জন করা যায়।"
+  },
+  {
+    "id": "smart-q19",
+    "difficulty": "hard",
+    "question": "`DerefMut` ট্রেইটের ভূমিকা কী এবং কখন কম্পাইলার স্বয়ংক্রিয়ভাবে মিউটেবল রেফারেন্সের ডিরেফ কোয়ার্সন সম্পাদন করে?",
+    "hint": "মিউটেবল স্মার্ট পয়েন্টারকে মূল ভেতরের টাইপের `&mut Target` এ কনভার্ট করে যখন ফাংশন বা অ্যাসাইনমেন্টে মিউটেবল রেফারেন্সের প্রত্যাশা থাকে।"
+  },
+  {
+    "id": "smart-q20",
+    "difficulty": "medium",
+    "question": "থ্রেড সেফটিতে ডেটা পরিবর্তন করতে মাল্টি-থ্রেডেড কনটেক্সটে `Arc` এর সাথে সাধারণত কোন দুটি সিঙ্ক্রোনাইজেশন প্রিমিটিভ যুক্ত করা হয়?",
+    "hint": "`Arc<Mutex<T>>` অথবা রিড-হেভি ওয়ার্কলোডের জন্য `Arc<RwLock<T>>`।"
   }
 ]

@@ -1,132 +1,124 @@
 [
   {
-    "id": "iterators-closures-1",
+    "id": "iter-q1",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "Rust-এর `Iterator` trait-এ implement করতেই হয় এমন method কোনটা, আর `map`, `filter`, `sum`-এর মতো বাকি সব method কোথা থেকে আসে?",
-    "options": [
-      "শুধু `next(&mut self) -> Option<Self::Item>` — বাকি সব method trait-এর default implementation হিসেবে free পাওয়া যায়",
-      "`next()` আর `collect()` দুটোই — বাকিগুলো macro",
-      "প্রতিটা method নিজে নিজে implement করতে হয়",
-      "`map()` — এটাই মূল method, বাকিরা এর উপর ভিত্তি করে স্বয়ংক্রিয়ভাবে লেখা হয়ে যায়"
-    ],
-    "answer": 0,
-    "explanation": "`Iterator` trait-এর একমাত্র required method হলো `next()` — যা `Option<Self::Item>` return করে। `map`, `filter`, `fold`, `sum`, `find` সবই trait-এর default method; তাই শুধু `next()` দিলেই পুরো toolbox free (chapter-এর Counter উদাহরণ)।"
+    "question": "রাস্টে ইটারেটর (Iterator) বাই ডিফল্ট \"লেজি\" (Lazy) কেন? নিচের কোডে `println!` কি কোনো আউটপুট দেবে?\n\n```rust\nlet v = vec![1, 2, 3];\nv.iter().map(|x| println!(\"{}\", x));\n```",
+    "code": "let v = vec![1, 2, 3];\nv.iter().map(|x| println!(\"{}\", x));",
+    "hint": "কোনো আউটপুট দেবে না! ইটারেটর যতক্ষণ না কোনো কনজিউমিং অ্যাডাপ্টার (যেমন `collect()`, `for` লুপ) দ্বারা টানা হয়, ততক্ষণ কোনো কাজই সম্পন্ন হয় না।"
   },
   {
-    "id": "iterators-closures-2",
+    "id": "iter-q2",
+    "difficulty": "medium",
+    "question": "একটি কালেকশন থেকে ইটারেটর তৈরি করার ৩টি প্রধান মেথড কী কী এবং তাদের ওনারশিপ ও রেফারেন্স আচরণ কীভাবে আলাদা?",
+    "hint": "`.iter()` ইমিউটেবল রেফারেন্স (`&T`) দেয়, `.iter_mut()` মিউটেবল রেফারেন্স (`&mut T`) দেয়, এবং `.into_iter()` কালেকশনের ওনারশিপ কনজিউম করে ওনড ভ্যালু (`T`) দেয়।"
+  },
+  {
+    "id": "iter-q3",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "`for val in v.into_iter() { ... }` চালানোর পর `v`-এর দশা কী?",
-    "options": [
-      "`v`-র ownership নেওয়া হয়েছে (consume) — লুপের পরে `v` আর ব্যবহার করা যাবে না",
-      "`v` valid আছে — `into_iter()` শুধু `&T` borrow করে",
-      "`v` valid আছে, কিন্তু শুধু mutable access করা যাবে",
-      "লুপের পর `v` আবার নতুন করে initialize হয়ে যায়"
-    ],
-    "answer": 0,
-    "explanation": "তিন রকম iteration: `.iter()` → `&T` (v বেঁচে থাকে), `.iter_mut()` → `&mut T`, আর `.into_iter()` → ownership নেয়, `v` consume হয়ে যায়। Python-এর মতো এক পথ না — Rust-এ ownership type-সচেতনভাবে বাছতে হয়।"
+    "question": "রাস্টের `Iterator` ট্রেইটের একমাত্র কোর রিকয়ার্ড মেথড কোনটি? প্রতিবার এই মেথড কল করলে এটি কী রিটার্ন করে এবং কখন ইটারেশন শেষ হয়?",
+    "hint": "`fn next(&mut self) -> Option<Self::Item>`। যতক্ষণ ডেটা থাকে `Some(item)` দেয়, শেষ হলে `None` রিটার্ন করে।"
   },
   {
-    "id": "iterators-closures-3",
-    "difficulty": "easy",
-    "type": "code",
-    "prompt": "`v` ভেক্টরের প্রতিটি উপাদানকে দ্বিগুণ করতে map অ্যাডাপ্টারে যে ক্লোজারটি পাঠাতে হবে তা লিখো:",
-    "code": "let v = vec![1, 2, 3, 4, 5];\nlet doubled: Vec<i32> = v.iter().map(____).collect();",
-    "explanation": "map অ্যাডাপ্টারে |x| x * 2 ক্লোজারটি প্রতিটি উপাদান ইনপুট হিসেবে নিয়ে তার দ্বিগুণ মান প্রদান করে।",
-    "accept": [
-      "|x| x * 2",
-      "|&x| x * 2"
-    ]
-  },
-  {
-    "id": "iterators-closures-4",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "`let it = v.iter().map(|x| x * 2);` — এই লাইনটা একা execute হলে সত্যিই কতটুকু কাজ হয়?",
-    "options": [
-      "একদম কিছুই না — `Map` নামের ছোট্ট adapter struct তৈরি হয় যেটা ভেতরের iterator আর closure ধরে রাখে শুধু; আসল কাজ শুরু হয় consumer (collect/sum/for লুপ) এ",
-      "নতুন একটা Vec allocate হয়ে সব element double হয়ে যায়",
-      "প্রতিটা element transform হয়ে যায়, কিন্তু Vec allocate হয় না",
-      "Compile error — `map`-এর পরে সাথে সাথেই `collect` চাই"
-    ],
-    "answer": 0,
-    "explanation": "Adapter গুলো lazy: `.map(...)` call করার মুহূর্তে শুধু একটা wrapper struct (`Map { iter, f }`) তৈরি হয় — পেঁয়াজের খোসার মতো একটার ভেতরে আরেকটা। `next()` টানা শুরু করে শুধু consumer; তাই মাঝপথে কোনো intermediate Vec তৈরি হয় না।"
-  },
-  {
-    "id": "iterators-closures-5",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "1 থেকে 10 পর্যন্ত রেঞ্জ থেকে শুধু জোড় সংখ্যাগুলো ফিল্টার করতে filter মেথডের ভেতরে ক্লোজারটি লিখো:",
-    "code": "let evens: Vec<i32> = (1..=10)\n    .filter(____)\n    .collect();",
-    "explanation": "filter অ্যাডাপ্টারে যে ক্লোজারটি boolean রিটার্ন করে (যেমন |x| x % 2 == 0), শুধু সেই উপাদানগুলোই রক্ষিত হয়।",
-    "accept": [
-      "|x| x % 2 == 0",
-      "|&x| x % 2 == 0"
-    ]
-  },
-  {
-    "id": "iterators-closures-6",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "`let mut count = 0;` নিয়ে `let mut inc = || { count += 1; };` — এই closure-টা কোন trait-এর অধীনে environment capture করছে?",
-    "options": [
-      "`FnMut` — environment-কে `&mut` ধরে ধরে modify করে, তাই closure variable-টাকেও `mut` রাখতে হয়",
-      "`Fn` — শুধু immutable borrow, কিছু বদলায় না",
-      "`FnOnce` — count-এর ownership নিয়ে নেয়, একবারই call করা যায়",
-      "কোনো trait না — closure নিয়ম ছাড়াই capture করে"
-    ],
-    "answer": 0,
-    "explanation": "Compiler closure-এর body দেখে ঠিক করে: শুধু পড়লে `Fn` (&T), লিখলে `FnMut` (&mut T), value move করলে `FnOnce` (T) — সবচেয়ে কম restrictive-টা জেতে। এখানে `count += 1` লিখছে, তাই `FnMut`; ভেতরে closure-টা anonymous struct যার field হিসেবে `count`-এর `&mut` থাকে।"
-  },
-  {
-    "id": "iterators-closures-7",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "Blank-এ কোন iterator method বসালে ছাপা হবে 15? (fold ছাড়া সবচেয়ে সংক্ষিপ্ত উপায়)",
-    "code": "fn main() {\n    let v = vec![1, 2, 3, 4, 5];\n    let total: i32 = v.iter().____;\n    println!(\"{}\", total);\n}",
-    "accept": [
-      "sum()",
-      "sum::<i32>()"
-    ],
-    "explanation": "`sum()` একটা consumer — ভেতরে `fold(0, |acc, x| acc + x)`-কেই চালায়। Type annotation (`: i32` বা turbofish) বলে দেয় কোন সংখ্যায় জমা হবে। `product()`-ও একই পথে fold ব্যবহার করে।"
-  },
-  {
-    "id": "iterators-closures-8",
+    "id": "iter-q4",
     "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "\"Iterator chain zero-cost\" — এর মানে ঠিক কোনটা?",
-    "options": [
-      "প্রতিটা adapter আলাদা concrete type, তাই monomorphization + inlining-এর পর compiler পুরো chain-কে একটাই plain for লুপ বানিয়ে ফেলে — হাতে লেখা লুপের সমান machine code",
-      "Chain গুলো runtime-এ JIT compile হয় বলে দ্রুত হয়",
-      "Element গুলো আসলে কখনো compute-ই হয় না, চিরকাল lazy থেকে যায়",
-      "Rust chain-এ heap allocation ব্যবহার করে না বলেই বিনামূল্যে"
-    ],
-    "answer": 0,
-    "explanation": "প্রতিটা adapter (Map, Filter...) আলাদা concrete type — তাই compiler সব call inline করে পুরো chain-কে একটাই optimized loop-এ নামিয়ে আনে; একটা function call-ও বাকি থাকে না। Lazy মানে কাজ হয় না তা না — consumer-এ ঠিকই হয়, শুধু খরচ ছাড়াই। Closure যে আলাদা type, তাও এর একটা কারণ।"
+    "question": "পারফরম্যান্স তুলনা: ইটারেটর চেইনিং (`v.iter().map(...).filter(...).sum()`) বনাম সি-স্টাইল ট্র্যাডিশনাল `for` লুপ — কোনটি দ্রুত এবং কেন ইটারেটর কোনো বাউন্ডস চেকিং ওভারহেড ছাড়াই সি কোডের চেয়েও দ্রুত চলতে পারে?",
+    "hint": "জিরো-কস্ট অ্যাবস্ট্রাকশন এবং এলএলভিএম অপটিমাইজেশন। কম্পাইলার সমস্ত ইটারেটর মেথড ইনলাইন করে এবং লুপ বাউন্ডস চেক বাদ দিয়ে সরাসরি সিপিইউ রেজিস্টারে লুপ রান করায়।"
   },
   {
-    "id": "iterators-closures-9",
-    "difficulty": "hard",
-    "type": "code",
-    "prompt": "নিচের `Counter` iterator 1 থেকে 5 পর্যন্ত সংখ্যা দেবে (এরপর None)। Blank-এ কী বসবে?",
-    "code": "struct Counter {\n    count: u32,\n}\n\nimpl Iterator for Counter {\n    type Item = u32;\n\n    fn next(&mut self) -> Option<Self::Item> {\n        if self.count < 5 {\n            self.count += 1;\n            ____\n        } else {\n            None\n        }\n    }\n}\n\nfn main() {\n    let result: Vec<u32> = Counter { count: 0 }\n        .map(|x| x * 2)\n        .filter(|x| x > 4)\n        .collect();\n    println!(\"{:?}\", result); // [6, 8, 10]\n}",
-    "accept": [
-      "Some(self.count)"
-    ],
-    "explanation": "count আগেই বাড়ানো হয়েছে, তাই প্রথম call-এ পাওয়া যাবে 1 — ফেরত দিতে হবে `Some(self.count)`। এভাবে 1, 2, 3, 4, 5 এরপর None; `map(|x| x * 2)` → 2, 4, 6, 8, 10; `filter(|x| x > 4)` → [6, 8, 10]। শুধু `next()` লিখলেই এই সব adapter free।"
-  },
-  {
-    "id": "iterators-closures-10",
+    "id": "iter-q5",
     "difficulty": "medium",
-    "type": "code",
-    "prompt": "count ভেরিয়েবলের মান 1 বৃদ্ধি করার জন্য আর্গুমেন্টহীন একটি ক্লোজার তৈরি করো:",
-    "code": "let mut count = 0;\nlet mut increment = ____;\nincrement();",
-    "explanation": "ক্লোজারে কোনো আর্গুমেন্ট না থাকলে || দিয়ে শুরু করে সরাসরি বডিতে পরিবেশের ভেরিয়েবল মিউটেট করা যায়।",
-    "accept": [
-      "|| count += 1",
-      "|| { count += 1; }",
-      "|| { count += 1 }"
-    ]
+    "question": "ক্লোজার (Closure) কী এবং সাধারণ ফাংশনের সাথে ক্লোজারের প্রধান তফাত কী? কেন ক্লোজারকে \"এনোনিমাস ফাংশন যা এনভায়রনমেন্ট ক্যাপচার করে\" বলা হয়?",
+    "hint": "সাধারণ ফাংশন বাইরের স্কোপের লোকাল ভ্যারিয়েবল সরাসরি অ্যাক্সেস করতে পারে না। কিন্তু ক্লোজার তার ডিফাইন করা স্কোপের আশেপাশের ভেরিয়েবল ক্যাপচার করতে পারে।"
+  },
+  {
+    "id": "iter-q6",
+    "difficulty": "hard",
+    "question": "ক্লোজার এনভায়রনমেন্ট ক্যাপচার করার ৩টি ট্রেইট (`Fn`, `FnMut`, `FnOnce`) এর মধ্যে মৌলিক পার্থক্য কী এবং কম্পাইলার কীভাবে নিজে থেকে ঠিক করে কোন ট্রেইট ব্যবহার হবে?",
+    "hint": "`Fn` ভেরিয়েবল ইমিউটেবলি ধার নেয় (`&T`), `FnMut` ভেরিয়েবল মিউটেট করতে পারে (`&mut T`), আর `FnOnce` ওনারশিপ মুভ করে নেয় যা কেবল একবারই কল করা যায়।"
+  },
+  {
+    "id": "iter-q7",
+    "difficulty": "medium",
+    "question": "ক্লোজারের পূর্বে `move` কি-ওয়ার্ড যোগ করার তাৎপর্য কী? মাল্টি-থ্রেডিংয়ে নতুন থ্রেডে ক্লোজার পাস করতে `move` কেন বাধ্যতামূলক?",
+    "hint": "`move || { ... }` বাইরের সমস্ত ক্যাপচারড ভেরিয়েবলের সম্পূর্ণ ওনারশিপ ক্লোজারের ভেতরে মুভ করে নেয়। নতুন থ্রেড প্যারেন্ট ফাংশনের চেয়ে বেশি বাঁচতে পারে, তাই ওনারশিপ মুভ বাধ্যতামূলক।"
+  },
+  {
+    "id": "iter-q8",
+    "difficulty": "easy",
+    "question": "একটি সংখ্যার ভেক্টর থেকে সমস্ত জোড় সংখ্যা ফিল্টার করে তাদের বর্গ (Square) এর একটি নতুন ভেক্টর তৈরি করতে ইডিওম্যাটিক ইটারেটর মেথড চেইনিং কীভাবে লিখবে?",
+    "hint": "`v.into_iter().filter(|x| x % 2 == 0).map(|x| x * x).collect()`।"
+  },
+  {
+    "id": "iter-q9",
+    "difficulty": "medium",
+    "question": "ইটারেটরের শেষে `.collect()` কল করার সময় প্রায়ই কেন টাইপ এনোটেশন (যেমন `let res: Vec<_> = ...`) দিতে হয় অথবা টার্বোফিশ (`.collect::<Vec<_>>()`) সিনট্যাক্স ব্যবহার করতে হয়?",
+    "hint": "`collect()` যেকোনো কালেকশন টাইপ (Vec, HashSet, BTreeSet, HashMap) তৈরি করতে পারে। কম্পাইলার নিজে থেকে অনুমান করতে না পারলে কাঙ্ক্ষিত টাইপ জানিয়ে দিতে হয়।"
+  },
+  {
+    "id": "iter-q10",
+    "difficulty": "hard",
+    "question": "ফোল্ডিং বা রিডাকশন (Fold / Reduce): একটি ভেক্টরের সব সংখ্যার গুণফল নির্ণয় করতে `fold` মেথড ব্যবহার করে কীভাবে ইনিশিয়াল একিউমুলেটর এবং ক্লোজার ডিফাইন করবে?",
+    "hint": "`v.iter().fold(1, |acc, x| acc * x)`।"
+  },
+  {
+    "id": "iter-q11",
+    "difficulty": "easy",
+    "question": "দুটি আলাদা ভেক্টরের উপাদানগুলোকে জোড়ায় জোড়ায় (Pairing) মিলিয়ে একক ইটারেটর তৈরি করতে কোন মেথড ব্যবহার করা হয়?",
+    "hint": "`.zip()` মেথড। যেমন `names.iter().zip(ages.iter())`।"
+  },
+  {
+    "id": "iter-q12",
+    "difficulty": "medium",
+    "question": "ইটারেশনের সময় উপাদানের সাথে তার কারেন্ট ইনডেক্স (0, 1, 2...) টুপল আকারে পেতে কোন মেথড কল করতে হয়?",
+    "hint": "`.enumerate()` মেথড। যেমন `for (index, val) in v.iter().enumerate()`।"
+  },
+  {
+    "id": "iter-q13",
+    "difficulty": "hard",
+    "question": "ইনফিনিট ইটারেটর (Infinite Iterator): রাস্টে `0..` রেঞ্জ ব্যবহার করে অসীম ইটারেটর চালানো সম্ভব। এটি মেমরি ক্র্যাশ না ঘটিয়ে কীভাবে `take()` মেথডের সাহায্যে প্রথম ১০টি সংখ্যা প্রসেস করে?",
+    "hint": "লেজি ইভ্যালুয়েশন। `(0..).take(10)` কেবল তখনই ১০ বার `next()` কল করে থেমে যায়, কোনো অসীম মেমরি এলোকেশন হয় না।"
+  },
+  {
+    "id": "iter-q14",
+    "difficulty": "medium",
+    "question": "নিচের কোডে ক্লোজারটির টাইপ কী এবং কম্পাইলার এটিকে কোন ট্রেইট (`Fn`, `FnMut`, নাকি `FnOnce`) হিসেবে গণ্য করবে?\n\n```rust\nlet mut count = 0;\nlet mut inc = || {\n    count += 1;\n    count\n};\n```",
+    "code": "let mut count = 0;\nlet mut inc = || {\n    count += 1;\n    count\n};",
+    "hint": "এটি বাইরের মিউটেবল ভেরিয়েবল পরিবর্তন করছে, তাই এটি `FnMut` ট্রেইট বাস্তবায়ন করে।"
+  },
+  {
+    "id": "iter-q15",
+    "difficulty": "easy",
+    "question": "একটি নেস্টেড ভেক্টর `vec![vec![1, 2], vec![3, 4]]` কে সিঙ্গেল ভেক্টরে ফ্ল্যাটেন করতে কোন ইটারেটর অ্যাডাপ্টার ব্যবহার করা হয়?",
+    "hint": "`.flatten()` অথবা ম্যাপিং সহ `.flat_map()`।"
+  },
+  {
+    "id": "iter-q16",
+    "difficulty": "hard",
+    "question": "ক্লোজার রিটার্ন করা: একটি ফাংশন থেকে কোনো ক্লোজার রিটার্ন করতে চাইলে কেন রিটার্ন টাইপ হিসেবে `-> impl Fn(i32) -> i32` লিখতে হয় এবং সাধারণ টাইপ নেম ব্যবহার করা যায় না কেন?",
+    "hint": "প্রতিটি ক্লোজারের জন্য কম্পাইলার ব্যাকগ্রাউন্ডে সম্পূর্ণ ইউনিক একটি বেনামী স্ট্রাকচার জেনারেট করে যার কোনো মানুষের পাঠযোগ্য টাইপ নেম থাকে না।"
+  },
+  {
+    "id": "iter-q17",
+    "difficulty": "medium",
+    "question": "ইটারেটরের ওপর সাইড ইফেক্ট (যেমন লগ প্রিন্ট করা বা ডিবাগ দেখা) চালানোর জন্য কিন্তু ইটারেশন প্রবাহ অব্যাহত রাখার জন্য কোন মেথড তৈরি করা হয়েছে?",
+    "hint": "`.inspect(|x| println!(\"debug: {}\", x))` মেথড।"
+  },
+  {
+    "id": "iter-q18",
+    "difficulty": "easy",
+    "question": "একটি কালেকশনের কোনো উপাদান একটি নির্দিষ্ট শর্ত পূরণ করে কি না (বুলিয়ান উত্তর) তা প্রথম ম্যাচেই চেক করে লুপ শেষ করতে কোন মেথড ব্যবহার করা হয়?",
+    "hint": "`.any(|x| ...)` এবং সব উপাদান চেক করতে `.all(|x| ...)`।"
+  },
+  {
+    "id": "iter-q19",
+    "difficulty": "hard",
+    "question": "কাস্টম টাইপে ইটারেটর বাস্তবায়ন: তোমার তৈরি একটি স্ট্রাক্টকে `for item in my_struct` সিনট্যাক্সে সরাসরি ব্যবহারযোগ্য করতে কোন ট্রেইট ইমপ্লিমেন্ট করতে হয়?",
+    "hint": "`std::iter::IntoIterator` ট্রেইট।"
+  },
+  {
+    "id": "iter-q20",
+    "difficulty": "medium",
+    "question": "ক্লোজার মেমরিতে কতটুকু জায়গা নেয়? একটি ক্লোজার যা কোনো ভ্যারিয়েবল ক্যাপচার করে না তার সাইজ এবং একটি ক্লোজার যা দুটি রেফারেন্স ক্যাপচার করে তার সাইজের পার্থক্য কী?",
+    "hint": "কোনো ভেরিয়েবল ক্যাপচার না করলে সাইজ ০ বাইট (Zero-Sized Type)। ভেরিয়েবল ক্যাপচার করলে ক্যাপচারড ভ্যালু বা রেফারেন্সের স্ট্রাক্ট আকারের সমান মেমরি নেয়।"
   }
 ]

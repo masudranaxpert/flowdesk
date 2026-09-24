@@ -1,133 +1,125 @@
 [
   {
-    "id": "structs-methods-1",
+    "id": "struct-q1",
     "difficulty": "easy",
-    "type": "code",
-    "prompt": "Field init shorthand ব্যবহার করে blank-এ `username` field-টা সেট করো (`username: username` না লিখে)।",
-    "code": "struct User {\n    username: String,\n    email: String,\n    age: u32,\n    active: bool,\n}\n\nfn build_user(username: String, email: String) -> User {\n    User {\n        ____,\n        email,\n        age: 0,\n        active: true,\n    }\n}",
-    "accept": [
-      "username",
-      "username: username"
-    ],
-    "explanation": "Variable আর field-এর নাম একই হলে `username: username`-এর জায়গায় শুধু `username` লিখলেই চলে — এটাই field init shorthand।"
+    "question": "রাস্টে ক্লাসিক ওওপি (OOP) ল্যাঙ্গুয়েজ যেমন জাভা বা সি++ এর মতো `class` কি-ওয়ার্ড নেই। কেন রাস্টে ডেটা রাখার জন্য `struct` এবং সেই ডেটার আচরণ ডিফাইন করার জন্য আলাদাভাবে `impl` ব্লক ব্যবহার করা হয়? এই আর্কিটেকচারাল সেপারেশন কী সুবিধা দেয়?",
+    "hint": "ডেটা ও বিহেভিয়ারের স্পষ্ট বিভাজন। একই ডেটা স্ট্রাকচারের ওপর ভিন্ন ভিন্ন কনটেক্সটে বা ভিন্ন ভিন্ন ক্রেটে ট্রেইট ইমপ্লিমেন্ট করে নতুন বিহেভিয়ার যোগ করা যায় মূল ডেটা স্ট্রাকচার না পরিবর্তন করেই।"
   },
   {
-    "id": "structs-methods-2",
+    "id": "struct-q2",
+    "difficulty": "medium",
+    "question": "মেথড ডিফাইন করার সময় প্রথম প্যারামিটার হিসেবে `&self`, `&mut self`, এবং `self` ব্যবহারের মৌলিক পার্থক্য কী এবং কখন কোনটি ব্যবহার করা বাধ্যতামূলক?",
+    "hint": "`&self` শুধু রিড করার জন্য (ইমিউটেবল ধার), `&mut self` ফিল্ডের মান পরিবর্তনের জন্য (মিউটেবল ধার), এবং `self` ওনারশিপ কনজিউম করার জন্য (যেমন ট্রান্সফর্মেশন বা ড্রপ মেথড)।"
+  },
+  {
+    "id": "struct-q3",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "`rect1.area()` call করলে compiler ভেতরে আসলে কী করে? (`fn area(&self) -> f64` এমন method)",
-    "options": [
-      "Runtime-এ vtable/method table খুঁজে `area` বের করে",
-      "`area(rect1)` — পুরো struct copy করে পাঠায়",
-      "সাধারণ function-এ নামিয়ে দেয়: `Rectangle::area(&rect1)` — `&self` দেখে call site-এ auto-ref করে",
-      "Method name runtime-এ string হিসেবে resolve করে"
-    ],
-    "answer": 2,
-    "explanation": "Method আসলে প্রথম parameter-এ self-ওয়ালা সাধারণ function মাত্র — `rect1.area()` হয়ে যায় `Rectangle::area(&rect1)`। `&self` লেখা থাকলে compiler call site-এ auto-ref করে; dispatch static, runtime lookup নেই — তাই inline-ও সহজ।"
+    "question": "রাস্টে কি অবজেক্ট তৈরির জন্য কোনো স্পেশাল কনস্ট্রাকটর (Constructor) কি-ওয়ার্ড আছে? ইডিওম্যাটিক রাস্টে নতুন ইনস্ট্যান্স তৈরি করতে সাধারণত কোন অ্যাসোসিয়েটেড ফাংশন (Associated Function) লেখা হয়?",
+    "hint": "কোনো বিল্ট-ইন constructor নেই। কনভেনশন হলো `fn new(...) -> Self` নামের একটি অ্যাসোসিয়েটেড ফাংশন লেখা যা `Self` রিটার্ন করে।"
   },
   {
-    "id": "structs-methods-3",
+    "id": "struct-q4",
     "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "64-bit এ `std::mem::size_of::<User>()` কত?",
-    "code": "struct User {\n    username: String,\n    email: String,\n    age: u32,\n    active: bool,\n}",
-    "options": [
-      "53 byte — শুধু field গুলোর যোগফল",
-      "56 byte — যোগফল ৫৩-এর উপরে alignment-এর জন্য ৩ byte padding",
-      "48 byte — String-এর data তো heap-এ থাকে",
-      "64 byte — প্রতিটা field কমপক্ষে ৮ byte নেয়"
-    ],
-    "answer": 1,
-    "explanation": "username (String = ২৪ byte) + email (২৪) + age (৪) + active (১) = ৫৩। মোট size টা alignment-এর multiple করতে হয়, তাই শেষে ৩ byte padding বসে — ৫৬। String নিজে ২৪ byte stack-এই থাকে, আসল character গুলো heap-এ।"
+    "question": "অ্যাসোসিয়েটেড ফাংশন এবং মেথড (Method) এর মধ্যে কাঠামোগত পার্থক্য কী? যেমন `Rectangle::new(10, 20)` এবং `rect.area()` এর কলিং সিনট্যাক্স কেন ভিন্ন?",
+    "hint": "মেথডের প্রথম প্যারামিটার সর্বদা `self` থাকে এবং তা ইনস্ট্যান্সের ওপর ডট দিয়ে কল হয়। অ্যাসোসিয়েটেড ফাংশনে কোনো `self` থাকে না এবং তা টাইপের ওপর `::` দিয়ে কল হয়।"
   },
   {
-    "id": "structs-methods-4",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "নিচের struct update syntax ব্যবহারের পর `user1`-এর কী হয়? (User-এ String field আছে)",
-    "code": "let user2 = User {\n    email: String::from(\"new@example.com\"),\n    ..user1\n};",
-    "options": [
-      "বাকি field গুলো user1 থেকে move হয়ে যায় — String (non-Copy) থাকায় user1 আর ব্যবহার করা যায় না",
-      "সব field deep copy হয় — user1 অটুট থাকে",
-      "user1 আর user2 একই heap data share করে",
-      "Compile error — update syntax শুধু সব field Copy type হলে চলে"
-    ],
-    "answer": 0,
-    "explanation": "`..user1` বাকি field-গুলোর ownership নিয়ে নেয় (move)। সব field copy type হলে (যেমন সব `i32`) user1 আরও valid থাকত; কিন্তু এখানে String move হয়ে গেছে, তাই user1-এর জীবন শেষ।"
-  },
-  {
-    "id": "structs-methods-5",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "`#[derive(Debug)]`-এর ম্যাজিকটা আসলে কোথায় ঘটে?",
-    "options": [
-      "Runtime-এ reflection দিয়ে field গুলো পড়ে বের করে",
-      "Debug build-এ কাজ করে, release build-ে বাদ পড়ে",
-      "Struct-এ একটা extra type-tag যোগ হয়, তাই প্রিন্ট সম্ভব হয়",
-      "Compile time-এ compiler নিজেই একটা সাধারণ `impl fmt::Debug` code লিখে দেয় — হাতে লেখার সমান, extra runtime খরচ নেই"
-    ],
-    "answer": 3,
-    "explanation": "Derive হলো compile-time codegen: Debug হলে field-by-field প্রিন্ট, `Clone` হলে প্রতিটা field clone, `PartialEq` হলে field-by-field `==` — সবই সাধারণ impl code। Derived impl আর হাতে লেখা impl-এর কোনো পার্থক্য নেই।"
-  },
-  {
-    "id": "structs-methods-6",
+    "id": "struct-q5",
     "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "`rect1.area()`-র dispatch নিয়ে কোন বক্তব্যটি সঠিক?",
-    "options": [
-      "Static dispatch — কোন function ডাকা হবে compile time-এই ঠিক হয়ে যায়; runtime lookup বা vtable নেই",
-      "Dynamic dispatch — vtable-এর ভেতর দিয়ে যায়, তাই একটু ধীর",
-      "Python-এর মতো runtime-ে attribute dictionary খুঁজে বের করা হয়",
-      "Dispatch-এর ধরন নির্ভর করে rect1 mutable কিনা তার উপর"
-    ],
-    "answer": 0,
-    "explanation": "Rust-এর method dispatch static — compile time-এই ঠিক, runtime খরচ শূন্য, compiler সহজে inline করে দিতে পারে। Python-এ `rect.area()` মানে runtime-এ attribute dictionary খোঁজা + bound method তৈরি — Rust-এ সেই খরচ নেই।"
+    "question": "নিচের কোডটি কেন কম্পাইল হবে না?\n\n```rust\nstruct Buffer {\n    data: Vec<u8>,\n}\n\nimpl Buffer {\n    fn consume(self) {\n        println!(\"Consuming {} bytes\", self.data.len());\n    }\n}\n\nlet buf = Buffer { data: vec![1, 2, 3] };\nbuf.consume();\nbuf.consume(); // Error!\n```\n\nদ্বিতীয়বার `buf.consume()` কলে কম্পাইলার কী এরর দেবে এবং এর ডিজাইন পারপাস কী?",
+    "code": "let buf = Buffer { data: vec![1, 2, 3] };\nbuf.consume();\nbuf.consume();",
+    "hint": "`consume(self)` ওনারশিপ নিয়ে নেয়। প্রথম কলের পর `buf` ড্রপ বা মুভ হয়ে গেছে, তাই দ্বিতীয়বার ব্যবহার করলে `use of moved value` এরর হয়।"
   },
   {
-    "id": "structs-methods-7",
+    "id": "struct-q6",
     "difficulty": "easy",
-    "type": "code",
-    "prompt": "Point struct এর একটি ইনস্ট্যান্স তৈরি করো যেখানে x এর মান 3 এবং y এর মান 4:",
-    "code": "#[derive(Debug)]\nstruct Point {\n    x: i32,\n    y: i32,\n}\n\nfn main() {\n    let p = ____;\n    println!(\"{:?}\", p);\n}",
-    "explanation": "Struct এর ফিল্ড নাম উল্লেখ করে curly braces এর মধ্যে মান প্রদান করে ইনস্ট্যান্স তৈরি করতে হয়।",
-    "accept": [
-      "Point { x: 3, y: 4 }",
-      "Point { x: 3, y: 4 };",
-      "Point{x: 3, y: 4}"
-    ]
+    "question": "টুপল স্ট্রাক্ট (Tuple Struct) কী? যখন ফিল্ডগুলোর আলাদা নাম দেওয়ার প্রয়োজন নেই, কেবল টাইপ সুরক্ষা ও গ্রুপিং দরকার (যেমন `struct Color(i32, i32, i32);`), তখন এটি কীভাবে মেমরি সেভ করে?",
+    "hint": "টুপল স্ট্রাক্টের ফিল্ডগুলোর কোনো নাম থাকে না, ইনডেক্স (`c.0`, `c.1`) দিয়ে অ্যাক্সেস করা হয়। মেমরিতে এটি সাধারণ টুপলের মতোই টাইটলি প্যাকড থাকে।"
   },
   {
-    "id": "structs-methods-8",
+    "id": "struct-q7",
     "difficulty": "medium",
-    "type": "code",
-    "prompt": "`square` একটি associated function (যার মধ্যে self নেই)। 25.0 বাহু বিশিষ্ট একটি বর্গ Rectangle তৈরি করতে ফাংশনটি কল করার সিনট্যাক্সটি লিখো:",
-    "code": "let s = ____;",
-    "explanation": "Associated function (যেমন constructor) টাইপের নামের পরে double colon (::) সিনট্যাক্স দিয়ে কল করতে হয়।",
-    "accept": [
-      "Rectangle::square(25.0)",
-      "Rectangle::square(25.0);"
-    ]
+    "question": "ইউনিট-লাইক স্ট্রাক্ট (Unit-like Struct: `struct Empty;`) এ কোনো ফিল্ড বা ডেটা থাকে না। মেমরিতে এর সাইজ কত বাইট (Zero-Sized Type বা ZST) এবং এটি কোন ধরনের আর্কিটেকচারে কাজে লাগে?",
+    "hint": "সাইজ ০ বাইট। এটি কোনো মেমরি অপচয় ছাড়াই মার্কার ট্রেইট ইমপ্লিমেন্ট করতে বা স্টেট মেশিন ট্রানজিশনে টাইপ-লেভেল গ্যারান্টি দিতে ব্যবহৃত হয়।"
   },
   {
-    "id": "structs-methods-9",
+    "id": "struct-q8",
+    "difficulty": "easy",
+    "question": "ফিল্ড ইনিট শর্টহ্যান্ড (Field Init Shorthand) কী? যখন ফাংশনের প্যারামিটারের নাম এবং স্ট্রাক্টের ফিল্ডের নাম একই হয়, তখন কীভাবে কোড সংক্ষিপ্ত করা যায়?",
+    "hint": "`User { name: name, age: age }` এর বদলে সরাসরি `User { name, age }` লেখা যায়।"
+  },
+  {
+    "id": "struct-q9",
+    "difficulty": "medium",
+    "question": "স্ট্রাক্ট আপডেট সিনট্যাক্স (Struct Update Syntax) ব্যবহারের সময় নন-কপি ফিল্ডের ক্ষেত্রে ওনারশিপ মুভ কীভাবে কাজ করে? নিচের কোডের পর কি `u1.email` ব্যবহার করা যাবে?\n\n```rust\nstruct User {\n    username: String,\n    email: String,\n    active: bool,\n}\n\nlet u1 = User { username: String::from(\"a\"), email: String::from(\"b\"), active: true };\nlet u2 = User { email: String::from(\"c\"), ..u1 };\n```",
+    "code": "let u2 = User { email: String::from(\"c\"), ..u1 };\n// u1 এর username কি বৈধ আছে?",
+    "hint": "`u1.username` নতুন স্ট্রাক্ট `u2` তে মুভ হয়ে গেছে, তাই `u1` সম্পূর্ণ বা তার username আর বৈধ নয়। তবে `u1.active` কপি টাইপ হওয়ায় আলাদা বিষয়।"
+  },
+  {
+    "id": "struct-q10",
     "difficulty": "hard",
-    "type": "code",
-    "prompt": "`Rectangle` এর `area` মেথডটিতে struct এর ফিল্ড শুধু রিড করার জন্য প্রথম প্যারামিটার হিসেবে কী লিখবে?",
-    "code": "impl Rectangle {\n    fn area(____) -> f64 {\n        self.width * self.height\n    }\n}",
-    "explanation": "কোনো মেথডে struct এর ফিল্ড শুধু রিড করার জন্য immutable borrow হিসেবে &self ব্যবহার করা হয়।",
-    "accept": [
-      "&self"
-    ]
+    "question": "একটি স্ট্রাক্টের কোনো ফিল্ড যদি রেফারেন্স হোল্ড করে (যেমন `struct Post { title: &str }`), তবে কম্পাইলার কোড বিল্ড করতে বাধা দেয় কেন? এই সমস্যার জন্য স্ট্রাক্টে কী যোগ করা বাধ্যতামূলক?",
+    "hint": "লাইফটাইম প্যারামিটার (`struct Post<'a> { title: &'a str }`)। স্ট্রাক্ট কতক্ষণ বাঁচবে তা তার রেফারেন্স করা ডেটার আয়ুর সাথে কম্পাইলারকে স্পষ্ট জানাতে হয়।"
   },
   {
-    "id": "structs-methods-10",
+    "id": "struct-q11",
+    "difficulty": "easy",
+    "question": "একটি স্ট্রাক্টের কন্টেন্ট সরাসরি ডিবাগ প্রিন্ট (`println!(\"{:?}\", user);`) করতে চাইলে স্ট্রাক্টের উপরে কোন অ্যাট্রিবিউট যোগ করতে হয়?",
+    "hint": "`#[derive(Debug)]` ডেরাইভ ম্যাক্রো।"
+  },
+  {
+    "id": "struct-q12",
     "difficulty": "medium",
-    "type": "code",
-    "prompt": "`scale` method-টা struct-এর field দুটো modify করে। Blank-এ বাকি signature-টা (method-এর নামসহ parameter list) কী লাগবে?",
-    "code": "struct Rectangle {\n    width: f64,\n    height: f64,\n}\n\nimpl Rectangle {\n    fn ____ {\n        self.width *= factor;\n        self.height *= factor;\n    }\n}",
-    "accept": [
-      "scale(&mut self, factor: f64)"
-    ],
-    "explanation": "Field modify করতে চাইলে `&mut self` লাগবেই — শুধু পড়লে `&self`, ownership পুরোটা নিতে `self`। `self.width *= factor` লেখা মানেই mutable borrow দরকার।"
+    "question": "রাস্টে কি একটি স্ট্রাক্টের জন্য একাধিক আলাদা আলাদা `impl` ব্লক লেখা বৈধ? বড় প্রজেক্টে বা আলাদা ট্রেইট বাস্তবায়নে এটি কীভাবে কোড অর্গানাইজেশনে সাহায্য করে?",
+    "hint": "হ্যাঁ, সম্পূর্ণ বৈধ। ভিন্ন ভিন্ন লজিক্যাল ফিচার বা ট্রেইটের মেথড আলাদা ফাইলে বা আলাদা ব্লকে ভাগ করে রাখা যায়।"
+  },
+  {
+    "id": "struct-q13",
+    "difficulty": "hard",
+    "question": "মেমরি প্যাডিং এবং ফিল্ড অ্যালাইনমেন্ট (Memory Alignment & Padding): নিচের স্ট্রাক্টটি ৬৪-বিট আর্কিটেকচারে র্যামে কত বাইট জায়গা নেবে এবং রাস্ট কম্পাইলার অপটিমাইজেশনের জন্য এর ফিল্ডের ক্রম কীভাবে পরিবর্তন করতে পারে?\n\n```rust\nstruct Sample {\n    a: u8,\n    b: u64,\n    c: u8,\n}\n```",
+    "code": "struct Sample {\n    a: u8,\n    b: u64,\n    c: u8,\n}",
+    "hint": "সি ল্যাঙ্গুয়েজে এটি ২৪ বাইট নিত প্যাডিংয়ের জন্য। কিন্তু রাস্টের ডিফল্ট রিপ্রেজেন্টেশনে কম্পাইলার ফিল্ড রি-অর্ডার করে ১৬ বাইটে সংকুচিত করতে পারে। সি মেমরি লেআউটের জন্য `#[repr(C)]` লাগে।"
+  },
+  {
+    "id": "struct-q14",
+    "difficulty": "medium",
+    "question": "মেথড চেইনিং (Method Chaining / Builder Pattern): কোনো অবজেক্টের ওপর একের পর এক কনফিগারেশন মেথড কল করতে চাইলে প্রতিটি মেথড থেকে কী রিটার্ন করতে হয়?",
+    "hint": "মিউটেবল রেফারেন্সের ক্ষেত্রে `&mut Self` এবং ওনারশিপ কনজিউমিং বিল্ডারের ক্ষেত্রে `mut self` এবং রিটার্নে `Self` ফেরত দেওয়া হয়।"
+  },
+  {
+    "id": "struct-q15",
+    "difficulty": "easy",
+    "question": "একটি মডিউলের ভেতর একটি স্ট্রাক্ট ডিফাইন করা হলো যার শুরুতে `pub struct Config` দেওয়া আছে। কিন্তু বাইরের ফাইল থেকে এর ফিল্ড `config.port` রিড করতে গেলে এরর দেয় কেন?",
+    "hint": "স্ট্রাক্ট পাবলিক হলেও তার ভেতরের প্রতিটি ফিল্ড বাই ডিফল্ট প্রাইভেট থাকে। ফিল্ডে প্রবেশাধিকার দিতে ফিল্ডের আগেও `pub` (যেমন `pub port: u16`) লিখতে হয়।"
+  },
+  {
+    "id": "struct-q16",
+    "difficulty": "hard",
+    "question": "টাইপ-স্টেট প্যাটার্ন (Type-State Pattern): স্ট্রাক্টের ফিল্ডে বুলিয়ান ফ্ল্যাগ (`is_connected: bool`) না রেখে জেনেরিক স্টেট মার্কার (যেমন `Connection<Connected>` এবং `Connection<Disconnected>`) ব্যবহার করার সুবিধা কী?",
+    "hint": "রানটাইম এরর বা এক্সেপশনের পরিবর্তে কম্পাইল টাইমে অবৈধ মেথড কল (যেমন ডিসকানেক্টেড অবস্থায় ডেটা পাঠানো) রোধ করা সম্ভব হয়।"
+  },
+  {
+    "id": "struct-q17",
+    "difficulty": "medium",
+    "question": "যদি কোনো স্ট্রাক্ট অন্য একটি স্ট্রাক্টকে কনটেইন করে (Composition), যেমন `struct Engine; struct Car { engine: Engine }`, ওনারশিপ ট্রান্সফারে কী ঘটে যখন সম্পূর্ণ `Car` ড্রপ হয়?",
+    "hint": "প্যারেন্ট অবজেক্ট ড্রপ হলে তার ভেতরে থাকা সমস্ত চাইল্ড অবজেক্টও ক্রমান্বয়ে ড্রপ হয়।"
+  },
+  {
+    "id": "struct-q18",
+    "difficulty": "easy",
+    "question": "টুপল স্ট্রাক্টকে নিউ-টাইপ প্যাটার্ন (Newtype Pattern: `struct Meters(f64); struct Inches(f64);`) হিসেবে ব্যবহার করলে সাধারণ ভ্যারিয়েবলের তুলনায় টাইপ সেফটিতে কী বিপুল উন্নতি ঘটে?",
+    "hint": "ভুলবশত ইঞ্চির সাথে মিটার যোগ করা বা ভুল ইউনিটের মান প্যারামিটারে পাস করা কম্পাইল টাইমে সম্পূর্ণ অসম্ভব হয়ে যায়।"
+  },
+  {
+    "id": "struct-q19",
+    "difficulty": "hard",
+    "question": "একটি স্ট্রাক্টের কোনো মেথড যদি শুধুমাত্র সেই ইনস্ট্যান্সের ওনারশিপ থাকলেই কল করা অনুমোদন করতে চায় (রেফারেন্সে কল করা নিষিদ্ধ), তবে মেথড সিগনেচার কীভাবে লিখতে হবে?",
+    "hint": "`fn finalize(self)` — অর্থাৎ প্যারামিটারে কোনো `&` চিহ্ন থাকবে না, সরাসরি ভ্যালু ওন করতে হবে।"
+  },
+  {
+    "id": "struct-q20",
+    "difficulty": "medium",
+    "question": "সি-এর মতো মেমরি রিপ্রেজেন্টেশন পাওয়ার জন্য (FFI বা লো-লেভেল বাইট ম্যানিপুলেশনের ক্ষেত্রে) রাস্ট স্ট্রাক্টের উপর কোন অ্যাট্রিবিউট ব্যবহার করা বাধ্যতামূলক?",
+    "hint": "`#[repr(C)]` অ্যাট্রিবিউট, যা কম্পাইলারকে ফিল্ড রি-অর্ডার করা থেকে বিরত রাখে এবং সি মেমরি লেআউট নিশ্চিত করে।"
   }
 ]

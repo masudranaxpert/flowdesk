@@ -1,129 +1,122 @@
 [
   {
-    "id": "strings-1",
+    "id": "str-q1",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "`String` ভেতরে আসলে কী?",
-    "options": [
-      "UTF-8 encoded byte-এর growable vector — মূলত `Vec<u8>` wrapper; pointer, capacity, len (64-bit-এ মোট ২৪ byte)",
-      "Character-এর linked list",
-      "UTF-16 code unit array — Python-এর মতো",
-      "Stack-এ রাখা fixed-size byte array"
-    ],
-    "answer": 0,
-    "explanation": "String হলো heap-allocated, growable `Vec<u8>`-ই — শুধু বাধ্য মানে UTF-8 valid। ভেতরে (pointer, capacity, len) — তাই সে ২৪ byte, আসল byte গুলো heap-এ। Mutable buffer হওয়ায় append সস্তা।"
+    "question": "রাস্টে `String` এবং `&str` এর মধ্যে মেমরি স্ট্রাকচার ও ওনারশিপের মৌলিক পার্থক্য কী? কোনটি স্ট্যাক মেমরিতে পয়েন্টার ও ক্যাপাসিটি রাখে এবং কোনটি হিপ ডেটা ওন করে?",
+    "hint": "`String` হিপে গ্রোয়েবল বাফারের মালিকানা ধরে রাখে (স্ট্যাকে পয়েন্টার, লেন্থ, ক্যাপাসিটি)। `&str` হলো একটি রিড-অনলি স্লাইস বা ভিউ (পয়েন্টার ও লেন্থ), যা মেমরির মালিক নয়।"
   },
   {
-    "id": "strings-2",
-    "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "`&str` ভেতরে কী, আর কতটুকু জায়গা নেয় (64-bit)?",
-    "options": [
-      "পুরো string-এর copy — string যত বড়, তত বড়",
-      "Fat pointer: data-র pointer + length — মোট ১৬ byte; data-র ownership নেয় না",
-      "একটা খালি pointer — ৮ byte, length আলাদা কোথাও থাকে",
-      "Reference-counted handle — ২৪ byte"
-    ],
-    "answer": 1,
-    "explanation": "`&str` string slice — (pointer, length) জোড়া, ১৬ byte। Ownership না নিয়ে borrow করে। `&String → &str` রূপান্তরটা deref coercion — শুধু fat pointer তৈরি হয়, data copy হয় না, খাঁটি zero cost।"
-  },
-  {
-    "id": "strings-3",
+    "id": "str-q2",
     "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "Rust-এ `s[0]` দেওয়াই নেই — কেন?",
-    "options": [
-      "String heap-এ থাকে, stack থেকে index করা যায় না",
-      "Index হিসেবে `usize` ব্যবহার করা নিষিদ্ধ",
-      "Ownership না থাকলে index করা যায় না",
-      "UTF-8-এ একটা character একাধিক byte-এর হতে পারে — byte index char-এর মাঝখানে পড়তে পারে; আর i-তম character পেতে শুরু থেকে O(i) হাঁটতে হয়, তাই O(1) random access-এর মিথ্যা সুবিধা না দেওয়াই সৎ"
-    ],
-    "answer": 3,
-    "explanation": "\"বাংলা\"-র প্রতিটা character ৩ byte — byte index দিলে character-এর মাঝে কাট পড়ত। তাই Rust indexing আটকে দিয়েছে; দরকার হলে `chars()` (Unicode scalar) বা `bytes()` দিয়ে iterate করো, slice লাগলে character boundary-তে কাটো।"
+    "question": "কেন রাস্টে স্ট্রিংকে সাধারণ অ্যারে বা ভেক্টরের মতো সরাসরি ইনডেক্সিং (যেমন `s[0]`) করা কম্পাইলার নিষিদ্ধ করে? ইউটিএফ-৮ (UTF-8) এনকোডিংয়ের সাথে এর কী সম্পর্ক?",
+    "hint": "UTF-8 এ প্রতিটি ক্যারেক্টার ১ থেকে ৪ বাইট পর্যন্ত হতে পারে। সরাসরি ইনডেক্সিং O(1) টাইমে নির্দিষ্ট ক্যারেক্টার রিটার্ন করতে পারে না এবং এটি ক্যারেক্টারের মাঝখানের ইনভ্যালিড বাইট দিতে পারে।"
   },
   {
-    "id": "strings-4",
-    "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "এরপর `s1` আর ব্যবহার করা যায় না — কেন?",
-    "code": "let s1 = String::from(\"Hello, \");\nlet s2 = String::from(\"world!\");\nlet s3 = s1 + &s2;",
-    "options": [
-      "`Add<&str> for String`-এর `add` প্রথম operand-টা by value (`self`) নেয় — s1-এর নিজের buffer-এই s2 append হয়, নতুন allocation বাঁচে; দাম হলো s1-এর ownership move হওয়া",
-      "`+` operator সব ক্ষেত্রেই দুটো operand-এর deep copy বানায়",
-      "s2 borrow হওয়ায় s1-ও automatic borrow হয়ে যায়",
-      "Concat-এর পর compiler পুরনো দুটো variable-ই drop করে দেয়"
-    ],
-    "answer": 0,
-    "explanation": "ভেতরে প্রায়: `fn add(mut self, other: &str) { self.push_str(other); self }` — s1-এর buffer-এই লেখা হয় বলে নতুন allocation লাগে না, কিন্তু by value নেওয়ার কারণে s1 move হয়ে যায়। সবাইকে valid রাখতে `format!` ব্যবহার করো — সে নতুন String বানায়, কোনো operand-এর ownership নেয় না।"
-  },
-  {
-    "id": "strings-5",
-    "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "`\"straße\".to_uppercase()` কী দেয়, আর allocation-এর গল্পটা কী?",
-    "options": [
-      "\"STRAßE\" — শুধু ASCII অংশ flip হয়, কোনো allocation নেই",
-      "\"STRASSE\" — 'ß' বদলে \"SS\" হয়ে byte দৈর্ঘ্যই বদলে যায়; উত্তরের size আগে থেকে জানা যায় না, তাই নতুন String allocate করতে হয়",
-      "\"STRASSE\", কিন্তু মূল string-এর buffer-এই in-place লেখা হয়",
-      "Compile error — uppercase non-ASCII string-এ চলে না"
-    ],
-    "answer": 1,
-    "explanation": "`to_uppercase()` শুধু ASCII flip না — Unicode case mapping table খোঁজে, আর uppercase করলে byte length বদলাতে পারে ('ß' → \"SS\")। তাই এটা সবসময় নতুন String allocate করে। তুলনায় `trim()` শুধু slice ফেরত দেয় — খাঁটি zero cost।"
-  },
-  {
-    "id": "strings-6",
+    "id": "str-q3",
     "difficulty": "easy",
-    "type": "code",
-    "prompt": "`s` স্ট্রিংটির শেষে \"bar\" যুক্ত করতে কোন মেথড কল করবে?",
-    "code": "let mut s = String::from(\"foo\");\ns.____(\"bar\");",
-    "explanation": "স্ট্রিং বাফারের শেষে স্ট্রিং স্লাইস যোগ করতে .push_str(&str) মেথড ব্যবহার করা হয়।",
-    "accept": [
-      "push_str"
-    ]
+    "question": "একটি স্ট্রিংয়ের মোট বাইট সংখ্যা এবং মোট ক্যারেক্টার সংখ্যা গণনা করার মেথডদ্বয় কী কী? বাংলা শব্দের ক্ষেত্রে `\"বাংলা\".len()` কেন ৫ না হয়ে ১৫ দেয়?",
+    "hint": "`.len()` বাইট সংখ্যা দেয়, আর `.chars().count()` ক্যারেক্টার সংখ্যা দেয়। বাংলায় প্রতিটি ইউনিকোড বর্ণ ৩ বাইট করে জায়গা নেয়।"
   },
   {
-    "id": "strings-7",
+    "id": "str-q4",
     "difficulty": "medium",
-    "type": "code",
-    "prompt": "`s` স্ট্রিংটির ক্যারেক্টারগুলো একে একে ইটারেট করতে কোন মেথড কল করবে?",
-    "code": "let s = \"hello\";\nfor c in s.____ {\n    println!(\"{}\", c);\n}",
-    "explanation": ".chars() মেথড স্ট্রিংয়ের ইউনিকোড ক্যারেক্টারগুলোর উপর ইটারেটর প্রদান করে।",
-    "accept": [
-      "chars()"
-    ]
+    "question": "নিচের ৩টি স্ট্রিং কনভার্সনের মধ্যে পারফরম্যান্স ও ইডিওম্যাটিক পার্থক্য কী:\n১. `s.to_string()`\n২. `s.to_owned()`\n৩. `String::from(s)`",
+    "hint": "`String::from` এবং `to_owned` সরাসরি ক্লোন বা এলোকেট করে দ্রুত। `to_string()` পেছনে `Display` ট্রেইটের ফরম্যাটিং ইঞ্জিন কল করে কিছুটা ধীর হতে পারে।"
   },
   {
-    "id": "strings-8",
+    "id": "str-q5",
     "difficulty": "hard",
-    "type": "code",
-    "prompt": "&str স্ট্রিং লিটারেলকে একটি নতুন heap-allocated String অবজেক্টে রূপান্তর করতে কোন মেথড কল করবে?",
-    "code": "let literal = \"hello\";\nlet s = literal.____;",
-    "explanation": "স্ট্রিং স্লাইস থেকে মালিকানাসহ নতুন String অবজেক্ট বানাতে .to_string() বা .to_owned() মেথড ব্যবহার করা হয়।",
-    "accept": [
-      "to_string()",
-      "to_owned()"
-    ]
+    "question": "স্ট্রিং স্লাইসিং এরর: `let s = \"বাংলা\"; let sub = &s[0..2];` এই কোডটি কম্পাইল হলেও রানটাইমে প্যানিক করে ক্র্যাশ করে কেন? রাস্টের প্যানিক মেসেজ কী বলে?",
+    "hint": "panicked at byte index 2 is not a char boundary! বাংলা অক্ষরের প্রথম বর্ণটি ৩ বাইটে শেষ হয়, ২ নম্বর বাইটে স্লাইস করলে অবৈধ UTF-8 তৈরি হবে।"
   },
   {
-    "id": "strings-9",
+    "id": "str-q6",
     "difficulty": "easy",
-    "type": "code",
-    "prompt": "Blank-এ কী বসালে String থেকে খরচবিহীন `&str` borrow হবে?",
-    "code": "fn main() {\n    let s = String::from(\"hello\");\n    let borrowed: &str = ____;\n    println!(\"{}\", borrowed);\n}",
-    "accept": [
-      "&s"
-    ],
-    "explanation": "`&s` — `&String` থেকে `&str` হওয়া deref coercion (`String` implement করে `Deref<Target = str>`)। কোনো data copy হয় না, শুধু (pointer, length) fat pointer তৈরি হয় — zero cost borrow।"
+    "question": "একটি বিদ্যমান `String` এ অন্য একটি টেক্সট যোগ বা অ্যাপেন্ড করতে কোন মেথডদ্বয় সবচেয়ে বেশি ব্যবহৃত হয়?",
+    "hint": "একক ক্যারেক্টারের জন্য `.push(c)` এবং স্ট্রিং স্লাইসের জন্য `.push_str(\"...\")`।"
   },
   {
-    "id": "strings-10",
+    "id": "str-q7",
     "difficulty": "medium",
-    "type": "code",
-    "prompt": "Blank-এ কোন iterator method বসালে `chars` Vec-এর ownership নিয়ে \"hello\" String বানানো যাবে?",
-    "code": "fn main() {\n    let chars = vec!['h', 'e', 'l', 'l', 'o'];\n    let s: String = chars.____().collect();\n    println!(\"{}\", s);\n}",
-    "accept": [
-      "into_iter"
-    ],
-    "explanation": "`into_iter()` element-এর ownership-সহ iterator দেয় — `chars` এরপর ব্যবহার করা যাবে না, String বানাতেই element গুলো খরচ হয়। `iter()` হলে reference দিত। `collect()` target type annotation (`let s: String`) দেখে বুঝে নেয় কী বানাতে হবে।"
+    "question": "`+` অপারেটর দিয়ে স্ট্রিং কনক্যাটেনেশন করার সময় কেন প্রথম অপারেন্ডটি ওনড `String` হতে হয় এবং দ্বিতীয়টি রেফারেন্স `&str` হতে হয়? যেমন `let s3 = s1 + &s2;` লাইনে `s1` এর কী অবস্থা হয়?",
+    "hint": "`+` অপারেটর `Add::add(self, s: &str) -> String` মেথড কল করে। এটি `s1` এর ওনারশিপ নিয়ে তার বর্তমান বাফারে `s2` যোগ করে, তাই কলের পর `s1` ইনভ্যালিড হয়ে যায়।"
+  },
+  {
+    "id": "str-q8",
+    "difficulty": "hard",
+    "question": "স্ট্রিং রিপ্রেজেন্টেশনে ৩টি দৃষ্টিভঙ্গি: বাইট (Bytes), স্কেলার ভ্যালু (Chars), এবং গ্রাফিম ক্লাস্টার (Grapheme Clusters)। বাংলা যুক্তাক্ষর (যেমন \"ক্ষ\" বা ইমোজি \"👨‍👩‍👧\") সঠিকভাবে কাউন্ট করতে কেন থার্ড-পার্টি `unicode-segmentation` ক্রেট প্রয়োজন?",
+    "hint": "স্ট্যান্ডার্ড লাইব্রেরির `.chars()` শুধু ইউনিকোড স্কেলার দেখে, কিন্তু যুক্তাক্ষর ও ইমোজি একাধিক স্কেলার মিলে একক গ্রাফিম ক্লাস্টার তৈরি করে।"
+  },
+  {
+    "id": "str-q9",
+    "difficulty": "easy",
+    "question": "স্ট্রিংয়ের শুরু এবং শেষের সমস্ত হোয়াইটস্পেস ও নিউলাইন ট্রিম করতে কোন মেথড ব্যবহার করা হয় এবং এটি কি নতুন স্ট্রিং তৈরি করে নাকি স্লাইস রিটার্ন করে?",
+    "hint": "`.trim()` মেথড — এটি কোনো মেমরি এলোকেশন করে না, মূল স্ট্রিংয়ের একটি সাব-স্লাইস `&str` রিটার্ন করে।"
+  },
+  {
+    "id": "str-q10",
+    "difficulty": "medium",
+    "question": "একটি কমা সেপারেটেড স্ট্রিং (যেমন `\"apple,banana,orange\"`) কে কমার ভিত্তিতে ভাগ করে ইটারেট করতে কোন মেথড ব্যবহার করা হয়?",
+    "hint": "`.split(',')` মেথড।"
+  },
+  {
+    "id": "str-q11",
+    "difficulty": "hard",
+    "question": "র স্ট্রিং লিটারেল (Raw String Literal: `r#\"...\"#`): রেগুলার এক্সপ্রেশন বা উইন্ডোজ ফাইল পাথ লেখার সময় এস্কেপ ক্যারেক্টার (`\\`) এর ঝামেলা এড়াতে র স্ট্রিং কীভাবে সাহায্য করে?",
+    "hint": "র স্ট্রিং ব্যাকস্ল্যাশ বা কোটেশনকে এস্কেপ না করে হুবহু স্টোর করে, ফলে `r\"C:\\Program Files\"` সরাসরি লেখা যায়।"
+  },
+  {
+    "id": "str-q12",
+    "difficulty": "medium",
+    "question": "একটি স্ট্রিংয়ের ভেতরে কোনো সাব-স্ট্রিং রিপ্লেস করতে `.replace(\"old\", \"new\")` মেথড কল করলে কেন এটি রেফারেন্স না দিয়ে সর্বদা নতুন ওনড `String` রিটার্ন করে?",
+    "hint": "রিপ্লেসমেন্টের ফলে স্ট্রিংয়ের দৈর্ঘ্য ছোট বা বড় হতে পারে, তাই হিপে সম্পূর্ণ নতুন বাফার তৈরি করা প্রয়োজন হয়।"
+  },
+  {
+    "id": "str-q13",
+    "difficulty": "easy",
+    "question": "একটি স্ট্রিং সম্পূর্ণ ফাঁকা কি না তা যাচাই করার জন্য লেন্থ জিরো চেক (`s.len() == 0`) করার চেয়ে কোন মেথড ব্যবহার করা বেশি ইডিওম্যাটিক?",
+    "hint": "`.is_empty()` মেথড।"
+  },
+  {
+    "id": "str-q14",
+    "difficulty": "hard",
+    "question": "এফএফআই (FFI) ও ওএস ইন্টারঅ্যাকশনে স্ট্রিং: লিনাক্স বা উইন্ডোজের পাথ এবং সি-ফাংশনে নাল-টার্মিনেটেড স্ট্রিং পাস করতে সাধারণ `String` এর বদলে কোন বিশেষ স্ট্রিং টাইপগুলো ব্যবহার করা হয়?",
+    "hint": "ওএস পাথের জন্য `std::ffi::OsString` / `OsStr` এবং সি-ল্যাঙ্গুয়েজ নাল-টার্মিনেটেড স্ট্রিংয়ের জন্য `std::ffi::CString` / `CStr`।"
+  },
+  {
+    "id": "str-q15",
+    "difficulty": "medium",
+    "question": "একটি স্ট্রিংকে বাইট স্লাইসে রূপান্তর করতে কোন মেথড ব্যবহার করা হয় এবং এই বাইট স্লাইসের টাইপ কী হয়?",
+    "hint": "`.as_bytes()` মেথড যা `&[u8]` রিটার্ন করে।"
+  },
+  {
+    "id": "str-q16",
+    "difficulty": "easy",
+    "question": "কাঁচা বাইটের একটি ভেক্টর `Vec<u8>` কে ভ্যালিড ইউটিএফ-৮ স্ট্রিংয়ে রূপান্তর করতে কোন নিরাপদ মেথড ব্যবহার করা হয় যা এরর আসলে রেজাল্ট দেয়?",
+    "hint": "`String::from_utf8(bytes)` — ইনপুট অবৈধ UTF-8 হলে এটি `Err(FromUtf8Error)` রিটার্ন করে।"
+  },
+  {
+    "id": "str-q17",
+    "difficulty": "hard",
+    "question": "আনচেকড স্ট্রিং ক্রিয়েশন: `String::from_utf8_unchecked(bytes)` মেথডটি কেন `unsafe` ব্লক দাবি করে এবং ভুল বাইট পাঠালে মেমরিতে কী বিপর্যয় ঘটবে?",
+    "hint": "রাস্টের সেফ কোড সর্বত্র ধরে নেয় স্ট্রিং সর্বদা ভ্যালিড UTF-8। ইনভ্যালিড বাইট ঢুকলে স্ট্যান্ডার্ড লাইব্রেরির প্রিন্ট ও স্লাইসিং কোড আনডিফাইন্ড বিহেভিয়ারে ক্র্যাশ করবে।"
+  },
+  {
+    "id": "str-q18",
+    "difficulty": "medium",
+    "question": "একটি স্ট্রিংয়ের ক্যারেক্টারগুলোকে উল্টো দিক থেকে ইটারেট করতে কোন মেথড চেইন ব্যবহার করতে হয়?",
+    "hint": "`.chars().rev()` মেথড চেইনিং।"
+  },
+  {
+    "id": "str-q19",
+    "difficulty": "easy",
+    "question": "ফরমেটেড স্ট্রিং তৈরি করে একটি নতুন ভেরিয়েবলে স্টোর করতে কোন স্ট্যান্ডার্ড ম্যাক্রো ব্যবহার করা হয়?",
+    "hint": "`format!(\"User: {}, Age: {}\", name, age)` ম্যাক্রো।"
+  },
+  {
+    "id": "str-q20",
+    "difficulty": "hard",
+    "question": "স্ট্রিং ক্যাপাসিটি অপটিমাইজেশন: যখন তুমি জানো একটি স্ট্রিং ঠিক কতটা লম্বা হবে, তখন ক্যাপাসিটি রিজার্ভ করে মেমরি রি-এলোকেশন প্রতিরোধে কোন কনস্ট্রাকটর ব্যবহার করা উচিত?",
+    "hint": "`String::with_capacity(bytes_size)` কনস্ট্রাকটর।"
   }
 ]

@@ -1,130 +1,122 @@
 [
   {
-    "id": "traits-generics-1",
+    "id": "trait-q1",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "Rust-এ একটা struct-এর জন্য একাধিক trait-এর behavior কোথায়, কীভাবে লাগানো হয়?",
-    "options": [
-      "প্রতিটা trait-এর জন্য আলাদা `impl Trait for Struct` block-এ — data (struct) আর behavior (impl) আলাদা জায়গায়",
-      "Struct definition-এর ভেতরেই method গুলো লিখতে হয়, একটার বেশি block নেই",
-      "Inheritance দিয়ে — `impl Tweet: Summary` লিখলে সব এসে যায়",
-      "একটা struct একটামাত্র trait implement করতে পারে"
-    ],
-    "answer": 0,
-    "explanation": "Rust-এ data (struct) আর behavior (trait impl) সম্পূর্ণ আলাদা — একই struct-এর জন্য যত খুশি trait, প্রতিটা নিজের `impl` block-এ। Rust-এ class inheritance-ই নেই; composition + trait-ই পথ।"
+    "question": "রাস্টে ট্রেইট (Trait) কী? অবজেক্ট-ওরিয়েন্টেড ল্যাঙ্গুয়েজের ইন্টারফেসের (Interface) সাথে এর মিল ও অমিল কী?",
+    "hint": "ট্রেইট হলো মেথড সিগনেচারের একটি চুক্তি। পার্থক্য হলো ক্লাসের ভেতরে মেথড থাকার বদলে রাস্টে ডেটা স্ট্রাকচার এবং ট্রেইট ইমপ্লিমেন্টেশন সম্পূর্ণ আলাদা থাকে।"
   },
   {
-    "id": "traits-generics-2",
+    "id": "trait-q2",
+    "difficulty": "medium",
+    "question": "স্ট্যাটিক ডিসপ্যাচ (`impl Trait`) এবং ডায়নামিক ডিসপ্যাচ (`dyn Trait`) এর মধ্যে পারফরম্যান্স ও মেমরির মৌলিক পার্থক্য কী?",
+    "hint": "স্ট্যাটিক ডিসপ্যাচ কম্পাইল টাইমে মোনোমরফাইজ হয় (কোনো রানটাইম ওভারহেড নেই, মেমরি ফিক্সড)। ডায়নামিক ডিসপ্যাচে রানটাইমে ভি-টেবিল (vtable) ও ফ্যাট পয়েন্টার দিয়ে মেথড খোঁজা হয়।"
+  },
+  {
+    "id": "trait-q3",
     "difficulty": "easy",
-    "type": "code",
-    "prompt": "Tweet স্ট্রাক্টের জন্য Summary ট্রেইট ইমপ্লিমেন্ট করার ঘোষণা লাইনটি সঠিকভাবে লিখো:",
-    "code": "trait Summary {\n    fn summarize(&self) -> String;\n}\n\nstruct Tweet {\n    username: String,\n    text: String,\n}\n\n____ {\n    fn summarize(&self) -> String {\n        format!(\"@{}: {}\", self.username, self.text)\n    }\n}",
-    "explanation": "কোনো নির্দিষ্ট টাইপের জন্য ট্রেইট ইমপ্লিমেন্ট করতে impl TraitName for TypeName সিনট্যাক্স ব্যবহার করতে হয়।",
-    "accept": [
-      "impl Summary for Tweet"
-    ]
+    "question": "ডিফল্ট মেথড ইমপ্লিমেন্টেশন (Default Method Implementation) কী? কোনো ট্রেইটের মেথডে যদি বডি দেওয়া থাকে, তবে স্ট্রাক্টে তা ইমপ্লিমেন্ট করার সময় কী সুবিধা পাওয়া যায়?",
+    "hint": "স্ট্রাক্ট সেই মেথডটি সরাসরি ডিফল্ট আচরণে ব্যবহার করতে পারে, অথবা চাইলে ওভাররাইড (Override) করতে পারে।"
   },
   {
-    "id": "traits-generics-3",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "`fn largest<T: PartialOrd>(list: &[T]) -> &T` — এটাকে `largest(&[1, 2, 3])` (i32) আর `largest(&[1.0, 2.0])` (f64) দিয়ে call করলে compiler কী করে (monomorphization)?",
-    "options": [
-      "প্রতিটা concrete type-এর জন্য আলাদা function (ধরো largest_i32, largest_f64) বানায় — runtime overhead নেই, দাম দিতে হয় compile time আর binary size-এ",
-      "একটাই function বানায় আর runtime-এ type চেক করে ঠিক compare বেছে নেয়",
-      "vtable বানিয়ে dynamic dispatch করে — তাই-ই তো generic",
-      "Generic function-এর নিজস্ব একটাই machine code থাকে, সব type সেটা share করে"
-    ],
-    "answer": 0,
-    "explanation": "Monomorphization-এ generic function-এর নিজস্ব machine code থাকে না — concrete type দিয়ে call হলেই সেই version compile হয়, optimizer সেগুলো inline-ও করতে পারে। দাম: যত type-এ call, তত copy — compile time আর binary size বাড়ে (C++ template bloat-এর মতো)।"
-  },
-  {
-    "id": "traits-generics-4",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "`fn create() -> impl Summary` দিয়ে কী করা যায় না?",
-    "options": [
-      "Runtime-এ ভিন্ন ভিন্ন type return করা (যেমন কখনো Article, কখনো Tweet) — এর জন্য `Box<dyn Summary>` লাগবে",
-      "একটা নির্দিষ্ট concrete type return করা, শুধু তার নাম caller-এর কাছে লুকিয়ে রাখা",
-      "Static dispatch হওয়া — call site-এ সরাসরি function address বসে যাওয়া",
-      "Compiler-এ anonymous generic parameter-এ expand হওয়া"
-    ],
-    "answer": 0,
-    "explanation": "`-> impl Trait` মানে ভেতরে একটাই concrete type — runtime-এ বদলানো যায় না। একাধিক type return করতে হলে trait object (`Box<dyn Trait>`) দরকার, যেখানে vtable দিয়ে dynamic dispatch হয়।"
-  },
-  {
-    "id": "traits-generics-5",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "জেনেরিক ফাংশন `largest` ডিক্লেয়ার করো যা PartialOrd ট্রেইট বাউন্ড যুক্ত একটি জেনেরিক টাইপ T গ্রহণ করে:",
-    "code": "fn largest<____>(list: &[T]) -> &T {\n    let mut largest = &list[0];\n    for item in &list[1..] {\n        if item > largest {\n            largest = item;\n        }\n    }\n    largest\n}",
-    "explanation": "জেনেরিক টাইপের উপাদানগুলোর মধ্যে তুলনা করতে সক্ষম হতে <T: PartialOrd> ট্রেইট বাউন্ড দেওয়া বাধ্যতামূলক।",
-    "accept": [
-      "T: PartialOrd"
-    ]
-  },
-  {
-    "id": "traits-generics-6",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "`a > b` compare করতে পারার জন্য blank-এ কোন trait bound বসবে? (`>` operator আসলে trait method-এর sugar)",
-    "code": "fn longest<T: ____>(a: T, b: T) -> T {\n    if a > b { a } else { b }\n}",
-    "accept": [
-      "PartialOrd"
-    ],
-    "explanation": "Rust-এ `==`, `<`, `>`, `+` সব operator আসলে trait method-এর sugar — `a > b` মানে PartialOrd-র compare method call। তাই bound `T: PartialOrd` দিতে হয়, নাহলে compiler জানবেই না কোন method call করবে। দুই parameter same type হতে হলে trait bound syntax-ই ব্যবহার করো।"
-  },
-  {
-    "id": "traits-generics-7",
+    "id": "trait-q4",
     "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "একটা type `#[derive(Clone, Copy)]` দিয়ে `Copy` হতে পারবে না কোন শর্তে?",
-    "options": [
-      "কোনো field নিজে `Copy` না হলে (যেমন field-এ `String`/`Vec` থাকলে), অথবা type-টা `Drop` implement করলে — দুটোই `Copy`-কে আটকায়",
-      "শুধু তখনই যখন type-টা enum হয়",
-      "শুধু তখনই যখন struct-এর ৪টার বেশি field থাকে",
-      "কোনো শর্ত নেই — যেকোনো struct-এ Copy derive করা যায়"
-    ],
-    "answer": 0,
-    "explanation": "`Copy`-র শর্ত: সব field নিজে `Copy` হতে হবে। Heap-owning type (`String`, `Vec`) কখনো `Copy` হতে পারে না — নাহলে দুই owner একই heap block free করত (double free)। আর custom cleanup (`Drop` impl) থাকলেও `Copy` দেওয়া যায় না — compiler সেই conflict-ই আটকে দেয়।"
+    "question": "মোনোমরফাইজেশন (Monomorphization) কী? জেনেরিক ফাংশন `fn print_val<T: Display>(val: T)` কম্পাইল করার পর মেশিন কোডে কীভাবে রূপান্তর হয় এবং এর ফলে কোড ব্লোট (Code Bloat) কী?",
+    "hint": "কম্পাইলার প্রতিটা ভিন্ন টাইপের জন্য (যেমন i32, f64) আলাদা আলাদা স্পেশালাইজড মেশিন কোড জেনারেট করে। ফলে গতি সর্বোচ্চ হয়, তবে বাইনারি সাইজ বড় হতে পারে।"
   },
   {
-    "id": "traits-generics-8",
-    "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "`&dyn Summary` (trait object) মেমরিতে কেমন, আর `item.summarize()` call কীভাবে চলে?",
-    "options": [
-      "দুই word-এর fat pointer — data pointer + vtable pointer; call-এ vtable থেকে function pointer load করে indirect call হয়, সাধারণত inline করা যায় না",
-      "এক word-এর সাধারণ pointer — call site-এ সরাসরি function address বসে থাকে",
-      "দুই word-এর fat pointer, কিন্তু vtable প্রতি call-এ runtime-এ নতুন করে তৈরি হয়",
-      "Trait object-এর size compile time-এই জানা থাকে, তাই সরাসরি stack-এ বসে"
-    ],
-    "answer": 0,
-    "explanation": "`dyn Trait` হলো DST — পেছনে যেকোনো type থাকতে পারে (Article বা Tweet-এর size ভিন্ন), তাই pointer-এর পেছনে থাকে। `&dyn` আসলে fat pointer: প্রথম word data-র ঠিকানা, দ্বিতীয় word ওই type-এর vtable-এর ঠিকানা। Vtable compile time-এ তৈরি static read-only table; call হয় indirect — এই এক indirection-ই dynamic dispatch-এর \"slightly slower\"।"
+    "id": "trait-q5",
+    "difficulty": "medium",
+    "question": "ট্রেইট বাউন্ড (Trait Bound): দুটি প্যারামিটার যাতে অবশ্যই একই টাইপের হয় এবং তুলনাযোগ্য হয়, তা নিশ্চিত করতে `impl Trait` নাকি জেনেরিক সিনট্যাক্স `<T: PartialOrd>` ব্যবহার করা উচিত?",
+    "hint": "জেনেরিক সিনট্যাক্স: `fn compare<T: PartialOrd>(a: T, b: T) -> bool`। `impl Trait` দিলে দুটি প্যারামিটার ভিন্ন ভিন্ন টাইপ হতে পারত।"
   },
   {
-    "id": "traits-generics-9",
-    "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "`impl From<i32> for UserId` লেখা হলো। `let id: UserId = 42i32.into();` কেন compile হয় — `Into` তো আলাদা implement করিনি?",
-    "options": [
-      "std-এ আছে blanket impl: `impl<T, U> Into<U> for T where U: From<T>` — `From` লিখলেই `Into` free, সব compile time-এ resolve, runtime cost শূন্য",
-      "`Into` বাধ্যতামূলকভাবে প্রতিটা type-এ auto-derive হয়",
-      "`.into()` আসলে runtime reflection দিয়ে type বুঝে নেয়",
-      "এটা কাজ করে না — `Into` আলাদা করে implement করতেই হতো"
-    ],
-    "answer": 0,
-    "explanation": "`.into()` ভেতরে মাত্র একটা call: `From::from(42i32)`। std-এর blanket impl-এর কারণে `From` লিখলেই `Into` পেয়ে যাও। Error handling-এর `?`-ও এই `From::from` দিয়েই error convert করে — ওটাই এই জোড়ার সবচেয়ে বড় ব্যবহার।"
+    "id": "trait-q6",
+    "difficulty": "easy",
+    "question": "একাধিক ট্রেইট বাউন্ড (Multiple Trait Bounds) যুক্ত করতে কোন অপারেটর ব্যবহার করা হয়? যেমন প্যারামিটারটি প্রিন্টযোগ্য এবং ক্লোনযোগ্য হতে হবে।",
+    "hint": "প্লাস অপারেটর: `fn process<T: Display + Clone>(item: T)`।"
   },
   {
-    "id": "traits-generics-10",
+    "id": "trait-q7",
+    "difficulty": "medium",
+    "question": "যখন অনেকগুলো জেনেরিক প্যারামিটার এবং লম্বা ট্রেইট বাউন্ড থাকে, তখন ফাংশন সিগনেচার পরিষ্কার রাখতে কোন ক্লজ ব্যবহার করা হয়?",
+    "hint": "`where` ক্লজ। যেমন `fn complex<T, U>(a: T, b: U) where T: Display + Clone, U: Debug`।"
+  },
+  {
+    "id": "trait-q8",
     "difficulty": "hard",
-    "type": "code",
-    "prompt": "একই Vec-এ Article আর Tweet — দুই রকম type রাখতে চাই। Blank-এ কী বসবে?",
-    "code": "trait Summary {\n    fn summarize(&self) -> String;\n}\n\nstruct Article {\n    title: String,\n    author: String,\n    content: String,\n}\n\nstruct Tweet {\n    username: String,\n    text: String,\n}\n\nimpl Summary for Article {\n    fn summarize(&self) -> String {\n        format!(\"{} by {}\", self.title, self.author)\n    }\n}\n\nimpl Summary for Tweet {\n    fn summarize(&self) -> String {\n        format!(\"@{}: {}\", self.username, self.text)\n    }\n}\n\nfn main() {\n    let items: Vec<____> = vec![\n        Box::new(Article {\n            title: String::from(\"News\"),\n            author: String::from(\"AP\"),\n            content: String::from(\"...\"),\n        }),\n        Box::new(Tweet {\n            username: String::from(\"user\"),\n            text: String::from(\"Hello\"),\n        }),\n    ];\n    for item in &items {\n        println!(\"{}\", item.summarize());\n    }\n}",
-    "accept": [
-      "Box<dyn Summary>"
-    ],
-    "explanation": "মিশ্র type-এর collection-এ লাগে trait object: `Box<dyn Summary>`। `dyn Summary`-র size compile time-এ জানা নেই (DST), তাই Box-এ মুড়ে heap-এ রাখতে হয়; method call যায় vtable দিয়ে (dynamic dispatch)। সব আইটেম একই type হলে `Vec<T>` + generic-ই যেত — static dispatch, দ্রুত।"
+    "question": "অরফান রুল (Orphan Rule / Coherence): রাস্টে কেন তুমি একটি এক্সটার্নাল ক্রেটের ট্রেইটকে অন্য একটি এক্সটার্নাল ক্রেটের টাইপের ওপর ইমপ্লিমেন্ট করতে পারো না? এটি কোনো গ্লোবাল কনফ্লিক্ট কীভাবে রোধ করে?",
+    "hint": "ট্রেইট বা টাইপ — যেকোনো একটি অবশ্যই তোমার নিজস্ব লোকাল ক্রেটের হতে হবে। নইলে দুটি ভিন্ন ক্রেট একই টাইপের ওপর একই ট্রেইট ইমপ্লিমেন্ট করলে কম্পাইলার কারটা মানবে তা নিয়ে অরাজকতা তৈরি হতো।"
+  },
+  {
+    "id": "trait-q9",
+    "difficulty": "medium",
+    "question": "একটি ভেক্টরে ভিন্ন ভিন্ন টাইপের অবজেক্ট রাখতে চাও যা একটি নির্দিষ্ট ট্রেইট ইমপ্লিমেন্ট করে (যেমন সার্কেল ও রেক্ট্যাঙ্গেল উভয়েই Drawable)। কেন `Vec<dyn Drawable>` লেখা অবৈধ এবং সমাধান হিসেবে কেন `Vec<Box<dyn Drawable>>` লিখতে হয়?",
+    "hint": "`dyn Trait` একটি ডায়নামিকালি সাইজড টাইপ (DST), কম্পাইল টাইমে এর নির্দিষ্ট সাইজ জানা নেই। ভেক্টরে রাখতে ফিক্সড সাইজের হিপ পয়েন্টার `Box` এর ভেতরে মুড়িয়ে ফ্যাট পয়েন্টার বানাতে হয়।"
+  },
+  {
+    "id": "trait-q10",
+    "difficulty": "hard",
+    "question": "ফ্যাট পয়েন্টার (Fat Pointer) এবং ভি-টেবিল (vtable): `Box<dyn Trait>` মেমরিতে কত বাইট জায়গা নেয় এবং এর ভেতরে থাকা দুটি ওয়ার্ড পয়েন্টার ঠিক কী নির্দেশ করে?",
+    "hint": "১৬ বাইট (২ ওয়ার্ড)। প্রথম পয়েন্টারটি হিপে থাকা আসল অবজেক্টের ডেটা নির্দেশ করে, আর দ্বিতীয় পয়েন্টারটি কম্পাইল টাইমে তৈরি স্ট্যাটিক vtable (ফাংশন পয়েন্টার তালিকা) নির্দেশ করে।"
+  },
+  {
+    "id": "trait-q11",
+    "difficulty": "easy",
+    "question": "রাস্টে টাইপ কনভার্সনের জন্য স্ট্যান্ডার্ড লাইব্রেরির বহুল ব্যবহৃত ট্রেইট জোড়া কোনটি? এদের যেকোনো একটি ইমপ্লিমেন্ট করলে অন্যটি কেন স্বয়ংক্রিয়ভাবে কাজ করে?",
+    "hint": "`From` এবং `Into`। ব্ল্যাঙ্কেট ইমপ্লিমেন্টেশন (`impl<T, U> Into<U> for T where U: From<T>`) এর কারণে From লিখলে Into ফ্রিতে পাওয়া যায়।"
+  },
+  {
+    "id": "trait-q12",
+    "difficulty": "medium",
+    "question": "অ্যাসোসিয়েটেড টাইপ (Associated Type): `Iterator` ট্রেইটে জেনেরিকের (`Iterator<Item>`) বদলে অ্যাসোসিয়েটেড টাইপ (`type Item;`) ব্যবহার করার আর্কিটেকচারাল কারণ কী?",
+    "hint": "একটি নির্দিষ্ট ইটারেটর টাইপের জন্য কেবলমাত্র একটি নির্দিষ্ট আউটপুট টাইপ সংজ্ঞায়িত করা। বারবার টাইপ এনোটেশন দেওয়া এড়াতে এটি কোড পরিষ্কার রাখে।"
+  },
+  {
+    "id": "trait-q13",
+    "difficulty": "hard",
+    "question": "অবজেক্ট সেফটি (Object Safety): সব ট্রেইটকে `dyn Trait` হিসেবে ব্যবহার করা যায় না কেন? কোন দুটি প্রধান নিয়ম না মানলে একটি ট্রেইট অবজেক্ট-সেফ হয় না?",
+    "hint": "১. ট্রেইটের মেথডে রিটার্ন টাইপ হিসেবে `Self` থাকা যাবে না। ২. মেথডে কোনো জেনেরিক প্যারামিটার থাকা যাবে না। কারণ vtable এ রানটাইমে জেনেরিকের সাইজ ও টাইপ হিসাব করা অসম্ভব।"
+  },
+  {
+    "id": "trait-q14",
+    "difficulty": "easy",
+    "question": "`#[derive(...)]` ম্যাক্রো কীভাবে কাজ করে? কম্পাইল টাইমে এটি কীভাবে কোনো স্ট্রাক্টের জন্য ট্রেইটের ইমপ্লিমেন্টেশন স্বয়ংক্রিয়ভাবে লিখে দেয়?",
+    "hint": "প্রসিডিউরাল ডেরাইভ ম্যাক্রো (Procedural Derive Macro)। এটি স্ট্রাক্টের সিনট্যাক্স ট্রি পড়ে প্রতিটি ফিল্ডের জন্য নির্দিষ্ট ট্রেইটের কোড জেনারেট করে।"
+  },
+  {
+    "id": "trait-q15",
+    "difficulty": "medium",
+    "question": "কন্ডিশনাল ইমপ্লিমেন্টেশন বা ব্ল্যাঙ্কেট ইমপ্লিমেন্টেশন (Blanket Implementation): স্ট্যান্ডার্ড লাইব্রেরিতে কীভাবে যেকোনো টাইপ যা `Display` ইমপ্লিমেন্ট করেছে তার জন্য স্বয়ংক্রিয়ভাবে `ToString` চালু করা হয়েছে?",
+    "hint": "`impl<T: Display> ToString for T { ... }` সিনট্যাক্স।"
+  },
+  {
+    "id": "trait-q16",
+    "difficulty": "hard",
+    "question": "অপারেটর ওভারলোডিং (Operator Overloading): রাস্টে `+`, `-`, `*` ইত্যাদির মতো অপারেটর কাস্টম অবজেক্টের জন্য সাপোর্ট করাতে `std::ops` এর কোন ট্রেইটগুলো ইমপ্লিমেন্ট করতে হয়?",
+    "hint": "যেমন যোগের জন্য `std::ops::Add`, গুণের জন্য `std::ops::Mul`, ইনডেক্সিংয়ের জন্য `std::ops::Index` ইত্যাদি।"
+  },
+  {
+    "id": "trait-q17",
+    "difficulty": "medium",
+    "question": "ফাংশনের রিটার্ন টাইপ হিসেবে `-> impl Trait` লেখার সীমাবদ্ধতা কী? যদি একটি ফাংশন থেকে কন্ডিশনের ওপর ভিত্তি করে দুটি আলাদা টাইপ (যেমন `Circle` অথবা `Square`) রিটার্ন করতে চাও, তবে কেন `-> impl Shape` কাজ করবে না?",
+    "hint": "`impl Trait` রিটার্ন পজিশনে একটিমাত্র নির্দিষ্ট কংক্রিট টাইপ অনুমোদন করে। ভিন্ন ভিন্ন টাইপ রিটার্ন করতে চাইলে ডায়নামিক ট্রেইট অবজেক্ট `Box<dyn Shape>` ব্যবহার করতে হয়।"
+  },
+  {
+    "id": "trait-q18",
+    "difficulty": "easy",
+    "question": "মার্কার ট্রেইট (Marker Trait): যেসব ট্রেইটে কোনো মেথড বা ফাংশন থাকে না (যেমন `Send`, `Sync`, `Copy`), সেগুলো কম্পাইলারের কাছে কী ধরনের সিগন্যাল বহন করে?",
+    "hint": "টাইপ-লেভেল গ্যারান্টি বা ফ্ল্যাগ। কম্পাইলারকে জানায় যে এই ডেটাটি থ্রেড বাউন্ডারি নিরাপদে অতিক্রম করতে পারে বা বিটওয়াইজ কপি সমর্থন করে।"
+  },
+  {
+    "id": "trait-q19",
+    "difficulty": "hard",
+    "question": "সাব-ট্রেইটিং বা সুপার-ট্রেইট (Super-trait): একটি ট্রেইট `Loggable` তৈরি করছ যা অবশ্যই নিশ্চিত করবে যে ইমপ্লিমেন্টকারী টাইপটি ইতিমধ্যে `Debug` ট্রেইট ইমপ্লিমেন্ট করেছে। এর ডিক্লেয়ারেশন কীভাবে লিখবে?",
+    "hint": "`trait Loggable: std::fmt::Debug { ... }`।"
+  },
+  {
+    "id": "trait-q20",
+    "difficulty": "medium",
+    "question": "সম্পূর্ণ শূন্য রানটাইম ওভারহেডের সাথে ওওপি ডিজাইনের কম্পোজিশন প্যাটার্ন অর্জন করতে রাস্টের কোন বৈশিষ্ট্যটি সবচেয়ে বেশি সাহায্য করে?",
+    "hint": "স্ট্রাক্ট কম্পোজিশনের সাথে ট্রেইট বাউন্ডের স্ট্যাটিক পলিমরফিজম (Static Polymorphism)।"
   }
 ]

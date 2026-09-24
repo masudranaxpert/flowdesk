@@ -1,131 +1,122 @@
 [
   {
-    "id": "macros-1",
+    "id": "macro-q1",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "println!(\"{} {}\", a, b) কেন function না হয়ে macro হয়ে আছে?",
-    "options": [
-      "macro runtime-এ function-এর চেয়ে দ্রুত call হয়",
-      "macro-তে type checking হয় না, তাই যেকোনো type নিতে পারে",
-      "macro variable সংখ্যক argument নিতে পারে আর compile-time-এ expand হয় — function-এর argument count fixed",
-      "macro-তে borrow checker চলে না, তাই নিয়ম কম"
-    ],
-    "answer": 2,
-    "explanation": "function-এর argument count fixed, কিন্তু println! কখনো একটা কখনো তিনটা argument নেয় — এটা macro-র repetition দিয়েই সম্ভব। macro compile-এর আগেই expand হয়ে code generate করে, তাই runtime overhead শূন্য। type checking ঠিকই হয় — expansion-এর পরে।"
+    "question": "রাস্টে ফাংশন এবং ডিক্লেয়ারেটিভ ম্যাক্রো (`macro_rules!`) এর মধ্যে এক্সিকিউশন টাইম ও কম্পাইলেশন টাইমের মৌলিক পার্থক্য কী? কেন পরিবর্তনশীল সংখ্যক আর্গুমেন্ট (Variable arguments) সাধারণ ফাংশন দিয়ে নেওয়া যায় না কিন্তু ম্যাক্রো দিয়ে সহজে নেওয়া যায়?",
+    "hint": "ম্যাক্রো রানটাইমে নয়, কম্পাইল টাইমে কোড এক্সপ্যান্ড হয়। ফাংশনে ফিক্সড সিগনেচার ও ফিক্সড প্যারামিটার লাগে, কিন্তু ম্যাক্রো টোকেন ট্রি ম্যাচ করে ভ্যারিয়েবল আর্গুমেন্ট কোড জেনারেট করে।"
   },
   {
-    "id": "macros-2",
+    "id": "macro-q2",
+    "difficulty": "medium",
+    "question": "কম্পাইলেশন পাইপলাইনে ম্যাক্রো ঠিক কোন ধাপে এক্সপ্যান্ড হয়? ম্যাক্রোর ভেতরের কোনো সিনট্যাক্স বা টাইপ এরর কেন অনেক সময় অদ্ভুত ফাইল ও লাইনে এরর মেসেজ দেখায়?",
+    "hint": "ম্যাক্রো পার্সিংয়ের শুরুতে টোকেনাইজেশনের পরপরই এক্সপ্যান্ড হয় — টাইপ চেকিংয়ের পূর্বে। টাইপ চেকিং হয় ম্যাক্রো এক্সপেনশনের পরে, তাই এরর কল সাইট বা এক্সপ্যান্ডেড কোডে ধরা পড়ে।"
+  },
+  {
+    "id": "macro-q3",
     "difficulty": "easy",
-    "type": "code",
-    "prompt": "`say_hello!` ম্যাক্রোটি কল করার সঠিক সিনট্যাক্সটি লিখো:",
-    "code": "macro_rules! say_hello {\n    () => {\n        println!(\"Hello!\");\n    };\n}\n\nfn main() {\n    ____;\n}",
-    "explanation": "ম্যাক্রো কল করার সময় নামের শেষে এক্সক্লেমেশন মার্ক (!) দিতে হয়, যেমন say_hello!()।",
-    "accept": [
-      "say_hello!()",
-      "say_hello!();"
-    ]
+    "question": "ডিক্লেয়ারেটিভ ম্যাক্রোতে ফ্র্যাগমেন্ট স্পেসিফায়ার (Fragment Specifiers) `$x:expr`, `$x:ident`, এবং `$x:ty` এর কাজ কী এবং কখন কোনটি ব্যবহার করতে হয়?",
+    "hint": "expr হলো যেকোনো গাণিতিক বা লজিক্যাল এক্সপ্রেশন (যেমন 1 + 2), ident হলো ভেরিয়েবল বা ফাংশনের নাম (যেমন my_var), এবং ty হলো ডেটা টাইপ (যেমন i32 বা String)।"
   },
   {
-    "id": "macros-3",
-    "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "dbg!(some_variable) ম্যাক্রোটা কী করে?",
-    "options": [
-      "stdout-এ newline ছাড়া শুধু মানটা print করে",
-      "expression-এর মান stderr-এ print করে, সাথে file:line location সহ",
-      "release build-এ program abort করে",
-      "variable-এর মান compile-time-এ যাচাই করে error দেয়"
-    ],
-    "answer": 1,
-    "explanation": "dbg! value-র সাথে file:line information যোগ করে stderr-এ ছাপায় — কোথা থেকে এল সেটাও দেখা যায় বলে println!-এর চেয়ে debugging-এ অনেক দরকারি। println! যায় stdout-এ আর location দেখায় না।"
-  },
-  {
-    "id": "macros-4",
+    "id": "macro-q4",
     "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "macro_rules! দিয়ে বানানো macro গুলো কম্পাইলের কোন ধাপে expand হয়?",
-    "options": [
-      "সব check শেষ হওয়ার পরে, codegen-এর ঠিক আগে",
-      "runtime-এ, প্রথম invocation-এ",
-      "LLVM IR তৈরি হওয়ার পরে, optimization pass-এ",
-      "tokenize-এর পরে, name resolution ও type check-এর আগে (parsing-এর মাঝপথে) — generated code পরের ধাপে হাতে-লেখা code-এর মতোই ঢোকে"
-    ],
-    "answer": 3,
-    "explanation": "pipeline-টা মোটামুটি: tokenize → macro expand → name resolution → type check → codegen। macro_rules! খুব আগে, parsing-এর মাঝপথে expand হয়। এর side effect: macro-র ভেতরের type error ধরা পড়ে expansion-এর পরে, call site-এ — তাই macro error-এর message অনেক সময় দূরের জায়গায় দেখায়। আর expansion-এর পরে generated আর নিজে লেখা code-এ কোনো পার্থক্য থাকে না।"
+    "question": "ম্যাক্রো রিপিটিশন সিনট্যাক্স: শূন্য বা ততোধিক আর্গুমেন্ট গ্রহণ করতে `$($x:expr),*` প্যাটার্ন কীভাবে কাজ করে? কমা সেপারেটর এবং স্টার (`*`) চিহ্নের ভূমিকা কী?",
+    "hint": "`$( ... ),*` নির্দেশ করে বন্ধনীর ভেতরের অংশ কমা দিয়ে পৃথক করে শূন্য বা তার বেশি সংখ্যক বার পুনরাবৃত্তি হতে পারে। অন্তত একবার চাইতে `+` দিতে হয়।"
   },
   {
-    "id": "macros-5",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "macro_rules!-এ একাধিক (... ) => {...} arm থাকলে কোন invocation কোন arm-এ match হবে সেটা কীভাবে ঠিক হয়?",
-    "options": [
-      "token tree-টা arm-গুলোর সাথে উপর থেকে নিচে মেলানো হয়, প্রথম match-ই expand হয় — backtracking নেই, তাই specific pattern আগে রাখতে হয়",
-      "সব arm try করে সবচেয়ে specific-টা compiler নিজে বেছে নেয়",
-      "নিচের arm আগে দেখা হয় — শেষ arm প্রাধান্য পায়",
-      "পুরো AST বানিয়ে type check-এর পরে সেরা arm বাছা হয়"
-    ],
-    "answer": 0,
-    "explanation": "macro engine দেখে token tree (AST না — শুধু bracket-এ গোছানো token গাছ), আর pattern-গুলোর সাথে উপর থেকে নিচে মেলায়। প্রথম match-ই final — backtracking নেই। তাই order গুরুত্বপূর্ণ: my_vec!-এ [elem; count] pattern-টা সাধারণ list pattern-এর আগে রাখা হয়েছে, নাহলে সাধারণটাই খেয়ে নিত।"
-  },
-  {
-    "id": "macros-6",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "macro_rules! তে একটি এক্সপ্রেশন আর্গুমেন্ট ম্যাচ করতে কোন fragment specifier টি ব্যবহার করবে?",
-    "code": "macro_rules! double {\n    ($x:____) => {\n        $x * 2\n    };\n}",
-    "explanation": "$x:expr ফ্র্যাগমেন্ট স্পেসিফায়ার যেকোনো বৈধ Rust এক্সপ্রেশন গ্রহণ করে।",
-    "accept": [
-      "expr"
-    ]
-  },
-  {
-    "id": "macros-7",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "info!(\"Server started on port {}\", 8080) যেন [INFO] Server started on port 8080 print করে — blank-এ কোন ম্যাক্রোর নাম বসবে?",
-    "code": "macro_rules! info {\n    ($($arg:tt)*) => {\n        println!(\"[INFO] {}\", ____!($($arg)*));\n    };\n}\n\nfn main() {\n    info!(\"Server started on port {}\", 8080);\n}",
-    "accept": [
-      "format"
-    ],
-    "explanation": "$($arg:tt)* ধরে রাখা token tree গুলো আবার format!-এ পাঠানো হয় — সে format string + argument থেকে একটা String বানিয়ে দেয়, আর println! সেটাকে [INFO] prefix-এর পাশে ছাপায়। tt (token tree) হলো সবচেয়ে general fragment specifier — যেকোনো token pass করা যায়, তাই logger ম্যাক্রোতে এটাই ব্যবহার হয়।"
-  },
-  {
-    "id": "macros-8",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "make_struct!(Point) call থেকে struct Point; generate করতে blank-এ কোন fragment specifier বসবে?",
-    "code": "macro_rules! make_struct {\n    ($name:____) => {\n        struct $name;\n    };\n}\n\nfn main() {\n    make_struct!(Point);\n    let p = Point;\n    println!(\"made a struct\");\n}",
-    "accept": [
-      "ident"
-    ],
-    "explanation": "$name:ident identifier ধরে (Point, MyType ইত্যাদি) — আর সেটাই struct-এর নাম হিসেবে generated code-এ বসে। expr হলে Point-কে expression হিসেবে ধরত, তখন সেটাকে struct-এর নামের জায়গায় বসানো যেত না। chapter-এর টেবিলে দেখো: expr, ident, ty, stmt, block, literal, path — প্রতিটার নিজস্ব কাজ।"
-  },
-  {
-    "id": "macros-9",
+    "id": "macro-q5",
     "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "chapter-এর my_vec! (push লুপ দিয়ে বানানো) আর আসল vec![1, 2, 3]-এর মধ্যে allocation-এ কী পার্থক্য?",
-    "options": [
-      "আসল vec!-তে প্রতিটা element-এর জন্য আলাদা heap allocation হয়",
-      "আসল vec! সব element একবারে এক টুকরো buffer-এ বসিয়ে সরাসরি Vec বানায় — মোটে একটাই allocation",
-      "আসল vec! পুরো Vec-টা compile-time constant হিসেবে binary-তে বসিয়ে দেয়",
-      "আসল vec!-ও push লুপই চালায়, তবে প্রতি push-এ alloc_zeroed ব্যবহার করে"
-    ],
-    "answer": 1,
-    "explanation": "আসল vec![1, 2, 3] আলাদা আলাদা push করে capacity বাড়ায় না — সব element একবারে এক টুকরো buffer-এ বসিয়ে সরাসরি Vec বানায়, মোটে একটাই allocation। my_vec!-এর push লুপে capacity 0 থেকে বাড়তে বাড়তে কয়েকবার realloc হয়। আর vec![0u8; 1_000_000]-এর মতো zero-filled ক্ষেত্রে allocator-এর alloc_zeroed fast path কাজে লাগে — OS-এর কাছে zero page ready-made থাকে।"
+    "question": "ম্যাক্রো হাইজিন (Macro Hygiene): সি ল্যাঙ্গুয়েজের `#define` ম্যাক্রোতে লোকাল ভেরিয়েবলের নাম কল সাইটের ভেরিয়েবলের সাথে কলিশন ঘটিয়ে ভয়াবহ বাগ সৃষ্টি করে। রাস্টের `macro_rules!` কীভাবে হাইজিন বজায় রেখে ম্যাক্রোর ভেতরের লোকাল ভেরিয়েবলকে বাইরের স্কোপ থেকে সম্পূর্ণ সুরক্ষিত রাখে?",
+    "hint": "রাস্ট কম্পাইলার ম্যাক্রোর ভেতরের আইডেন্টিফায়ারগুলোকে আলাদা সিনট্যাক্টিক কনটেক্সট বা কালার বরাদ্দ করে, ফলে ম্যাক্রোর ভেতরের let x বাইরের x কে ওভাররাইট করতে পারে না।"
   },
   {
-    "id": "macros-10",
+    "id": "macro-q6",
+    "difficulty": "easy",
+    "question": "প্রসিডিউরাল ম্যাক্রো (Procedural Macro) কী? সাধারণ `macro_rules!` এর সাথে এর পার্থক্য কী এবং এটি কেন একটি আলাদা কম্পাইলার প্লাগইন লাইব্রেরি ক্রেটে লিখতে হয়?",
+    "hint": "প্রসিডিউরাল ম্যাক্রো রাস্ট কোডকে ইনপুট টোকেন হিসেবে গ্রহণ করে এবং নতুন রাস্ট কোড আউটপুট দেয়। এটি কম্পাইল টাইমে রান হওয়া পূর্ণাঙ্গ রাস্ট প্রোগ্রাম।"
+  },
+  {
+    "id": "macro-q7",
+    "difficulty": "medium",
+    "question": "রাস্টের ৩ ধরনের প্রসিডিউরাল ম্যাক্রো কী কী এবং তাদের ব্যবহারের বাস্তব সিনট্যাক্স উদাহরণ দাও?",
+    "hint": "১. ডেরাইভ ম্যাক্রো (`#[derive(Serialize)]`), ২. অ্যাট্রিবিউট ম্যাক্রো (`#[tokio::main]`, `#[get(\"/users\")]`), ৩. ফাংশন-লাইক ম্যাক্রো (`sqlx::query!(\"SELECT...\")`)।"
+  },
+  {
+    "id": "macro-q8",
     "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "custom derive (যেমন #[derive(HelloMacro)]) compile-এর সময় আসলে কী ঘটে?",
-    "options": [
-      "derive-টা একটা proc-macro — compiler struct-এর TokenStream আলাদা crate-কে দেয়, সেটা syn দিয়ে parse করে quote! দিয়ে নতুন tokens (যেমন impl block) লিখে ফেরত দেয়; generated code তোমার crate-এ ঢুকে type check হয়",
-      "compiler নিজে built-in হিসেবে impl-টা লিখে দেয় — কোনো আলাদা crate চলে না",
-      "runtime-এ reflection দিয়ে struct inspect করে method যোগ হয়",
-      "একটা vtable binary-তে বসে যায়, প্রথম call-এ ব্যবহৃত হয়"
-    ],
-    "answer": 0,
-    "explanation": "derive আসলে code লেখার code — একটা proc-macro। compiler struct-এর tokens আলাদা binary হিসেবে নিজেই চালায়; ওই crate syn দিয়ে parse, quote! দিয়ে generate করে (যেমন impl Pancakes { fn hello_macro() {...} })। সব খরচ compile-time-এ — binary-তে কোনো reflection বা runtime metadata নেই, Python metaclass-এর মতো runtime overhead নেই।"
+    "question": "ডেরাইভ প্রসিডিউরাল ম্যাক্রোতে `syn` এবং `quote` ক্রেটের ভূমিকা কী? অ্যাবস্ট্রাক্ট সিনট্যাক্স ট্রি (AST) পার্সিং এবং কোড তৈরিতে তারা কীভাবে সাহায্য করে?",
+    "hint": "`syn` কাঁচা টোকেন স্ট্রিমকে পার্স করে স্ট্রাকচার্ড রাস্ট এএসটিতে রূপান্তর করে। `quote` কাস্টম টোকেন টেমপ্লেটকে কোড হিসেবে জেনারেট করে টোকেন স্ট্রিমে ফিরিয়ে দেয়।"
+  },
+  {
+    "id": "macro-q9",
+    "difficulty": "medium",
+    "question": "একটি কাস্টম ম্যাক্রো অন্য ফাইলে বা ক্রেটের বাইরে এক্সপোর্ট করতে ম্যাক্রো ডেফিনিশনের উপরে কোন অ্যাট্রিবিউট যোগ করতে হয়?",
+    "hint": "`#[macro_export]` অ্যাট্রিবিউট।"
+  },
+  {
+    "id": "macro-q10",
+    "difficulty": "hard",
+    "question": "ম্যাক্রোতে রিকার্সিভ প্যাটার্ন ম্যাচিং (TT Muncher Pattern): জটিল DSL (Domain-Specific Language) পার্স করতে ম্যাক্রো কীভাবে নিজের মধ্যে নিজেকে বারবার কল করে একটি একটি করে টোকেন কনজিউম করে?",
+    "hint": "হেড এবং টেইল প্যাটার্ন: `$head:tt $($tail:tt)* => { process($head); my_macro!($($tail)*); }`।"
+  },
+  {
+    "id": "macro-q11",
+    "difficulty": "easy",
+    "question": "বিল্ট-ইন `vec!` ম্যাক্রোটি অভ্যন্তরীণভাবে কীভাবে কাজ করে? এটি কি সাধারণ লুপ চালায় নাকি সাইজ আগে থেকেই হিসাব করে হিপ বাফার এলোকেট করে?",
+    "hint": "আর্গুমেন্ট গণনা করে ফিক্সড সাইজ অ্যারে তৈরি করে এবং `Box<[T]>` এর মাধ্যমে জিরো-ওভারহেডে ভেক্টরে কনভার্ট করে।"
+  },
+  {
+    "id": "macro-q12",
+    "difficulty": "medium",
+    "question": "ডিবাগিং ম্যাক্রো: ম্যাক্রো এক্সপ্যান্ড হওয়ার পর আসলে কী কোড তৈরি হলো তা দেখার জন্য কার্গোর কোন অফিশিয়াল সাবকমান্ড ব্যবহার করা হয়?",
+    "hint": "`cargo expand` কমান্ড।"
+  },
+  {
+    "id": "macro-q13",
+    "difficulty": "hard",
+    "question": "কম্পাইল-টাইম ভ্যালিডেশন: `sqlx::query!` ম্যাক্রো কীভাবে কোড বিল্ড করার সময়ই ডেটাবেজে কানেক্ট করে এসকিউএল কোয়েরির সিনট্যাক্স ও কলাম টাইপ যাচাই করে নেয়?",
+    "hint": "প্রসিডিউরাল ম্যাক্রো কম্পাইল টাইমে যেকোনো আই/ও বা কানেকশন চালাতে পারে। কোয়েরি ভুল থাকলে এটি কম্পাইল টাইম এরর ছুড়ে বিল্ড ফেইল করায়।"
+  },
+  {
+    "id": "macro-q14",
+    "difficulty": "medium",
+    "question": "ম্যাক্রোতে স্টেটমেন্ট স্পেসিফায়ার `$s:stmt` এবং ব্লক স্পেসিফায়ার `$b:block` এর পার্থক্য কী?",
+    "hint": "`stmt` হলো একক সেমিকোলন যুক্ত লাইন (যেমন `let x = 5;`), আর `block` হলো কার্লি ব্রেসে আবদ্ধ পুরো কোড সেকশন `{ ... }`।"
+  },
+  {
+    "id": "macro-q15",
+    "difficulty": "easy",
+    "question": "কম্পাইল টাইমে ফাইল পাথ বা এনভায়রনমেন্ট ভ্যারিয়েবল রিড করতে কোন বিল্ট-ইন ম্যাক্রোগুলো ব্যবহৃত হয়?",
+    "hint": "`env!(\"VAR_NAME\")` এবং `include_str!(\"path.txt\")`।"
+  },
+  {
+    "id": "macro-q16",
+    "difficulty": "hard",
+    "question": "ম্যাক্রো অ্যাম্বিগুইটি রুল (Ambiguity Rules): কেন `$x:expr` এর ঠিক পরপর যেকোনো চিহ্ন বা টোকেন দেওয়া যায় না এবং কেন এর পর শুধু নির্দিষ্ট ডিলিমিটার (যেমন `,`, `;`, `=>`) আসতে পারে?",
+    "hint": "রাস্ট পার্সার ব্যাকট্র্যাকিং ছাড়া এলএল(১) পার্সিং করে। এক্সপ্রেশনের শেষ কোথায় তা নিশ্চিত হতে নির্দিষ্ট ফলো-সেট টোকেন থাকা বাধ্যতামূলক।"
+  },
+  {
+    "id": "macro-q17",
+    "difficulty": "medium",
+    "question": "কোডে কোনো কন্ডিশন সত্য না হলে কম্পাইল টাইমে বা রানটাইমে প্যানিক মেসেজ ফরম্যাট করতে `assert!` এবং `assert_eq!` ম্যাক্রো কীভাবে সাহায্য করে?",
+    "hint": "শর্ত মিথ্যা হলে এরা এক্সপ্রেশনের মান ও ফাইল/লাইন নম্বর সহ সুন্দর ডিবাগ প্যানিক মেসেজ প্রিন্ট করে।"
+  },
+  {
+    "id": "macro-q18",
+    "difficulty": "easy",
+    "question": "`compile_error!(\"Message\")` ম্যাক্রো কখন ব্যবহার করা হয়? প্ল্যাটফর্ম সাপোর্ট বা ফিচার ফ্ল্যাগ অমিলের ক্ষেত্রে এটি কী ভূমিকা রাখে?",
+    "hint": "বিল্ড চলাকালীন সচেতনভাবে কম্পাইলেশন থামিয়ে ডেভেলপারকে নির্দিষ্ট সতর্কবার্তা বা রিকয়ারমেন্ট জানাতে এটি ব্যবহৃত হয়।"
+  },
+  {
+    "id": "macro-q19",
+    "difficulty": "hard",
+    "question": "ম্যাক্রো ব্যবহার বনাম জেনেরিক ট্রেইট ব্যবহার: কখন তোমার ম্যাক্রো না লিখে ট্রেইট/জেনেরিক্স ব্যবহার করা উচিত এবং সিনিয়র ডেভেলপাররা কেন ম্যাক্রোকে শেষ ভরসা হিসেবে গণ্য করেন?",
+    "hint": "ম্যাক্রোতে টাইপ চেকিং অস্পষ্ট, কম্পাইল টাইম ধীর হয় এবং আইডিই অটো-কমপ্লিশন দুর্বল থাকে। সাধারণ টাইপ সিস্টেম দিয়ে সমাধান সম্ভব হলে কখনোই ম্যাক্রো লেখা উচিত নয়।"
+  },
+  {
+    "id": "macro-q20",
+    "difficulty": "medium",
+    "question": "কনক্যাটেনেশন ম্যাক্রো `concat!` এবং ফরম্যাটিং ম্যাক্রো `format!` এর মধ্যে পারফরম্যান্স পার্থক্য কী? কোনটি স্ট্যাটিক মেমরিতে কম্পাইল টাইমে স্ট্রিং তৈরি করে?",
+    "hint": "`concat!` কম্পাইল টাইমে স্ট্রিং লিটারেল তৈরি করে যা শূন্য রানটাইম কস্টে স্ট্যাটিক মেমরিতে থাকে। `format!` রানটাইমে হিপ মেমরি এলোকেট করে নতুন String বানায়।"
   }
 ]

@@ -1,128 +1,127 @@
 [
   {
-    "id": "ownership-1",
+    "id": "own-q1",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "Ownership-এর ৩টা rule-এর একটা বলে — একই সময়ে একটা value-র owner কতজন থাকতে পারে?",
-    "options": [
-      "ঠিক একজন — অন্য কারো কাছে ownership গেলে আগেরটা invalid",
-      "দুজন পর্যন্ত, যদি দুজনেই শুধু read করে",
-      "যত খুশি — সবাই pointer share করে থাকে",
-      "Owner বলে আলাদা কিছু নেই — GC সব সামলায়"
-    ],
-    "answer": 0,
-    "explanation": "Rule ২ — একই সময়ে একজনই owner। Assign করলে ownership move হয়ে আগের variable মরে যায়, আর owner scope ছাড়লে value drop হয়। এই এক-মালিক নিয়মেই double free অসম্ভব হয়ে যায়।"
+    "question": "রাস্টের ওনারশিপ মডেলের ৩টি মৌলিক গোল্ডেন রুলস (Golden Rules) কী কী? এই তিনটি নিয়ম কীভাবে কোনো মেমরি লিক বা ডাবল ফ্রি ছাড়াই সম্পূর্ণ মেমরি ম্যানেজ করে?",
+    "hint": "১. প্রতিটি মানের একজন একক ওনার থাকে। ২. এক সময়ে কেবল একজন ওনারই থাকতে পারে। ৩. ওনারের স্কোপ শেষ হলে মানটি স্বয়ংক্রিয়ভাবে ড্রপ হয়ে মেমরি মুক্ত হয়।"
   },
   {
-    "id": "ownership-2",
+    "id": "own-q2",
+    "difficulty": "medium",
+    "question": "নিচের কোডটি লক্ষ্য করো:\n\n```rust\nlet s1 = String::from(\"hello\");\nlet s2 = s1;\nprintln!(\"{}, world!\", s1);\n```\n\nকম্পাইলার `borrow of moved value: s1` এরর দেয়। মেমরির দৃষ্টিতে (Stack বনাম Heap) এই লাইনে ঠিক কী ঘটেছে? কেন রাস্ট এটিকে শ্যালো কপি (Shallow Copy) না বলে \"মুভ\" (Move) বলে?",
+    "code": "let s1 = String::from(\"hello\");\nlet s2 = s1;\nprintln!(\"{}\", s1); // Error!",
+    "hint": "স্ট্যাকে থাকা পয়েন্টার, লেন্থ ও ক্যাপাসিটি s2 তে কপি হয়, কিন্তু হিপের আসল ডেটা কপি হয় না। দুটি ভেরিয়েবল একই হিপ অ্যাড্রেস ধরে রাখলে ডাবল ফ্রি হবে, তাই কম্পাইলার s1 কে তৎক্ষণাৎ ইনভ্যালিড করে দেয়।"
+  },
+  {
+    "id": "own-q3",
     "difficulty": "easy",
-    "type": "code",
-    "prompt": "`s1` এর মালিকানা (ownership) `s2` তে মুভ করতে অ্যাসাইনমেন্ট এক্সপ্রেশনটি লিখো:",
-    "code": "fn main() {\n    let s1 = String::from(\"hello\");\n    let s2 = ____;\n    println!(\"{}\", s2);\n}",
-    "explanation": "Rust-এ যখন কোনো heap ডেটা ધરાভী টাইপ (যেমন String) অন্য ভেরিয়েবলে অ্যাসাইন করা হয়, তখন তার মালিকানা মুভ হয়ে যায় এবং আগের ভেরিয়েবলটি ইনভ্যালিড হয়ে যায়।",
-    "accept": [
-      "s1"
-    ]
+    "question": "পূর্ণসংখ্যা টাইপের ক্ষেত্রে `let x = 5; let y = x; println!(\"{}\", x);` কোনো এরর ছাড়াই নিখুঁতভাবে কম্পাইল হয়, কিন্তু `String` এর ক্ষেত্রে হয় না কেন? কোন ট্রেইটের কারণে প্রিমিটিভ টাইপগুলো স্বয়ংক্রিয়ভাবে কপি হয়?",
+    "hint": "`Copy` ট্রেইট। যেসব ডেটা টাইপের ফিক্সড সাইজ শুধুমাত্র স্ট্যাক মেমরিতে থাকে এবং কোনো এক্সটার্নাল রিসোর্স ওন করে না, তারা বিটওয়াইজ কপি সমর্থন করে।"
   },
   {
-    "id": "ownership-3",
-    "difficulty": "easy",
-    "type": "code",
-    "prompt": "`x` এর মান `y` তে কপি করো (যেহেতু i32 একটি Copy টাইপ, তাই `x` এর মান অক্ষুণ্ণ থাকবে):",
-    "code": "fn main() {\n    let x = 5;\n    let y = ____;\n    println!(\"{} {}\", x, y); // 5 5\n}",
-    "explanation": "স্ট্যাক-ভিত্তিক প্রিমিটিভ টাইপ (যেমন i32, bool) Copy ট্রেইট ধারণ করে, তাই মেমোরিতে সরাসরি বিট কপি হয় এবং মূল ভেরিয়েবলটি অক্ষত থাকে।",
-    "accept": [
-      "x"
-    ]
-  },
-  {
-    "id": "ownership-4",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "নিচের কোন type-এর value assign করলে (`let b = a;`) মূল variable-টা invalid হয় না?",
-    "options": [
-      "String",
-      "Vec<i32>",
-      "[i32; 4]",
-      "কোনোটাতেই না — সবগুলোই move হয়"
-    ],
-    "answer": 2,
-    "explanation": "Fixed array `[i32; 4]`-এর ভেতরে সব element copy type — তাই পুরো array-ই Copy হয়, a বৈধ থাকে। String আর Vec heap data point করে — তাই move। একই কথা `(i32, i32)` tuple-এর জন্যও খাটে: ভেতরে সব copy type হলে tuple-ও Copy।"
-  },
-  {
-    "id": "ownership-5",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "`let s2 = s1.clone();` — ভেতরে আসল খরচটা কী?",
-    "options": [
-      "শুধু pointer-টা copy হয় — O(1)",
-      "নতুন heap buffer allocate (ঠিক len ততটা) + bytes copy (memcpy) — O(n), আর allocation-ই সবচেয়ে ব্যয়বহুল অংশ",
-      "Reference count ১ বাড়ে — মালিকানা share হয়ে যায়",
-      "কিছুই হয় না — clone আসলে move-এরই আরেকটা নাম"
-    ],
-    "answer": 1,
-    "explanation": "clone মানে deep copy: alloc(len) → memcpy → নতুন header। পরে দুটো আলাদা heap buffer, দুজন আলাদা owner — একজন drop হলেও আরেকজন অক্ষত। খরচ থাকায় hot loop-এ বারবার clone এড়ানো ভালো — পরের chapter-এর borrowing দিয়েই এই খরচ এড়ানো যায়। Reference counting-এর ব্যাপারটা এখানে নেই-ই।"
-  },
-  {
-    "id": "ownership-6",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "Owner scope ছাড়লে value drop হয় — এই drop-টা আসলে কে করে?",
-    "options": [
-      "GC-র মতো একটা background চালক নিয়মিত memory ঝেড়ে দেয়",
-      "Compiler প্রতিটা scope-এর শেষে নিজে থেকেই cleanup call বসিয়ে দেয় — compile time-এ বসানো deterministic free()",
-      "Runtime প্রতিটা allocation-এর reference count রাখে, শূন্য হলে free করে",
-      "তোমাকেই নিজে হাতে free() call করতে হয়"
-    ],
-    "answer": 1,
-    "explanation": "Magic না — compiler scope-এর শেষে `String::drop(s)`-এর মতো cleanup call ঢোকিয়ে দেয়, যেটা heap buffer allocator-কে ফেরত দেয় (C-এর free-এর মতো)। i32-জাতীয় value-তে drop no-op — LLVM মুছে দেয়। GC-র pause নেই, manual free-ও লাগে না — এটাই \"automatic memory management\"-এর আসল রূপ।"
-  },
-  {
-    "id": "ownership-7",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "`s` এর মালিকানা `takes_ownership` ফাংশনে পাস করতে ফাংশন কলটি সঠিকভাবে লিখো:",
-    "code": "fn takes_ownership(some_string: String) {\n    println!(\"{}\", some_string);\n}\n\nfn main() {\n    let s = String::from(\"hello\");\n    ____;\n}",
-    "explanation": "ফাংশনে ভ্যালু পাস করার সময় মালিকানা চলে যায়। ফাংশনের এক্সিকিউশন শেষে some_string মেমোরি থেকে ড্রপ হয়ে যায়।",
-    "accept": [
-      "takes_ownership(s)",
-      "takes_ownership(s);"
-    ]
-  },
-  {
-    "id": "ownership-8",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "main-এর `s`-এর মালিকানা ঠিকঠাক চলে আসতে হলে return type হিসেবে blank-এ কী লিখবে?",
-    "code": "fn gives_ownership() -> ____ {\n    String::from(\"from the function\")\n}\n\nfn main() {\n    let s = gives_ownership();\n    println!(\"{}\", s);\n}",
-    "accept": [
-      "String"
-    ],
-    "explanation": "function টি একটা নেওয়া value-কে মালিকানা-সহ ফেরত দিচ্ছে — তাই return type `String`। `s` main-এ এড়িয়ে ফিরে আসে কারণ যে value বানানো হয়েছে তার ownership ফেরত দেওয়াই return-টার কাজ।"
-  },
-  {
-    "id": "ownership-9",
+    "id": "own-q4",
     "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "`\"hello\"` literal আর `String::from(\"hello\")` — memory-র দিক থেকে কোন বর্ণনাটা সঠিক?",
-    "options": [
-      "Literal heap-এ allocate হয় ও পরে বড়ও হতে পারে; String::from read-only section-এ বসে থাকে",
-      "দুটোই heap-এ থাকে, খালি জায়গায় বদলে যায়",
-      "Literal compile-ই binary-র read-only section-এ বসে যায় (type &str — pointer + length), allocation/free কিছুই নেই; String::from runtime-এ heap-এ নতুন buffer নিয়ে literal-এর bytes copy করে — খরচ O(n)",
-      "Literal প্রতি ব্যবহারে stack-এ push হয়; String::from stack-এই থেকে যায়"
-    ],
-    "answer": 2,
-    "explanation": "Literal binary-র rodata-তে বসে পুরো program জুড়ে অপরিবর্তিত থাকে — allocation নেই, free নেই। String::from-এর তিন ধাপ: heap allocate → bytes memcpy → header (ptr, len, capacity) বানানো। এই O(n) খরচটাই \"মালিকানা-সহ, বাড়ানো-যোগ্য\" String-এর দাম।"
+    "question": "যদি কোনো টাইপ হিপ মেমরি ওন করে (যেমন `String` বা `Vec<T>`), তবে তাকে কি `Copy` ট্রেইট ইমপ্লিমেন্ট করতে দেওয়া সম্ভব? যদি রাস্ট কম্পাইলার কাউকে জোর করে `String` এ `Copy` ট্রেইট দিতে দিত, তবে রানটাইমে কী ভয়াবহ বিপর্যয় ঘটত?",
+    "hint": "ডাবল ফ্রি ক্র্যাশ (Double Free Bug)। দুটি স্বাধীন ওনার একই হিপ মেমরির মালিক হয়ে যাবে এবং স্কোপ শেষে একই মেমরি দুবার ফ্রি করার চেষ্টা করে মেমরি করাপশন ঘটাবে।"
   },
   {
-    "id": "ownership-10",
+    "id": "own-q5",
+    "difficulty": "medium",
+    "question": "একটি ফাংশনে আর্গুমেন্ট হিসেবে ভ্যারিয়েবল পাস করলে ওনারশিপের কী ঘটে?\n\n```rust\nfn take_ownership(s: String) {\n    println!(\"{}\", s);\n}\n\nfn main() {\n    let my_str = String::from(\"Rust\");\n    take_ownership(my_str);\n    // এখানে my_str ব্যবহার করা যাবে কি?\n}\n```\n\nফাংশন কলের পর `my_str` ইনভ্যালিড হয়ে যায় কেন এবং কীভাবে একে সচল রাখা যায়?",
+    "code": "fn take_ownership(s: String) { println!(\"{}\", s); }\nfn main() {\n    let my_str = String::from(\"Rust\");\n    take_ownership(my_str);\n}",
+    "hint": "ফাংশনে পাস করার সাথে সাথে ওনারশিপ ফাংশনের লোকাল স্কোপে মুভ হয় এবং ফাংশন শেষে ড্রপ হয়ে যায়। সচল রাখতে রেফারেন্স (`&my_str`) পাস করো অথবা ক্লোন করো।"
+  },
+  {
+    "id": "own-q6",
+    "difficulty": "easy",
+    "question": "ডিপ কপি (Deep Copy) করার জন্য রাস্টে এক্সপ্লিসিটলি কোন মেথড কল করতে হয় এবং কেন এটি পারফরম্যান্সের দিক থেকে সতর্কতার সাথে ব্যবহার করা উচিত?",
+    "hint": "`.clone()` মেথড। এটি হিপে সম্পূর্ণ নতুন মেমরি বাফার এলোকেট করে প্রতিটি বাইট কপি করে, যা বড় ডেটাসেটে মেমরি ও সিপিইউ খরচ বাড়ায়।"
+  },
+  {
+    "id": "own-q7",
     "difficulty": "hard",
-    "type": "code",
-    "prompt": "দুটো variable-ই ব্যবহার করতে হবে (output: hello hello) — এমন কিছু blank-এ লিখো যাতে s1 পরেও valid থাকে।",
-    "code": "fn main() {\n    let s1 = String::from(\"hello\");\n    let s2 = ____;\n\n    println!(\"{} {}\", s1, s2);\n}",
-    "accept": [
-      "s1.clone()"
-    ],
-    "explanation": "move-এর বদলে `clone()` ব্যবহার করা হয়েছে — এটা একটা heap buffer/মালিকানা আলাদা কপি বানায়। তাই s1-ও valid থেকে যায়, আর s2 আলাদা কপি।"
+    "question": "কোনো ফাংশন থেকে কোনো ভ্যালু রিটার্ন করলে ওনারশিপ কীভাবে ট্রান্সফার হয়? নিচে দেখানো কোডে `create_string` এর লোকাল ভ্যারিয়েবল `s` কি ফাংশন শেষে ড্রপ হবে, নাকি তার ওনারশিপ কলারের কাছে চলে যাবে?\n\n```rust\nfn create_string() -> String {\n    let s = String::from(\"hello\");\n    s\n}\n```",
+    "code": "fn create_string() -> String {\n    let s = String::from(\"hello\");\n    s\n}",
+    "hint": "রিটার্ন করার মাধ্যমে ওনারশিপ বাইরে মুভ হয়, তাই ফাংশন শেষে ড্রপ মেথড কল হয় না। কলার সেই ভ্যালুর নতুন ওনার হয়ে যায়।"
+  },
+  {
+    "id": "own-q8",
+    "difficulty": "medium",
+    "question": "সি ল্যাঙ্গুয়েজে ফাংশনের ভেতর লোকাল ভ্যারিয়েবলের অ্যাড্রেস রিটার্ন করলে ড্যাংলিং পয়েন্টার (Dangling Pointer) তৈরি হয় এবং আনডিফাইন্ড বিহেভিয়ার ঘটে। রাস্টে নিচের কোডটি কেন কম্পাইলার পুরোপুরি আটকে দেয়?\n\n```rust\nfn dangle() -> &String {\n    let s = String::from(\"hello\");\n    &s\n}\n```",
+    "code": "fn dangle() -> &String {\n    let s = String::from(\"hello\");\n    &s // Error!\n}",
+    "hint": "স্কোপ শেষে `s` মেমরি থেকে ড্রপ হয়ে যায়। তাই তার রেফারেন্স রিটার্ন করলে তা একটি মৃত মেমরির দিকে নির্দেশ করবে, যা বরো চেকার কম্পাইল টাইমে কঠোরভাবে নিষেধ করে।"
+  },
+  {
+    "id": "own-q9",
+    "difficulty": "easy",
+    "question": "রাস্টে মেমরি ম্যানেজমেন্টের জন্য ব্যবহৃত RAII এর পূর্ণরূপ কী এবং স্কোপ শেষ হলে কোন ট্রেইটের কোন মেথডটি স্বয়ংক্রিয়ভাবে এক্সিকিউট হয়?",
+    "hint": "Resource Acquisition Is Initialization এবং `std::ops::Drop` ট্রেইটের `drop(&mut self)` মেথড।"
+  },
+  {
+    "id": "own-q10",
+    "difficulty": "hard",
+    "question": "একটি স্ট্রাক্টের মধ্যে কিছু ফিল্ড `Copy` টাইপের (যেমন `i32`) এবং কিছু ফিল্ড নন-কপি টাইপের (যেমন `String`)। তুমি স্ট্রাক্ট থেকে নির্দিষ্ট একটি স্ট্রিং ফিল্ড মুভ করে অন্য ভেরিয়েবলে নিলে (Partial Move), মূল স্ট্রাক্টের কী অবস্থা হয়?",
+    "hint": "পার্শিয়াল মুভ (Partial Move) হলে সম্পূর্ণ স্ট্রাক্টটি আর ফাংশনাল থাকে না, তবে অক্ষত থাকা কপি ফিল্ডগুলো এখনও সরাসরি রিড করা সম্ভব।"
+  },
+  {
+    "id": "own-q11",
+    "difficulty": "medium",
+    "question": "যদি কোনো ভ্যারিয়েবলকে তার স্বাভাবিক স্কোপ শেষ হওয়ার আগেই জোরপূর্বক তৎক্ষণাৎ মেমরি থেকে রিলিজ করতে চাও, তবে স্ট্যান্ডার্ড লাইব্রেরির কোন গ্লোবাল ফাংশন কল করতে হয়?",
+    "hint": "`drop(var)` ফাংশন, যা মূলত ওনারশিপ গ্রহণ করে ফাংশনটি শূন্যে শেষ করে দেয়।"
+  },
+  {
+    "id": "own-q12",
+    "difficulty": "hard",
+    "question": "লুপের ভেতরে যদি তুমি কোনো ভেক্টরে থাকা এলিমেন্টের ওনারশিপ মুভ করার চেষ্টা করো (যেমন `let x = v[0];` যেখানে `v: Vec<String>`), তাহলে কম্পাইলার বাধা দেয় কেন? এর পেছনে কালেকশনের মেমরি ইনভ্যারিয়েন্ট কী?",
+    "hint": "একটি ভেক্টরের মাঝখান থেকে কোনো এলিমেন্ট মুভ করে নিলে সেই ইনডেক্সটি ফাঁকা (uninitialized) হয়ে যায়, যা ভেক্টরের ডেটা ইন্টিগ্রিটি নষ্ট করে। রেফারেন্স বা `.remove(i)` ব্যবহার করতে হয়।"
+  },
+  {
+    "id": "own-q13",
+    "difficulty": "easy",
+    "question": "একটি টুপল `let t = (String::from(\"A\"), 10);` তৈরি করা হলো। `let (s, n) = t;` করার পর `t.0` এবং `t.1` এর ওনারশিপ স্টেটাস কী হবে?",
+    "hint": "`t.0` এর স্ট্রিংটি `s` এ মুভ হয়ে গেছে, তাই `t.0` অবৈধ। কিন্তু `t.1` একটি কপি টাইপ (`i32`), তাই এটি এখনও অ্যাক্সেসযোগ্য।"
+  },
+  {
+    "id": "own-q14",
+    "difficulty": "medium",
+    "question": "রাস্টে ওনারশিপ সিস্টেম রানটাইম পারফরম্যান্সে কোনো প্রভাব ফেলে কি? পাইথনের রেফারেন্স কাউন্টিং বা জাভার ট্র্যাশিং জিসির সাথে তুলনা করলে রাস্টের সিপিইউ ওভারহেড কত?",
+    "hint": "শূন্য রানটাইম ওভারহেড (Zero Runtime Overhead)। ওনারশিপ এবং ড্রপ কল সম্পূর্ণ কম্পাইল টাইমে স্থির হয়, কোনো ব্যাকগ্রাউন্ড ট্রেসিং বা চেকিং চলে না।"
+  },
+  {
+    "id": "own-q15",
+    "difficulty": "hard",
+    "question": "ওনারশিপ মেকানিজমে মেমরি ছাড়া আর কী কী সিস্টেম রিসোর্স স্বয়ংক্রিয়ভাবে ক্লোজ বা রিলিজ হয়? যেমন ফাইল হ্যান্ডেল (`File`) বা নেটওয়ার্ক সকেট বা মিউটেক্স লক (`MutexGuard`) এর ক্ষেত্রে ওনারশিপ কীভাবে কাজ করে?",
+    "hint": "স্কোপ শেষ হওয়া মাত্র `File` তার ওএস ফাইল ডেসক্রিপটর ক্লোজ করে, `MutexGuard` লক মুক্ত করে। যেকোনো ওএস হ্যান্ডেল ওনারশিপের সাথে নিখুঁতভাবে বাউন্ড।"
+  },
+  {
+    "id": "own-q16",
+    "difficulty": "medium",
+    "question": "নিচের কোডে ক্লোন ছাড়া কীভাবে ওনারশিপ ট্রান্সফারের সমস্যা সমাধান করবে?\n\n```rust\nfn print_length(s: String) {\n    println!(\"Length: {}\", s.len());\n}\n\nlet s = String::from(\"Rust\");\nprint_length(s);\n// আমি পরেও s ব্যবহার করতে চাই\n```",
+    "code": "fn print_length(s: String) { println!(\"{}\", s.len()); }\nlet s = String::from(\"Rust\");\nprint_length(s);",
+    "hint": "ফাংশনের সিগনেচার পরিবর্তন করে ওনারশিপের পরিবর্তে রেফারেন্স গ্রহণ করো: `fn print_length(s: &str)` অথবা `&String`।"
+  },
+  {
+    "id": "own-q17",
+    "difficulty": "easy",
+    "question": "`String` এর ইন্টারনাল মেমরি লেআউটে স্ট্যাকের ভেতর ৩টি ফিল্ড থাকে: একটি পয়েন্টার, একটি লেন্থ এবং একটি ক্যাপাসিটি। স্ট্রিং লিটারেল `&str` এর মেমরি লেআউটের সাথে এর মূল তফাত কী?",
+    "hint": "`&str` একটি ফ্যাট পয়েন্টার যাতে শুধু ডেটা পয়েন্টার এবং লেন্থ থাকে, এর কোনো ক্যাপাসিটি থাকে না কারণ এটি মেমরির মালিক নয়।"
+  },
+  {
+    "id": "own-q18",
+    "difficulty": "hard",
+    "question": "যদি দুটি ডেটা স্ট্রাকচার একে অপরকে ওন করতে চায় (Cyclic Reference), যেমন নোড A ওন করে নোড B কে আবার নোড B ওন করে নোড A কে, সাধারণ ওনারশিপ মডেলে কেন এটি বাস্তবায়ন অসম্ভব এবং এর ফলে মেমরি লিক এড়াতে কোন স্মার্ট পয়েন্টার ব্যবহার করতে হয়?",
+    "hint": "সাধারণ ওনারশিপে প্যারেন্ট-চাইল্ড হায়ারার্কি ফিক্সড থাকে। সাইক্লিক রেফারেন্সে ওনারশিপ সমাধান করতে `Rc`/`Arc` এর সাথে উইক রেফারেন্স (`Weak`) ব্যবহার করতে হয়।"
+  },
+  {
+    "id": "own-q19",
+    "difficulty": "medium",
+    "question": "স্ট্রাক্ট তৈরির সময় অন্য স্ট্রাক্ট থেকে ডেটা মুভ করে আনা (Struct Update Syntax: `User { email: new_email, ..old_user }`) এর পর `old_user` কি পুনরায় ব্যবহার করা যাবে?",
+    "hint": "যদি আনমুভড ফিল্ডগুলোর মধ্যে কোনো নন-কপি টাইপ (যেমন String) নতুন স্ট্রাক্টে মুভ হয়ে থাকে, তবে old_user ইনভ্যালিড হয়ে যাবে।"
+  },
+  {
+    "id": "own-q20",
+    "difficulty": "hard",
+    "question": "রাস্টে ফাংশন আর্গুমেন্টে বাই-ভ্যালু পাস করার সময় কখন মুভ হয় এবং কখন কপি হয় তা কম্পাইলার কোন একক নিয়মের ভিত্তিতে চূড়ান্ত করে?",
+    "hint": "টাইপটি `Copy` ট্রেইট ইমপ্লিমেন্ট করেছে কি না। করলে বিটওয়াইজ কপি, না করলে ওনারশিপ মুভ।"
   }
 ]

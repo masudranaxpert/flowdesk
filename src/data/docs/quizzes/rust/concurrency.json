@@ -1,131 +1,124 @@
 [
   {
-    "id": "concurrency-1",
+    "id": "conc-q1",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "নিচের প্রোগ্রামে join() নেই — ফলাফল কী হতে পারে?",
-    "code": "use std::thread;\nuse std::time::Duration;\n\nfn main() {\n    thread::spawn(|| {\n        for i in 1..10 {\n            println!(\"Thread: {}\", i);\n            thread::sleep(Duration::from_millis(1));\n        }\n    });\n\n    for i in 1..5 {\n        println!(\"Main: {}\", i);\n        thread::sleep(Duration::from_millis(1));\n    }\n}",
-    "options": [
-      "প্রোগ্রাম spawn করা thread-এর কাজ শেষ না হওয়া পর্যন্ত অপেক্ষা করে, তারপর exit করে",
-      "spawn করা thread detached হয়ে main-এর পরেও background-এ চলতেই থাকে",
-      "main thread-এর loop শেষ হলেই প্রোগ্রাম exit করে — spawn করা thread-এর বাকি কাজ আর চলতে পারে না",
-      "compile error দেয় — join() ছাড়া thread::spawn করা যায় না"
-    ],
-    "answer": 2,
-    "explanation": "spawn সাথে সাথে JoinHandle return করে আর thread parallel-এ চলতে থাকে; handle drop করে দিলে thread detached হয়। কিন্তু main thread শেষ হলে পুরো process exit করে — detached thread-ও বাঁচে না। thread শেষ হওয়ার guarantee দরকার হলে handle-এ .join() করতে হবে, যেটা calling thread-কে block করে রাখে।"
+    "question": "পাইথন বা নোড.জেএস এ GIL (Global Interpreter Lock) বা সিঙ্গেল-থ্রেডেড ইভেন্ট লুপের কারণে আসল প্যারালাল মাল্টি-কোর সিপিইউ প্রসেসিং জটিল। কিন্তু সি++ এ মাল্টি-থ্রেডিংয়ে ডেটা রেস (Data Race) হয়ে সাইলেন্ট বাগ তৈরি হয়। রাস্টে কেন ডেটা রেস কম্পাইল টাইমে সম্পূর্ণ অসম্ভব (Fearless Concurrency)?",
+    "hint": "ওনারশিপ এবং বরোয়িং নিয়মাবলী। দুটি থ্রেড কখনই একই সাথে একটি মেমরি লোকেশন মিউটেবলি শেয়ার করতে পারে না যদি না কোনো সিঙ্ক্রোনাইজেশন প্রিমিটিভ (যেমন Mutex) ব্যবহৃত হয়।"
   },
   {
-    "id": "concurrency-2",
+    "id": "conc-q2",
+    "difficulty": "medium",
+    "question": "নিচের কোডটি লক্ষ্য করো:\n\n```rust\nuse std::thread;\n\nlet handle = thread::spawn(|| {\n    for i in 1..10 {\n        println!(\"Thread: {}\", i);\n    }\n});\n```\n\nমেইন ফাংশন যদি শেষ হয়ে যায়, তাহলে স্পন করা ব্যাকগ্রাউন্ড থ্রেডটির কী হবে? থ্রেডটি সম্পূর্ণ শেষ হওয়া পর্যন্ত অপেক্ষা করতে হ্যান্ডেলের কোন মেথড কল করতে হয়?",
+    "code": "let handle = thread::spawn(|| { ... });\n// handle.join() কল না করলে কী হবে?",
+    "hint": "মেইন থ্রেড এক্সিট হলে ব্যাকগ্রাউন্ড থ্রেড শেষ না হতেই ওএস সম্পূর্ণ প্রসেস টার্মিনেট করে দেয়। অপেক্ষা করতে `handle.join().unwrap()` কল করতে হয়।"
+  },
+  {
+    "id": "conc-q3",
+    "difficulty": "hard",
+    "question": "নিচের কোডে কেন কম্পাইলার ত্রুটি দেবে এবং সমাধান কী?\n\n```rust\nuse std::thread;\n\nlet v = vec![1, 2, 3];\nlet handle = thread::spawn(|| {\n    println!(\"Vector: {:?}\", v); // Error!\n});\nhandle.join().unwrap();\n```\n\nকম্পাইলার `closure may outlive the current function` এরর দিচ্ছে কেন এবং ক্লোজারের আগে `move` কি-ওয়ার্ড দিলে কীভাবে সমস্যার সমাধান হয়?",
+    "code": "let v = vec![1, 2, 3];\nlet handle = thread::spawn(|| {\n    println!(\"{:?}\", v);\n});",
+    "hint": "স্পন করা থ্রেডের লাইফটাইম বাউন্ড `'static`। কম্পাইলার জানে না মেইন ফাংশন থ্রেডের আগে শেষ হয়ে `v` ড্রপ করবে কিনা। `move ||` দিলে `v` এর সম্পূর্ণ ওনারশিপ নতুন থ্রেডে স্থানান্তরিত হয়ে মেমরি সেফটি নিশ্চিত হয়।"
+  },
+  {
+    "id": "conc-q4",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "std::sync::mpsc channel-এর ব্যাপারে কোনটা সঠিক?",
-    "options": [
-      "Sender আর Receiver দুটোই clone করা যায় — যত খুশি producer আর consumer",
-      "Sender clone করা যায় (multiple producer), কিন্তু Receiver clone করা যায় না — consumer একজনই",
-      "Receiver clone করা যায় কিন্তু Sender যায় না — producer একজনই",
-      "কোনোটাই clone করা যায় না — channel একবারই ব্যবহার করা যায়"
-    ],
-    "answer": 1,
-    "explanation": "mpsc = Multiple Producer, Single Consumer। tx.clone() শুধু atomic refcount বাড়ায় — queue একই থাকে, তাই অনেক thread একসাথে send করতে পারে। কিন্তু Receiver clone করা যায় না — receive করে একজনই (নামের শেষের c দ্বারা single consumer)।"
+    "question": "মেসেজ পাসিং কনকারেন্সির নীতিবাক্য কী? \"মেমরি শেয়ার করে যোগাযোগ করো না, বরং...\" — রাস্টের চ্যানেল আর্কিটেকচারে কোন মডিউল ব্যবহৃত হয়?",
+    "hint": "\"...যোগাযোগ করে মেমরি শেয়ার করো\"। মডিউল: `std::sync::mpsc` (Multiple Producer, Single Consumer)।"
   },
   {
-    "id": "concurrency-3",
+    "id": "conc-q5",
+    "difficulty": "medium",
+    "question": "`mpsc::channel()` কল করলে যে টুপল `(tx, rx)` ফেরত আসে, তার ট্রান্সমিটার (`tx`) এবং রিসিভার (`rx`) এর আর্কিটেকচারাল ভূমিকা কী? একাধিক প্রযোজক (Multiple Producer) তৈরি করতে কোন মেথড কল করা হয়?",
+    "hint": "`tx` মেসেজ পাঠায়, `rx` মেসেজ গ্রহণ করে। একাধিক থ্রেড থেকে মেসেজ পাঠাতে `tx.clone()` করে নতুন ট্রান্সমিটার তৈরি করতে হয়।"
+  },
+  {
+    "id": "conc-q6",
+    "difficulty": "hard",
+    "question": "চ্যানেলের রিসিভার লুপ: `for msg in rx { println!(\"{}\", msg); }` এই লুপটি কখন থামবে এবং কখন লুপ সমাপ্ত হবে?",
+    "hint": "যখন সমস্ত ট্রান্সমিটার (`tx` এবং তার সমস্ত ক্লোন) ড্রপ বা আউট অফ স্কোপ হয়ে যাবে, চ্যানেলটি বন্ধ হবে এবং রিসিভার লুপ গ্রেসফুলি সমাপ্ত হবে।"
+  },
+  {
+    "id": "conc-q7",
+    "difficulty": "medium",
+    "question": "শেয়ার্ড স্টেট কনকারেন্সি (Shared State Concurrency): একাধিক থ্রেড যদি একই মেমরি মিউটেট করতে চায়, তবে শুধুমাত্র `Mutex<T>` দিলে কেন কম্পাইলার ওনারশিপ ত্রুটি দেয় এবং এর সাথে কেন `Arc` কম্বাইন করা বাধ্যতামূলক?",
+    "hint": "`Mutex` নিজে ওনারশিপ শেয়ার করতে পারে না। প্রতিটি থ্রেডে ওনারশিপ পাঠাতে `Arc::clone(&counter)` লাগে, যাতে তৈরি হয় `Arc<Mutex<T>>`।"
+  },
+  {
+    "id": "conc-q8",
     "difficulty": "easy",
-    "type": "code",
-    "prompt": "নতুন একটি থ্রেড তৈরি করার জন্য স্ট্যান্ডার্ড লাইব্রেরির spawn ফাংশনটি কল করার সিনট্যাক্স লিখো:",
-    "code": "use std::thread;\nlet handle = ____(|| {\n    println!(\"Hello from thread!\");\n});",
-    "explanation": "Rust-এ নতুন OS থ্রেড তৈরি করতে thread::spawn(|| { ... }) ব্যবহার করা হয়।",
-    "accept": [
-      "thread::spawn"
-    ]
+    "question": "`Mutex::lock()` কল করলে যে গার্ড অবজেক্ট `MutexGuard` ফেরত আসে, সেটি কোন ট্রেইট বাস্তবায়নের মাধ্যমে স্বয়ংক্রিয়ভাবে লক মুক্ত (Unlock) করে?",
+    "hint": "`Drop` ট্রেইট। গার্ড অবজেক্টটি তার লোকাল স্কোপ শেষ হওয়া মাত্র মিউটেক্সকে আনলক করে দেয়, কোনো ম্যানুয়াল unlock() কল করতে হয় না।"
   },
   {
-    "id": "concurrency-4",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "thread::spawn দিয়ে নতুন thread বানালে প্রতিটার default stack মোটামুটি কত বড়, আর ১০,০০০ thread spawn করলে কথা কী?",
-    "options": [
-      "প্রতি thread-এ ~64 KiB — মোট ~640 MB address space",
-      "প্রতি thread-ে ~8 MiB — মোট ~80 GB",
-      "stack আগে থেকে reserve হয় না, দরকারমতো grow করে",
-      "প্রতি thread-এ ~2 MiB — মোট ~20 GB address space"
-    ],
-    "answer": 3,
-    "explanation": "spawn আসলে OS-কে call করে (Linux-এ pthread_create) — আসল kernel thread তৈরি হয়, প্রতিটার default stack ~2 MiB। main thread-টা OS দেয় (সাধারণত 8 MiB)। এজন্যই ১০,০০০ thread মানে ~20 GB address space, কিন্তু async task-এর খরচ মাত্র কয়েকশো byte — async chapter-এর মূল যুক্তি এটাই।"
-  },
-  {
-    "id": "concurrency-5",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "Mutex::lock() কেন Result return করে — আমরা কেন counter.lock().unwrap() লিখি?",
-    "options": [
-      "lock তখনই busy থাকলে Err দেয় — অপেক্ষা না করেই fail করে ফেলে",
-      "deadlock detect করলে Err দেয়",
-      "lock ধরে থাকা অবস্থায় কোনো thread panic করলে mutex poisoned হয় — তখন পরের সব lock() দেয় Err(PoisonError), কারণ shared data সম্ভবত অসঙ্গত হয়ে গেছে",
-      "T-এর উপর Debug implement না থাকলে Err দেয়"
-    ],
-    "answer": 2,
-    "explanation": "এটা poison mechanism: lock ধরে থাকা অবস্থায় thread panic করলে mutex poisoned হয়ে যায়, আর চুপচাপ চলতে দেওয়া হয় না — পরের সব lock() Err দেয়। জোর করে মান লুটতে চাইলে e.into_inner() আছে। ভেতরে fast path-এ এক atomic exchange-এই lock নেওয়া যায়, ব্যস্ত থাকলে কিছুক্ষণ spin করে Linux-এর futex-এ ঘুমিয়ে যায় — অপেক্ষায় CPU খরচ শূন্য।"
-  },
-  {
-    "id": "concurrency-6",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "চ্যানেলের রিসিভার rx থেকে ব্লক করে মেসেজ গ্রহণ করতে কোন মেথড কল করবে?",
-    "code": "let (tx, rx) = mpsc::channel();\ntx.send(42).unwrap();\nlet val = rx.____.unwrap();",
-    "explanation": "rx.recv() মেসেজ আসার আগ পর্যন্ত অপেক্ষা করে এবং Result হিসেবে মেসেজ রিটার্ন করে।",
-    "accept": [
-      "recv()"
-    ]
-  },
-  {
-    "id": "concurrency-7",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "thread-এর ভেতরে data ব্যবহার করতে blank-এ কী বসালে কোড compile হবে?",
-    "code": "use std::thread;\n\nfn main() {\n    let data = vec![1, 2, 3];\n\n    let handle = thread::spawn(____ || {\n        println!(\"{:?}\", data);\n    });\n\n    handle.join().unwrap();\n}",
-    "accept": [
-      "move"
-    ],
-    "explanation": "spawn-এর closure bound হলো F: FnOnce() -> T + Send + 'static — thread-টা main-এর বাঁচা ছাড়িয়ে যেতে পারে, তাই borrowed data নিষেধ। move দিলে Vec-এর pointer+len+capacity ownership সহ thread-এ চলে যায় (element copy হয় না)। move ছাড়া compiler error দেয় — closure may outlive the current function।"
-  },
-  {
-    "id": "concurrency-8",
+    "id": "conc-q9",
     "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "Rc<i32>-কে thread::spawn-এর closure-এ move করলে compile error আসে। কারণ কী?",
-    "options": [
-      "Rc heap-এ allocate থাকে, আর heap-এর data thread-এর মধ্যে পাঠানো নিষেধ",
-      "Rc-তে Mutex নেই — unlock করার মতো কোনো method না থাকায় compiler আটকায়",
-      "সমস্যাটা শুধু 'static নিয়ে — Rc deref করে reference দেয়, তাই lifetime bound ভাঙে; Send নিয়ে কোনো বাধা নেই",
-      "Rc-র reference count non-atomic — data race হতে পারে, তাই std এটাকে ইচ্ছা করে !Send + !Sync রেখেছে; spawn-এর Send + 'static bound-ই এটাকে আটকে দেয়"
-    ],
-    "answer": 3,
-    "explanation": "Send/Sync দুটো marker trait — কোনো method নেই, compiler এগুলো auto trait হিসেবে গাছের মতো বানায়: struct-এর সব field Send হলে struct-ও Send। Rc-র count non-atomic বলে std-তে সেটা ইচ্ছা করে !Send + !Sync। multi-threaded-এ Arc (atomic refcount) লাগবে — compiler এটা enforce করে, আর এভাবেই data race compile error হয়ে যায়।"
+    "question": "পয়জন্ড মিউটেক্স (Poisoned Mutex): যদি কোনো থ্রেড একটি মিউটেক্স লক ধরে রাখা অবস্থায় হঠাৎ `panic!` করে ক্র্যাশ করে, তবে অন্য থ্রেড যখন পরবর্তীতে `.lock()` কল করবে তখন কী ঘটবে?",
+    "hint": "মিউটেক্সটি পয়জনড হয়ে যাবে এবং `.lock()` মেথড `Err(PoisonError)` রিটার্ন করবে, যা অন্যান্য থ্রেডকে সতর্ক করে যে শেয়ার্ড ডেটা কোনো ইনভ্যালিড স্টেটে থাকতে পারে।"
   },
   {
-    "id": "concurrency-9",
-    "difficulty": "hard",
-    "type": "code",
-    "prompt": "১০টা thread একটা Arc<Mutex<i32>> counter বাড়াচ্ছে — শেষে Final: 10 print হতে হলে blank-এ কী বসবে?",
-    "code": "use std::sync::{Arc, Mutex};\nuse std::thread;\n\nfn main() {\n    let counter = Arc::new(Mutex::new(0));\n    let mut handles = vec![];\n\n    for _ in 0..10 {\n        let counter = Arc::clone(&counter);\n        handles.push(thread::spawn(move || {\n            let mut num = counter.lock().unwrap();\n            ____;\n        }));\n    }\n\n    for handle in handles {\n        handle.join().unwrap();\n    }\n\n    println!(\"Final: {}\", *counter.lock().unwrap());\n}",
-    "accept": [
-      "*num += 1"
-    ],
-    "explanation": "lock() একটা MutexGuard return করে — guard-এর ভেতরের মান বদলাতে deref করতে হয়, তাই *num += 1। guard scope শেষে drop হলে lock automatically release হয় (RAII), তাই প্রতিটা thread-এর বাড়ানো হারায় না। Arc নিজে কাউকে share করাতে পারে না — atomic refcount দিয়ে Arc অনেক thread-কে একই Mutex-এর মালিকানা দেয়।"
+    "id": "conc-q10",
+    "difficulty": "medium",
+    "question": "ডেডলক (Deadlock) কী? যদি থ্রেড ১ লক করে মিউটেক্স A এবং চায় মিউটেক্স B, আর একই সাথে থ্রেড ২ লক করে মিউটেক্স B এবং চায় মিউটেক্স A, তবে কী ঘটবে এবং সিস্টেম ডিজাইনে এটি প্রতিরোধের গোল্ডেন রুল কী?",
+    "hint": "উভয় থ্রেড অনন্তকাল একে অপরের জন্য আটকে থাকবে (Deadlock)। সমাধান হলো কোডের সমস্ত থ্রেডে লক গ্রহণের ক্রম সর্বদা একই ক্রমানুসারে (Global Lock Ordering) রাখা।"
   },
   {
-    "id": "concurrency-10",
+    "id": "conc-q11",
     "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "parallel_sum-এ ১ থেকে ১০ লাখের যোগফল accumulator কেন i64 দিয়ে করা হয়েছে — i32 accumulator হলে কী হতো?",
-    "options": [
-      "i32-তেও কিছু হতো না — Rust automatically সব কিছু i64-এ promote করে ফেলে",
-      "যোগফল 500000500000 — যা i32-র সীমা (≈2.1 billion) পার করে যায়; debug build-এ attempt to add with overflow panic হতো",
-      "debug আর release দুই build-ই panic করত",
-      "compile-ই হতো না — compiler constant overflow ধরে ফেলত"
-    ],
-    "answer": 1,
-    "explanation": "১..=১০ লাখের যোগফল 500,000,500,000 — i32 ধারণ করতে পারে না। debug build-এ overflow check থাকে বলে panic হয়, release build-এ wrap করে ভুল মান silently আসে। তাই x as i64 conversion করে i64 accumulator-এ sum করা হয়েছে — rayon-এর উদাহরণেও একই সতর্কতা।"
+    "question": "`Send` এবং `Sync` ট্রেইটের মধ্যে সূক্ষ্ম তফাত কী? কোন শর্ত পূরণ হলে একটি টাইপ স্বয়ংক্রিয়ভাবে `Sync` হিসেবে গণ্য হয়?",
+    "hint": "`Send` নির্দেশ করে ডেটা এক থ্রেড থেকে অন্য থ্রেডে ওনারশিপ ট্রান্সফার করা নিরাপদ। `Sync` নির্দেশ করে একাধিক থ্রেড থেকে একই সাথে রেফারেন্স (`&T`) শেয়ার করা নিরাপদ। অর্থাৎ, `&T` যদি `Send` হয়, তবে `T` হলো `Sync`।"
+  },
+  {
+    "id": "conc-q12",
+    "difficulty": "easy",
+    "question": "রাস্টে কি কোনো পয়েন্টার টাইপ আছে যা `Send` বা `Sync` নয়? কেন র কাঁচা পয়েন্টার (`*const T`, `*mut T`) থ্রেড-সেফ নয়?",
+    "hint": "র পয়েন্টার যেকোনো মেমরি সুরক্ষার বাইরে থাকে। কম্পাইলার তাদের ওনারশিপ ট্র্যাক করতে পারে না, তাই তারা `!Send` এবং `!Sync`।"
+  },
+  {
+    "id": "conc-q13",
+    "difficulty": "medium",
+    "question": "রিড-হেভি ওয়ার্কলোডে `Mutex<T>` এর চেয়ে `RwLock<T>` ব্যবহার করা কেন অনেক বেশি পারফরম্যান্ট?",
+    "hint": "রিডার-রাইটার লক (RwLock) একই সাথে যেকোনো সংখ্যক রিডারকে লক ছাড়াই পড়ার অনুমতি দেয়, কেবল লেখার সময় এক্সক্লুসিভ লক গ্রহণ করে।"
+  },
+  {
+    "id": "conc-q14",
+    "difficulty": "hard",
+    "question": "কনকারেন্সিতে সিম্পল কাউন্টার বাড়ানোর জন্য মিউটেক্সের ভারী লক ওভারহেড সম্পূর্ণ বাদ দিয়ে ওএস লক-ফ্রি অপটিমাইজেশন পেতে কোন মডিউল ব্যবহার করা উচিত?",
+    "hint": "`std::sync::atomic` মডিউলের অ্যাটোমিক টাইপসমূহ (যেমন `AtomicUsize`, `AtomicBool`)।"
+  },
+  {
+    "id": "conc-q15",
+    "difficulty": "medium",
+    "question": "অ্যাটোমিক মেমরি অর্ডারিং (Memory Ordering): `fetch_add` মেথডে `Ordering::SeqCst` এবং `Ordering::Relaxed` এর মধ্যে কার্যপদ্ধতির পার্থক্য কী?",
+    "hint": "`SeqCst` সবচেয়ে কঠোর গ্লোবাল সিকোয়েনশিয়াল কনসিস্টেন্সি নিশ্চিত করে। `Relaxed` কেবল অ্যাটোমিক অপারেশনের নিরাপত্তা দেয় তবে ইন্সট্রাকশন রি-অর্ডারিংয়ে কোনো মেমরি ব্যারিয়ার দেয় না।"
+  },
+  {
+    "id": "conc-q16",
+    "difficulty": "easy",
+    "question": "একটি ব্যাকগ্রাউন্ড থ্রেড তৈরি করার সময় তার নাম নির্দিষ্ট করতে বা স্ট্যাক সাইজ কাস্টমাইজ করতে কোন বিল্ডার ব্যবহার করা হয়?",
+    "hint": "`std::thread::Builder::new().name(\"worker\".into()).spawn(...)`।"
+  },
+  {
+    "id": "conc-q17",
+    "difficulty": "hard",
+    "question": "স্কোপড থ্রেড (Scoped Threads): রাস্ট ১.৬৩ এ যুক্ত হওয়া `std::thread::scope` কীভাবে ওনারশিপ মুভ না করেই লোকাল ভ্যারিয়েবলের রেফারেন্স নিরাপদে থ্রেডে ধার নেওয়ার সুযোগ দেয়?",
+    "hint": "স্কোপ ব্লকের শেষ সীমায় কম্পাইলার নিশ্চিত করে যে তৈরি হওয়া সমস্ত থ্রেড শেষ হয়ে গেছে (`join`), ফলে লোকাল ভ্যারিয়েবল ড্রপ হওয়ার আগেই থ্রেড বন্ধ হওয়া নিশ্চিত হয়।"
+  },
+  {
+    "id": "conc-q18",
+    "difficulty": "medium",
+    "question": "সিঙ্ক্রোনাস চ্যানেল (`mpsc::sync_channel(bound)`): বাউন্ডেড চ্যানেলে যখন বাফার পূর্ণ হয়ে যায়, তখন প্রেরক থ্রেডের (`tx.send()`) কী ঘটে?",
+    "hint": "প্রেরক থ্রেড ব্লক হয়ে অপেক্ষা করে যতক্ষণ না রিসিভার বাফার থেকে অন্তত একটি উপাদান গ্রহণ করে জায়গা ফাঁকা করে (Backpressure Handling)।"
+  },
+  {
+    "id": "conc-q19",
+    "difficulty": "easy",
+    "question": "কোনো থ্রেডকে নির্দিষ্ট সময়ের জন্য স্লিপ বা পজ রাখতে কোন মেথড কল করতে হয় এবং এটি কি সিপিইউ পোড়ায়?",
+    "hint": "`std::thread::sleep(Duration::from_millis(...))`। এটি ওএস লেভেলে থ্রেড পার্ক করে রাখে, কোনো সিপিইউ সাইকেল অপচয় হয় না।"
+  },
+  {
+    "id": "conc-q20",
+    "difficulty": "hard",
+    "question": "থ্রেড পুল (Thread Pool): প্রতিবার নতুন রিকোয়েস্টে নতুন ওএস থ্রেড তৈরি না করে প্রোডাকশন সার্ভারে থ্রেড পুল কেন ব্যবহার করা হয় এবং `rayon` ক্রেট কীভাবে ডেটা-প্যারালালিজম সহজ করে তোলে?",
+    "hint": "ওএস থ্রেড তৈরি করা ব্যয়বহুল (প্রায় ২ মেগাবাইট স্ট্যাক মেমরি)। থ্রেড পুল ফিক্সড ওয়ার্কার থ্রেড ধরে রাখে এবং `rayon` সহজে `.par_iter()` দিয়ে স্বয়ংক্রিয় ওয়ার্ক-স্টিলিং চালায়।"
   }
 ]

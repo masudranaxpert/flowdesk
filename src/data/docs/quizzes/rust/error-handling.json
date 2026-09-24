@@ -1,132 +1,125 @@
 [
   {
-    "id": "error-handling-1",
+    "id": "err-q1",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "নিচের কোন পরিস্থিতিটা recoverable error — মানে `Result` দিয়ে handle করা উচিত?",
-    "options": [
-      "ফাইল খুলতে গিয়ে পাওয়া যায়নি (file not found)",
-      "Array-র বৈধ সীমার বাইরে index access",
-      "Program-এর এমন state যেটা কখনোই হওয়ার কথা না (impossible state)",
-      "Programmer-এর logic mistake"
-    ],
-    "answer": 0,
-    "explanation": "Chapter-এর টেবিল অনুযায়ী recoverable error (expected failure) — file not found, network error, parse error — এগুলো `Result` দিয়ে handle হয়। Array out of bounds বা impossible state হলো programmer mistake — ওগুলোর জায়গা `panic!`।"
+    "question": "রাস্টে এরর হ্যান্ডলিংয়ের দুটি মৌলিক ক্যাটাগরি কী কী? কোন পরিস্থিতিতে `panic!` হওয়া উচিত এবং কোন পরিস্থিতিতে `Result` রিটার্ন করা উচিত?",
+    "hint": "আনরিকভারেবল এরর (Unrecoverable — যেমন ইনডেক্স আউট অফ বাউন্ডস বা লজিক বাগ) এর জন্য panic!, আর রিকভারেবল এরর (Recoverable — যেমন ফাইল না পাওয়া, নেটওয়ার্ক ফেইল) এর জন্য Result।"
   },
   {
-    "id": "error-handling-2",
+    "id": "err-q2",
+    "difficulty": "medium",
+    "question": "নিচের কোডটি লক্ষ্য করো:\n\n```rust\nlet f = std::fs::File::open(\"config.json\").unwrap();\n```\n\nপ্রোডাকশন সার্ভারে এই কোডটি চালানো কেন অত্যন্ত বিপজ্জনক? ফাইলটি মিসিং থাকলে ঠিক কী ঘটবে?",
+    "code": "let f = std::fs::File::open(\"config.json\").unwrap();",
+    "hint": "ফাইল না থাকলে `unwrap()` সাথে সাথে panic! ট্রিগার করবে যা সম্পূর্ণ থ্রেডকে ক্র্যাশ করাবে এবং ইউজারকে কোনো গ্রেসফুল মেসেজ বা রিকভারি করতে দেবে না।"
+  },
+  {
+    "id": "err-q3",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "`unwrap()` আর `expect(\"msg\")` এর মধ্যে আসল পার্থক্য কী?",
-    "options": [
-      "দুটোই Err-তে panic করে, কিন্তু `expect` panic message-এর শুরুতে তোমার দেওয়া msg বসায়",
-      "`expect` কখনো panic করে না, তাই production-safe",
-      "`unwrap` শুধু Option-এ চলে, `expect` শুধু Result-এ",
-      "কোনো পার্থক্য নেই — দুটো হুবহু একই কাজ করে, শুধু নাম আলাদা"
-    ],
-    "answer": 0,
-    "explanation": "ভেতরে দুটোই একই match: `Ok(v) => v, Err(e) => panic!(...)`। পার্থক্য শুধু message-এ — `unwrap` দেয় \"called `unwrap()` on an `Err` value\", আর `expect(\"msg\")` শুরুতে তোমার msg বসায়। দুটোই panic করতে পারে, তাই production-এ avoid করো — শুধু test/prototype-এ।"
+    "question": "`unwrap()` এবং `expect(\"Custom error message\")` এর মধ্যে পার্থক্য কী? কেন প্রোটোটাইপিং ও টেস্টের সময় `expect` ব্যবহার করা অপেক্ষাকৃত ভালো?",
+    "hint": "দুটোই প্যানিক করে, কিন্তু expect প্যানিক মেসেজে তোমার দেওয়া কাস্টম ডেসক্রিপশন যুক্ত করে যা ডিবাগিংয়ে তাৎক্ষণিক সমস্যা বুঝতে সাহায্য করে।"
   },
   {
-    "id": "error-handling-3",
+    "id": "err-q4",
+    "difficulty": "medium",
+    "question": "`?` (কোশ্চেন মার্ক) অপারেটর কীভাবে এরর প্রপাগেশন (Error Propagation) সহজ করে তোলে? নিচের ভার্বোস ম্যাচ ব্লকের সমতুল্য এক লাইনের `?` কোডটি কী হবে?\n\n```rust\nlet mut file = match File::open(\"data.txt\") {\n    Ok(f) => f,\n    Err(e) => return Err(e),\n};\n```",
+    "code": "let mut file = match File::open(\"data.txt\") {\n    Ok(f) => f,\n    Err(e) => return Err(e),\n};",
+    "hint": "`let mut file = File::open(\"data.txt\")?;` — Ok হলে মান আনপ্যাক করে, Err হলে আর্লি রিটার্ন করে।"
+  },
+  {
+    "id": "err-q5",
+    "difficulty": "hard",
+    "question": "`?` অপারেটরের অভ্যন্তরীণ ডিসুগারিং (Desugaring) মেকানিজম কী? যখন ফাংশনের রিটার্ন এরর টাইপ এবং ফেইলিং লাইব্রেরির এরর টাইপ আলাদা হয়, তখন `?` কোন ট্রেইটের সাহায্যে অটোমেটিক টাইপ কনভার্সন সম্পাদন করে?",
+    "hint": "`From::from(err)` ট্রেইট। কম্পাইলার কোড এক্সপ্যান্ড করে `Err(From::from(e))` দিয়ে রিটার্ন করে।"
+  },
+  {
+    "id": "err-q6",
     "difficulty": "easy",
-    "type": "code",
-    "prompt": "`divide(a, b)` ফাংশনে `b == 0` হলে Err(\"division by zero\") ফেরত দিতে Err ভ্যারিয়েন্ট কনস্ট্রাক্ট করো:",
-    "code": "fn divide(a: i32, b: i32) -> Result<i32, String> {\n    if b == 0 {\n        ____\n    } else {\n        Ok(a / b)\n    }\n}",
-    "explanation": "Result এ এরর রিটার্ন করতে Err(...) ভ্যারিয়েন্টে এরর মেসেজ র্যাপ করে পাঠানো হয়।",
-    "accept": [
-      "Err(String::from(\"division by zero\"))",
-      "Err(\"division by zero\".to_string())"
-    ]
+    "question": "যেসব ফাংশনের কোনো রিটার্ন ভ্যালু নেই (শুধুমাত্র সাকসেস বা ফেইলিউর বোঝায়), সেগুলোর রিটার্ন টাইপ হিসেবে কী লেখা ইডিওম্যাটিক?",
+    "hint": "`Result<(), std::io::Error>` বা কাস্টম এরর সহ `Result<(), MyError>`।"
   },
   {
-    "id": "error-handling-4",
+    "id": "err-q7",
     "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "`file.read_to_string(&mut s)?;` — compiler এই `?`-কে মোটামুটি কোন কোডে expand করে?",
-    "options": [
-      "match file.read_to_string(&mut s) { Ok(val) => val, Err(err) => return Err(From::from(err)) }",
-      "match file.read_to_string(&mut s) { Ok(val) => val, Err(err) => panic!(\"{}\", err) }",
-      "file.read_to_string(&mut s).unwrap()",
-      "match file.read_to_string(&mut s) { Ok(val) => val, Err(err) => return Err(err) } — কোনো conversion ছাড়া"
-    ],
-    "answer": 0,
-    "explanation": "`?` runtime feature নয় — compile time-এ match-এ expand হয়: Ok হলে value, Err হলে `return Err(From::from(err))`। `From::from`-ই automatic error conversion-এর জায়গা, আর পুরোটা একটা branch + return — exception throw-এর মতো কোনো খরচ নেই। Option 4 প্রায় ঠিক, কিন্তু `From::from` conversion-টা বাদ দিয়েছে।"
+    "question": "`main()` ফাংশনে কি সরাসরি `?` অপারেটর ব্যবহার করা যায়? এর জন্য `main` এর রিটার্ন সিগনেচার কীভাবে লিখতে হয়?",
+    "hint": "`fn main() -> Result<(), Box<dyn std::error::Error>>`।"
   },
   {
-    "id": "error-handling-5",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "`fn read_config() -> Result<i32, AppError>` ফাংশনে `content.trim().parse()?` লেখা হলো। `parse()` যে `ParseIntError` দেয়, সেটা `AppError`-এ কীভাবে পরিণত হয়?",
-    "options": [
-      "`?` ভেতরে `From::from(err)` call করে — তাই `impl From<ParseIntError> for AppError` থাকলেই conversion স্বয়ংক্রিয়",
-      "`parse()` নিজে থেকেই `AppError` return করে — return type দেখে বুঝে নেয়",
-      "`?` শুধু হুবহু same error type-এ কাজ করে, তাই প্রতিবার `.map_err()` লাগে",
-      "Compiler implicit ভাবে `AppError`-এর সব variant-এর জন্য From derive করে দেয়"
-    ],
-    "answer": 0,
-    "explanation": "Desugaring-এর `Err(From::from(err))` অংশটাই এই কাজ করে: `From<ParseIntError> for AppError` impl থাকলে `?` নিজেই convert করে দেয়। `parse()` আসলে `FromStr::from_str` call করে আর `Result` return করে — সে তোমার error type এমনিতে জানে না।"
-  },
-  {
-    "id": "error-handling-6",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "Blank-এ কী বসবে যাতে ফাংশনটা compile হয় আর config-এর সংখ্যাটা `i32` হিসেবে পাওয়া যায়? (`content` একটা String)",
-    "code": "use std::fs;\n\nfn read_config() -> Result<i32, Box<dyn std::error::Error>> {\n    let content = fs::read_to_string(\"config.txt\")?;\n    let number: i32 = ____\n    Ok(number)\n}",
-    "accept": [
-      "content.trim().parse()?;",
-      "content.trim().parse()?"
-    ],
-    "explanation": "`parse()` নিজে `Result` দেয়, তাই `?` দিয়ে unwrap করতে হবে। Err হলে `From::from` ওটাকে `Box<dyn Error>`-এ মুড়ে দেয় — যেকোনো error, boxed; তাই-ই এই return type-এ `?` চলে।"
-  },
-  {
-    "id": "error-handling-7",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "`fn main() -> Result<(), Box<dyn std::error::Error>>` — যদি main থেকে `Err` return হয়, তাহলে কী হয়?",
-    "options": [
-      "Runtime নিজেই error-টার Debug format stderr-এ ছাপে আর exit code হয় 1",
-      "Panic হয় আর exit code হয় 101",
-      "Compile error — main কখনো Result return করতে পারে না",
-      "কিছু ছাপা হয় না, silently exit 0 হয়"
-    ],
-    "answer": 0,
-    "explanation": "`main`-এর return type-কে `Termination` trait implement করতে হয়; `Result<(), E>` থেকে `Err(e)` পেলে runtime `e`-এর Debug format stderr-এ ছাপে আর exit code 1 দেয় (`Ok` হলে 0)। Manual error printing লাগে না। Exit 101 পাওয়ার গল্পটা panic-এর — এটা সেটা না।"
-  },
-  {
-    "id": "error-handling-8",
+    "id": "err-q8",
     "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "Default (unwind) setting-এ `panic!(\"boom\")` হলে ভেতরে কী কী ঘটে?",
-    "options": [
-      "stderr-এ message + file:line ছাপা হয়, তারপর call stack উল্টো দিকে walk করে প্রতিটা frame-এর local-দের Drop চালায়, শেষে process exit করে code 101 দিয়ে",
-      "stderr-এ message ছাপা হয়, কোনো Drop না চালিয়ে সরাসরি exit 101",
-      "Message ছাপা হয় আর exit code 1 — Result-এর মতোই",
-      "Panic handler-এর পরেই OS-level abort — exit code 134"
-    ],
-    "answer": 0,
-    "explanation": "Panic মানেই instant crash না: প্রথমে panic handler message ছাপে, তারপর unwinding শুরু হয় — প্রতিটা frame-এর local variable-এর `Drop::drop` চলে (file close, mutex unlock, heap free), main পেরোলে exit code 101। Drop ছাড়া abort হয় `panic = \"abort\"` দিলে।"
+    "question": "`Box<dyn std::error::Error>` কী? এটিকে কেন ট্রেইট অবজেক্ট (Trait Object) বলা হয় এবং অ্যাপ্লিকেশন লেভেলে বিভিন্ন ধরনের ভিন্ন ভিন্ন এরর একসাথে হ্যান্ডেল করতে এটি কীভাবে কাজ করে?",
+    "hint": "`dyn Error` যেকোনো টাইপকে অ্যাকসেপ্ট করে যা স্ট্যান্ডার্ড Error ট্রেইট ইমপ্লিমেন্ট করেছে। যেহেতু তাদের সাইজ কম্পাইল টাইমে জানা নেই, হিপে `Box` পয়েন্টারের পেছনে রাখতে হয়।"
   },
   {
-    "id": "error-handling-9",
-    "difficulty": "hard",
-    "type": "code",
-    "prompt": "`read_config() -> Result<i32, AppError>`-এ `parse()?` কাজ করানোর জন্য নিচের From impl-এর blank-এ কী বসবে?",
-    "code": "#[derive(Debug)]\nenum AppError {\n    Io(std::io::Error),\n    Parse(std::num::ParseIntError),\n    NotFound(String),\n}\n\nimpl From<std::num::ParseIntError> for AppError {\n    fn from(e: std::num::ParseIntError) -> Self {\n        ____\n    }\n}\n\nfn read_config() -> Result<i32, AppError> {\n    let content = std::fs::read_to_string(\"config.txt\")?;\n    let number: i32 = content.trim().parse()?;\n    Ok(number)\n}",
-    "accept": [
-      "AppError::Parse(e)"
-    ],
-    "explanation": "`?`-এর `From::from(err)` এই impl-টাকেই call করে। `Self` মানে এখানে `AppError`, আর parse-এর error যাবে `Parse` variant-এ। এই impl থাকলেই `read_config`-এর দুই ধরনের error-ই `?` দিয়ে চেইন করা যায় — thiserror-এর `#[from]` একই কাজ macro দিয়ে করে দেয়।"
+    "id": "err-q9",
+    "difficulty": "medium",
+    "question": "লাইব্রেরি ডেভেলপমেন্টে কাস্টম এরর টাইপ তৈরি করতে `thiserror` ক্রেট কেন সেরা পছন্দ, আর অ্যান্ড-ইউজার অ্যাপ্লিকেশনে `anyhow` কেন বেশি জনপ্রিয়?",
+    "hint": "`thiserror` লাইব্রেরির জন্য স্ট্রাকচার্ড কাস্টম টাইপ ও ডিসপ্লে ট্রেইট ডিরাইভ করে দেয়। `anyhow` অ্যাপ্লিকেশনের জন্য ডায়নামিক কনটেক্সট চেইনিং (`.context(\"Failed to load...\")`) সুবিধা দেয়।"
   },
   {
-    "id": "error-handling-10",
+    "id": "err-q10",
+    "difficulty": "easy",
+    "question": "যদি কোনো কোড ব্লক কখনোই ঘটা সম্ভব নয় বলে তুমি ১০০% নিশ্চিত থাকো, তবে কম্পাইলারকে তা জানাতে কোন বিল্ট-ইন ম্যাক্রো ব্যবহার করা হয়?",
+    "hint": "`unreachable!()` ম্যাক্রো।"
+  },
+  {
+    "id": "err-q11",
     "difficulty": "hard",
-    "type": "code",
-    "prompt": "File::open ফাংশন থেকে এরর আসলে তা সরাসরি কলার ফাংশনে propagate করতে ? অপারেটরটি কোথায় বসাবে?",
-    "code": "use std::fs::File;\nuse std::io;\n\nfn open_my_file() -> Result<File, io::Error> {\n    let f = File::open(\"hello.txt\")____;\n    Ok(f)\n}",
-    "explanation": "? অপারেটর ব্যবহার করলে রেজাল্ট Ok হলে মান আনপ্যাক হয়, আর Err হলে ফাংশন থেকে সরাসরি return Err(e) হয়ে যায়।",
-    "accept": [
-      "?"
-    ]
+    "question": "স্ট্যাক আনওয়াইন্ডিং বনাম অ্যাবোর্ট (Unwind vs Abort): `Cargo.toml` এ `panic = \"abort\"` সেট করলে বাইনারি পারফরম্যান্স ও এক্সিকিউশনে কী প্রভাব পড়ে?",
+    "hint": "আনওয়াইন্ডিং বন্ধ হয়ে যায়। প্যানিক হলে কোনো ড্রপ মেথড না চালিয়ে সরাসরি ওএস প্রসেস কিল হয়। বাইনারি সাইজ ছোট হয় এবং কিছুটা গতি বাড়ে।"
+  },
+  {
+    "id": "err-q12",
+    "difficulty": "medium",
+    "question": "`Result` থেকে `Option` এ এবং `Option` থেকে `Result` এ রূপান্তর করার দুটি মেথড কী কী?",
+    "hint": "`res.ok()` দিলে Result হয় Option, এবং `opt.ok_or(error_val)` দিলে Option হয় Result।"
+  },
+  {
+    "id": "err-q13",
+    "difficulty": "easy",
+    "question": "যদি কোনো ফিচার এখনও তৈরি করা বাকি থাকে কিন্তু কোড কম্পাইল করাতে চাও, তখন কোন প্লেসহোল্ডার ম্যাক্রো ব্যবহার করা হয়?",
+    "hint": "`todo!()` অথবা `unimplemented!()` ম্যাক্রো।"
+  },
+  {
+    "id": "err-q14",
+    "difficulty": "hard",
+    "question": "নিচের ফাংশন চেইনিং কোডটি লক্ষ্য করো:\n\n```rust\nlet content = std::fs::read_to_string(\"num.txt\")?;\nlet num: i32 = content.trim().parse()?;\n```\n\nএখানে প্রথম লাইনে আসতে পারে `std::io::Error` এবং দ্বিতীয় লাইনে আসতে পারে `std::num::ParseIntError`। ফাংশনের রিটার্ন টাইপ একটি কংক্রিট কাস্টম এনাম হলে কীভাবে দুটি এররকেই `?` দিয়ে ক্যাচ করবে?",
+    "code": "let content = std::fs::read_to_string(\"num.txt\")?;\nlet num: i32 = content.trim().parse()?;",
+    "hint": "কাস্টম এনামে `Io(std::io::Error)` এবং `Parse(ParseIntError)` ভ্যারিয়েন্ট রেখে উভয়ের জন্য `From` ট্রেইট ইমপ্লিমেন্ট করতে হবে (অথবা `#[derive(thiserror::Error)]` ব্যবহার করতে হবে)।"
+  },
+  {
+    "id": "err-q15",
+    "difficulty": "medium",
+    "question": "`Result::map_err` মেথডের কাজ কী? লাইব্রেরি বা থার্ড-পার্টির কোনো লো-লেভেল এররকে তোমার নিজস্ব ডোমেইন স্পেসিফিক এররে কনভার্ট করতে এটি কীভাবে সাহায্য করে?",
+    "hint": "এটি রেজাল্টের `Ok` ভ্যালু অক্ষত রেখে শুধু `Err(e)` কে অন্য কোনো ফরম্যাটে ট্রান্সফর্ম করে দেয়।"
+  },
+  {
+    "id": "err-q16",
+    "difficulty": "easy",
+    "question": "একটি `Result` ভ্যালু কি সরাসরি বুলিয়ান কন্ডিশনে টেস্ট করা যায়? যেমন শুধুমাত্র সাকসেস হয়েছে কিনা বা ফেইল করেছে কিনা জানতে কোন মেথডদ্বয় রয়েছে?",
+    "hint": "`.is_ok()` এবং `.is_err()`।"
+  },
+  {
+    "id": "err-q17",
+    "difficulty": "hard",
+    "question": "এফএফআই (FFI - Foreign Function Interface) দিয়ে সি কোড কল করার সময় বা অন্য ভাষা থেকে রাস্ট ফাংশন কল করার সময় প্যানিক আনওয়াইন্ড হওয়া কেন অত্যন্ত বিপজ্জনক এবং এর জন্য `std::panic::catch_unwind` কেন প্রয়োজন?",
+    "hint": "সি রানটাইম রাস্টের স্ট্যাক আনওয়াইন্ডিং বোঝে না। এফএফআই বাউন্ডারি পার হয়ে প্যানিক ছুড়লে তা সম্পূর্ণ প্রসেস ক্র্যাশ বা আনডিফাইন্ড বিহেভিয়ার সৃষ্টি করে।"
+  },
+  {
+    "id": "err-q18",
+    "difficulty": "medium",
+    "question": "`?` অপারেটর কি `Option` টাইপের সাথেও কাজ করে? যেমন `let x = opt?;` লিখলে `None` এর ক্ষেত্রে ফাংশন থেকে কী রিটার্ন হবে?",
+    "hint": "হ্যাঁ, কাজ করে! `Some(val)` হলে ভ্যালু আনপ্যাক হয়, আর `None` হলে সম্পূর্ণ প্যারেন্ট ফাংশন তৎক্ষণাৎ `None` রিটার্ন করে।"
+  },
+  {
+    "id": "err-q19",
+    "difficulty": "easy",
+    "question": "একটি ফাইল রিড করতে গিয়ে এরর হলে একটি ডিফল্ট টেক্সট ফেরত দিতে চাও। `match` না লিখে এক লাইনে কীভাবে লিখবে?",
+    "hint": "`fs::read_to_string(\"file.txt\").unwrap_or_else(|_| String::from(\"default\"))`।"
+  },
+  {
+    "id": "err-q20",
+    "difficulty": "hard",
+    "question": "রাস্টের স্ট্যান্ডার্ড লাইব্রেরির `std::error::Error` ট্রেইটে কোন দুটি প্রধান ট্রেইট বাধ্যতামূলক সুপার-ট্রেইট (Super-trait) হিসেবে রিকয়ার্ড থাকে?",
+    "hint": "`std::fmt::Debug` এবং `std::fmt::Display`।"
   }
 ]

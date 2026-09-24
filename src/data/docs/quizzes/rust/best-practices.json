@@ -1,130 +1,122 @@
 [
   {
-    "id": "best-practices-1",
+    "id": "best-q1",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "fn greet(name: &str) — String-এর বদলে &str parameter কেন idiomatic?",
-    "options": [
-      "&str সবসময় stack-এ থাকে, String কখনো stack-এ থাকে না",
-      "&str-এর নিজস্ব কোনো allocation নেই, আর caller String পাঠালে deref coercion automatic &str বানিয়ে দেয় — ownership বা clone দিতে হয় না",
-      "&str mutable, তাই function-এর ভেতর থেকে বদলানো যায়",
-      "String parameter নিলে borrow checker compile error দেয়"
-    ],
-    "answer": 1,
-    "explanation": "String = heap-allocated struct (pointer + len + capacity, ২৪ byte) + আলাদা heap buffer; &str = শুধু fat pointer (data pointer + length, ১৬ byte)। greet(name: String) লিখলে caller-কে ownership দিতে হয় নয়তো clone() — মানে malloc + O(n) memcpy। &str-এ দুটোই বাদ, আর &String পাঠালে deref coercion automatic &str বানায়। &[T] vs &Vec<T> হুবহু একই গল্প।"
+    "question": "রাস্টে `unwrap()` এর মাত্রাতিরিক্ত ব্যবহারকে কেন কোড স্মেল (Code Smell) বলা হয়? একজন অভিজ্ঞ ডেভেলপার কখন প্রোডাকশন কোডে `unwrap()` সম্পূর্ণ বাদ দিয়ে ইডিওম্যাটিক এরর হ্যান্ডলিং করেন?",
+    "hint": "unwrap অনিরাপদ প্যানিক ঘটায়। রিকভারেবল এররে সর্বদা `?` অপারেটর, ম্যাচ প্যাটার্ন বা ফলব্যাক মেথড (`unwrap_or`) ব্যবহার করা উচিত।"
   },
   {
-    "id": "best-practices-2",
+    "id": "best-q2",
+    "difficulty": "medium",
+    "question": "অপ্রয়োজনীয় ক্লোনিং পরিহার: বিগিনাররা বরো চেকার এরর এড়াতে কোডে যেখানে সেখানে `.clone()` ব্যবহার করে থাকেন। এর ফলে মেমরি ও পারফরম্যান্সে কী ক্ষতিকর প্রভাব পড়ে এবং কীভাবে রেফারেন্স বা ওনারশিপ রিস্ট্রাকচার করে এটি সমাধান করা যায়?",
+    "hint": "ক্লোন অপ্রয়োজনীয় হিপ মেমরি এলোকেশন ও সিপিইউ কপি ওভারহেড বাড়ায়। ফাংশনে ওনারশিপের বদলে স্লাইস বা রেফারেন্স (`&str`, `&[T]`) গ্রহণ করা শ্রেয়।"
+  },
+  {
+    "id": "best-q3",
     "difficulty": "easy",
-    "type": "code",
-    "prompt": "ফাংশনে স্ট্রিং প্যারামিটার হিসেবে &String এর পরিবর্তে আরও ফ্লেক্সিবল ও ইডিওম্যাটিক স্ট্রিং স্লাইস টাইপ লিখো:",
-    "code": "fn print_name(name: ____) {\n    println!(\"{}\", name);\n}",
-    "explanation": "&str প্যারামিটার টাইপ দিলে &String এবং string literal (\"hello\") উভয়ই কোনো মেমোরি কপি ছাড়া সরাসরি পাস করা যায়।",
-    "accept": [
-      "&str"
-    ]
+    "question": "ফাংশন প্যারামিটারে ডেটা গ্রহণের সময় `&String` বা `&Vec<T>` এর বদলে যথাক্রমে `&str` এবং `&[T]` গ্রহণ করা কেন রাস্টের অন্যতম প্রধান বেস্ট প্র্যাকটিস?",
+    "hint": "ডিরেফ কোয়ার্সন। এটি ফাংশনটিকে অনেক বেশি ফ্লেক্সিবল করে তোলে — যে কেউ সরাসরি স্লাইস, অ্যারে বা ওনড কালেকশন পাঠাতে পারে।"
   },
   {
-    "id": "best-practices-3",
-    "difficulty": "easy",
-    "type": "code",
-    "prompt": "স্ট্রাক্টের ফিল্ডগুলোর ডিফল্ট মান স্বয়ংক্রিয়ভাবে জেনারেট করতে derive ম্যাক্রোতে কোন ট্রেইটটি বসাবে?",
-    "code": "#[derive(____)]\nstruct Config {\n    port: u16,\n}",
-    "explanation": "#[derive(Default)] দিলে কম্পাইলার টাইপের জন্য default() মেথড তৈরি করে দেয়।",
-    "accept": [
-      "Default"
-    ]
-  },
-  {
-    "id": "best-practices-4",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "Vec<String>-এর উপর .clone() call করলে আসলে কী খরচ হয়?",
-    "options": [
-      "শুধু reference count বাড়ে — O(1)",
-      "শুধু ২৪ byte header copy হয়, data share করা থাকে যায়",
-      "কিছুই হয় না — compiler lazy evaluation-এ clone বাদ দিয়ে দেয়",
-      "নতুন heap allocation + পুরো data memcpy (O(n)) — ভেতরের প্রতিটা String-এর জন্য আলাদা allocation"
-    ],
-    "answer": 3,
-    "explanation": "String/Vec clone মানে নতুন heap allocation + পুরো data memcpy — O(n); Vec<String> হলে প্রতিটা string-এর জন্য আলাদা allocation। borrow (&T) = zero খরচ, মাত্র ৮-১৬ byte pointer pass। তাই ownership দরকার না হলে clone কোরো না — নিয়মটা অলংকার না, flamegraph-এ সোজা দেখা যায়।"
-  },
-  {
-    "id": "best-practices-5",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "struct UserId(u64); newtype wrapper-এর runtime খরচ কত?",
-    "options": [
-      "প্রতি value-তে ৮ byte extra tag যোগ হয়",
-      "শূন্য — memory layout ভেতরের u64-এর মতোই (৮ byte), কোনো indirection নেই; সব check compile-time-এ",
-      "প্রতিবার access-এ মান heap থেকে আনতে হয়",
-      "প্রতি type-এ একটা vtable entry যোগ হয়"
-    ],
-    "answer": 1,
-    "explanation": "এক-field struct-এর layout মূলত ভেতরের type-টারই সমান — UserId(u64) ঠিক u64-এর মতো ৮ byte, register-এ চলে, indirection নেই। user ID আর product ID আলাদা type হওয়ায় accidental mix-up compile error। Bonus: এই wrapper দিয়ে orphan rule-এর ফাঁকি দিয়ে foreign type-এ foreign trait implement করা যায়।"
-  },
-  {
-    "id": "best-practices-6",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "builder pattern-এর method গুলো fn host(mut self, host: &str) -> Self — &mut self-এর বদলে self by-value কেন?",
-    "options": [
-      "Rust-এ &mut self method থেকে কোনো কিছু return করা নিষেধ",
-      "&mut self হলে compiler method গুলো কখনো inline করতে পারে না",
-      "পুরো struct move হয়ে modified self return করে — কোনো clone বা allocation ছাড়াই chaining হয়, এটা শুধু ownership-এর হাতবদল",
-      "self by-value হলে borrow checker একই variable-এ দ্বিতীয় call আটকায় না — &mut self হলে আটকায়"
-    ],
-    "answer": 2,
-    "explanation": "প্রতিটা method self-কে by-value নিয়ে self return করে — পুরোটা move, কোনো clone বা allocation নেই; chain-টা ownership-এর হাতবদল মাত্র। Rust-এ named/optional argument নেই, builder-ই সেই ফাঁক পূরণ করে। derive_builder crate এই method গুলো proc-macro দিয়ে generate করে দেয়।"
-  },
-  {
-    "id": "best-practices-7",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "দুই ধরনের call — String-এর reference আর str literal — দুটোই কাজ করাতে blank-এ কী বসবে?",
-    "code": "fn greet(name: ____) -> String {\n    format!(\"Hello, {}!\", name)\n}\n\nfn main() {\n    let owned = String::from(\"Karim\");\n    println!(\"{}\", greet(&owned));\n    println!(\"{}\", greet(\"Sadia\"));\n}",
-    "accept": [
-      "&str"
-    ],
-    "explanation": "&str parameter দুটোই নেয়: \"Sadia\" হলো &str, আর &owned (&String) deref coercion-এ automatic &str হয়ে যায়। name: String হলে greet(\"Sadia\") compile-ই হতো না (borrow-কে ownership দেওয়া যায় না), &String হলে greet(\"Sadia\") আটকে যেত — তাই &str-ই idiomatic।"
-  },
-  {
-    "id": "best-practices-8",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "১০০০টা push-এ বারবার reallocation এড়াতে blank-এ কী বসবে?",
-    "code": "fn main() {\n    let mut v: Vec<i32> = Vec::____(1000);\n    for i in 0..1000 {\n        v.push(i);\n    }\n    println!(\"{}\", v.len());\n}",
-    "accept": [
-      "with_capacity"
-    ],
-    "explanation": "Vec::with_capacity(1000) একবারেই ১০০০ জায়গার buffer নেয় — বাকি push গুলো শুধু slot-এ লেখা, amortized O(1), কোনো copy নেই। সাধারণ push-এ capacity শেষ হলে বারবার নতুন বড় buffer allocate + পুরনো সব copy হয় (growth মোটামুটি ২×)। String::with_capacity হুবহু একই জিনিস।"
-  },
-  {
-    "id": "best-practices-9",
+    "id": "best-q4",
     "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "? operator-এর expansion-এ Err(e) => return Err(From::from(e)) — এই From::from-এর কাজ কী?",
-    "options": [
-      "error-টাকে function-এর error type-এ automatic রূপান্তর করে (যেমন io::Error থেকে নিজের ConfigError-এ), তারপর early return করে",
-      "error-টাকে string-এ রূপান্তর করে panic! করে দেয়",
-      "error message-এ context string জুড়ে দেয় — .context()-এর কাজই এটা",
-      "error type-এর stack trace capture করে রাখে"
-    ],
-    "answer": 0,
-    "explanation": "? শুধু shorthand না — Err-এর পথে From::from conversion চালিয়ে error-টাকে তোমার function-এর return type-এর error-এ রূপান্তর করে, তারপর early return। ভেতরে branch ছাড়া কিছু নেই — zero-cost। আর মনে রেখো, .context(\"...\") হলো anyhow-এর আলাদা সুবিধা — ওটা ?-এর expansion-এর অংশ না।"
+    "question": "নিউ-টাইপ প্যাটার্ন (Newtype Pattern): প্রিমিটিভ টাইপ (যেমন সাধারণ `i64`) সরাসরি আইডি হিসেবে ব্যবহার না করে `struct UserId(i64)` এবং `struct OrderId(i64)` তৈরি করার নিরাপত্তা সুবিধা কী?",
+    "hint": "টাইপ কনফিউশন প্রতিরোধ। ভুলবশত ইউজার আইডির জায়গায় অর্ডার আইডি পাস করলে কম্পাইল টাইমে এরর হবে, যা শত শত ব্যবসায়িক লজিক বাগ ঠেকায়।"
   },
   {
-    "id": "best-practices-10",
+    "id": "best-q5",
+    "difficulty": "medium",
+    "question": "বিল্ডার প্যাটার্ন (Builder Pattern): যখন কোনো স্ট্রাক্টে অনেকগুলো অপশনাল কনফিগারেশন ফিল্ড থাকে, তখন কনস্ট্রাকটরে ১০টি প্যারামিটার না নিয়ে কীভাবে বিল্ডার অবজেক্ট ব্যবহার করা হয়?",
+    "hint": "একটি আলাদা বিল্ডার স্ট্রাকট তৈরি করে ফ্লুয়েন্ট মেথড চেইনিং (`ServerBuilder::new().port(8080).timeout(30).build()`) বাস্তবায়ন করা হয়।"
+  },
+  {
+    "id": "best-q6",
+    "difficulty": "easy",
+    "question": "কোড স্টাইল এবং ইডিওম্যাটিক ফরম্যাটিং নিশ্চিত করতে রাস্টের অফিশিয়াল অটো-ফরম্যাটার কমান্ড কোনটি যা টিম প্রজেক্টে বাধ্যতামূলক করা হয়?",
+    "hint": "`cargo fmt` বা `rustfmt`।"
+  },
+  {
+    "id": "best-q7",
+    "difficulty": "medium",
+    "question": "স্ট্যান্ডার্ড লিন্টার `cargo clippy`: কেন সিআই/সিডি (CI/CD) পাইপলাইনে `cargo clippy -- -D warnings` কমান্ডটি গেট-কিপার হিসেবে রাখা হয়?",
+    "hint": "যাতে কোডে কোনো নন-ইডিওম্যাটিক প্যাটার্ন, অপ্রয়োজনীয় এলোকেশন বা পারফরম্যান্স ক্ষতিকর ওয়ার্নিং থাকলে বিল্ড সাথে সাথে ফেইল করে এবং কোড কোয়ালিটি বজায় থাকে।"
+  },
+  {
+    "id": "best-q8",
     "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "Box কোন কোন ক্ষেত্রে সত্যিই দরকার?",
-    "options": [
-      "যত দ্রুত code চাই সেখানে — Box সবসময় fast path",
-      "multithread-এ data share করার জন্য — Box atomic ভাবে share করে",
-      "borrow checker-এর lifetime error এড়াতে — Box করলে lifetime থাকেই না",
-      "recursive type (size অসীম হয়ে যেত), trait object (dyn Trait), বা বড় value move করার সময় stack copy এড়াতে"
-    ],
-    "answer": 3,
-    "explanation": "Box-এর খরচ: একটা heap allocation + পরে সব access pointer-এর পিছনে (cache miss হতে পারে) — ছোট value-তে শুধু অপচয়, let x = 5; stack-এই থাকুক। সত্যিই লাগে recursive type (size অসীম হয়ে যেত), trait object (dyn Trait), বা বড় value move-এর stack copy এড়াতে। আর multithread-এ share করার জিনিস Arc — Box না।"
+    "question": "টাইপ স্টেট প্যাটার্ন (Type-State Pattern): অবজেক্টের অবৈধ স্টেট ট্রানজিশন (যেমন ড্রাফট পোস্ট পাবলিশ না করেই সেন্ড করা) রানটাইম `if-else` চেকের পরিবর্তে কম্পাইল টাইমে বন্ধ করতে ফ্যান্টম টাইপ বা জেনেরিক স্টেট কীভাবে সাহায্য করে?",
+    "hint": "`struct Post<Draft>` এবং `struct Post<Published>`। শুধুমাত্র Published স্টেটের পোস্টেই send() মেথড এক্সিস্ট করবে, ফলে ড্রাফটে send কল করা কম্পাইল টাইমে অসম্ভব হবে।"
+  },
+  {
+    "id": "best-q9",
+    "difficulty": "medium",
+    "question": "কাস্টম কনভার্সন ট্রেইট: নিজের তৈরি ডেটা টাইপকে অন্য টাইপে রূপান্তর করার সময় নিজস্ব মেথড না বানিয়ে কেন স্ট্যান্ডার্ড `From` এবং `Into` ট্রেইট ইমপ্লিমেন্ট করা বেস্ট প্র্যাকটিস?",
+    "hint": "স্ট্যান্ডার্ড ইকোসিস্টেম ইন্টারঅপারেবিলিটি। `?` অপারেটরে স্বয়ংক্রিয় কনভার্সন এবং জেনেরিক এপিআইতে সহজে ব্যবহারের সুযোগ পাওয়া যায়।"
+  },
+  {
+    "id": "best-q10",
+    "difficulty": "easy",
+    "question": "স্ট্রাক্টের সমস্ত ফিল্ড যদি ডিফল্ট ইনিশিয়াল মান সাপোর্ট করতে পারে, তবে ম্যানুয়াল ইনিশিয়ালাইজেশনের বদলে কোন ট্রেইট ডিরাইভ করা উচিত?",
+    "hint": "`#[derive(Default)]` এবং ইনস্ট্যান্সের জন্য `MyStruct::default()`।"
+  },
+  {
+    "id": "best-q11",
+    "difficulty": "hard",
+    "question": "আনসেফ রাস্ট (`unsafe`): সিনিয়র ইঞ্জিনিয়ারদের কাছে `unsafe` ব্লকের মূল নীতি কী? কেন আনসেফ কোডের পরিধিকে সর্বদা ক্ষুদ্রতম প্রাইভেট মডিউলে সীমাবদ্ধ রেখে তার চারপাশে সেফ পাবলিক অ্যাবস্ট্রাকশন তৈরি করতে হয়?",
+    "hint": "আনসেফ মানে নিয়ম ভাঙা নয়, বরং কম্পাইলারকে জানানো যে ইনভ্যারিয়েন্ট রক্ষার দায়িত্ব প্রোগ্রামারের। সেফ র্যাপার দিলে বাইরের বিশ্ব কোনোভাবেই মেমরি সেফটি ভাঙতে পারে না।"
+  },
+  {
+    "id": "best-q12",
+    "difficulty": "medium",
+    "question": "মেমরি বাফার প্রি-এলোকেটিং: লুপের ভেতর ডায়নামিক কালেকশন (যেমন `Vec` বা `String`) তৈরি করার সময় ক্যাপাসিটি রিজার্ভ করার গোল্ডেন রুল কী?",
+    "hint": "এলিমেন্ট সংখ্যা অনুমানযোগ্য হলে সর্বদা `with_capacity()` ব্যবহার করো, যা অপ্রয়োজনীয় রিলোকেশন বন্ধ করে।"
+  },
+  {
+    "id": "best-q13",
+    "difficulty": "easy",
+    "question": "মিউটেবিলিটি সীমাবদ্ধ রাখা: কেন রাস্টে কোনো ভ্যারিয়েবলকে যতক্ষণ পর্যন্ত পরিবর্তন না করতেই হয় ততক্ষণ তাকে `mut` ঘোষণা না করা একটি কঠোর কনভেনশন?",
+    "hint": "কোডের স্টেট পরিবর্তন যত কম হয়, বাগ হওয়ার ঝুঁকি তত হ্রাস পায় এবং কোড সহজে বোধগম্য হয়।"
+  },
+  {
+    "id": "best-q14",
+    "difficulty": "hard",
+    "question": "স্মার্ট পয়েন্টার সিলেকশন ডিসিশন ম্যাট্রিক্স: কখন `Box`, কখন `Rc`/`Arc`, এবং কখন `RefCell`/`Mutex` ব্যবহার করবে তার সিদ্ধান্ত কীভাবে নেবে?",
+    "hint": "একক ওনারে হিপে রাখতে Box; সিঙ্গেল থ্রেডে শেয়ার্ড ওনারশিপে Rc; মাল্টি থ্রেডে Arc; ইন্টারনাল মিউটেবিলিটির জন্য সিঙ্গেল থ্রেডে RefCell এবং মাল্টি থ্রেডে Mutex/RwLock।"
+  },
+  {
+    "id": "best-q15",
+    "difficulty": "medium",
+    "question": "ডকুমেন্টেশন কমেন্ট (`///` বনাম `//!`): ফাইল বা মডিউল লেভেলের সার্বিক বর্ণনায় এবং একক ফাংশন বা স্ট্রাক্টের বর্ণনায় এদের ব্যবহার কীভাবে আলাদা?",
+    "hint": "`//!` মডিউল বা ক্রেটের ভেতর থেকে পুরো ফাইলকে ডক্যুমেন্ট করে (ইনার কমেন্ট)। `///` তার ঠিক পরবর্তী আইটেম বা ফাংশনকে ডক্যুমেন্ট করে (আউটার কমেন্ট)।"
+  },
+  {
+    "id": "best-q16",
+    "difficulty": "easy",
+    "question": "লাইব্রেরির পাবলিক টাইপ এক্সপোজ করার সময় কেন প্রতিটি পাবলিক টাইপ ও স্ট্রাক্টে ন্যূনতম `Debug` ট্রেইট ডিরাইভ করা ভদ্রতা ও বেস্ট প্র্যাকটিস?",
+    "hint": "যাতে ব্যবহারকারী যেকোনো সময় আপনার টাইপের ভ্যালু `println!(\"{:?}\", val)` দিয়ে বা টেস্ট ফেইলিউরে ডিবাগ করতে পারে।"
+  },
+  {
+    "id": "best-q17",
+    "difficulty": "hard",
+    "question": "জিরো-কস্ট অ্যাবস্ট্রাকশনে ইনলাইনিং (`#[inline]`): কখন কোনো ফাংশনে `#[inline]` অ্যাট্রিবিউট ব্যবহার করা উচিত এবং অতিরিক্ত ইনলাইনিংয়ের ক্ষতিকর দিক কী?",
+    "hint": "ছোট, বারবার কল হওয়া মেথডে ইনলাইনিং গতি বাড়ায়। তবে বড় ফাংশনে ইনলাইনিং দিলে বাইনারি সাইজ স্ফীত হয় এবং সিপিইউর ইন্সট্রাকশন ক্যাশ নষ্ট হতে পারে।"
+  },
+  {
+    "id": "best-q18",
+    "difficulty": "medium",
+    "question": "প্যাটার্ন ম্যাচিং বনাম ব্লাইন্ড এক্সট্র্যাকশন: `if opt.is_some() { let val = opt.unwrap(); }` লেখা কেন একটি অত্যন্ত জঘন্য কোড স্মেল এবং এর সঠিক বিকল্প কী?",
+    "hint": "এটি দুটি পৃথক অপারেশন চালায়। সঠিক উপায় হলো সরাসরি প্যাটার্ন ম্যাচিং: `if let Some(val) = opt { ... }` যা এক ধাপে নিরাপদে মান বের করে আনে।"
+  },
+  {
+    "id": "best-q19",
+    "difficulty": "easy",
+    "question": "কনস্ট্যান্ট নেমিং কনভেনশন: রাস্টে কনস্ট্যান্ট ও স্ট্যাটিক ভেরিয়েবলের নাম কোন কেসে লেখা বাধ্যতামূলক?",
+    "hint": "স্ক্রিমিং স্নেক কেস (`SCREAMING_SNAKE_CASE`) — যেমন `MAX_BUFFER_SIZE`।"
+  },
+  {
+    "id": "best-q20",
+    "difficulty": "hard",
+    "question": "রাস্ট আর্কিটেকচারের সারসংক্ষেপ: কেন বলা হয় \"Make illegal states unrepresentable\"? ডেটা টাইপ ডিজাইনের মাধ্যমে কীভাবে ব্যবসায়িক ভুলগুলো কম্পাইল টাইম এররে পরিণত করা যায়?",
+    "hint": "বুলিয়ান বা স্ট্রিং ফ্ল্যাগের বদলে শক্তিশালী এনাম ও স্ট্রাকট ব্যবহার করা, যাতে কোনো অবৈধ কম্বিনেশনের ডেটা তৈরি বা রিপ্রেজেন্ট করাই টাইপ সিস্টেমে অসম্ভব হয়ে পড়ে।"
   }
 ]

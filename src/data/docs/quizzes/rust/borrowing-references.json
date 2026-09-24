@@ -1,126 +1,126 @@
 [
   {
-    "id": "borrowing-references-1",
+    "id": "borrow-q1",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "Borrowing-এর প্রথম rule — একই সময়ে কোন কম্বিনেশনটা বৈধ?",
-    "options": [
-      "একটা mutable reference অথবা (যত খুশি) অনেকগুলো immutable reference",
-      "একটা mutable আর একসাথে একটা immutable — মোট দুটো",
-      "একাধিক mutable reference, যদি ভিন্ন ভিন্ন জায়গায় ব্যবহার হয়",
-      "একটাই reference থাকতে পারে — immutable-ও না, একাধিকও না"
-    ],
-    "answer": 0,
-    "explanation": "নিয়ম — many readers ঠিক আছে, কিন্তু writer একা থাকবে। লঙ্ঘন করলে E0502 (immutable borrow জীবিত অবস্থায় &mut নেওয়া) বা E0499 (দুটো &mut একসাথে)। এই নিয়মেই compile time-এ data race অসম্ভব হয়ে যায়।"
+    "question": "রাস্টে ধার নেওয়া বা বরোয়িং (Borrowing) কী? রেফারেন্স (`&`) ব্যবহারের মাধ্যমে ওনারশিপ মুভ না করেও কোনো ভ্যালু পড়ার যে সুবিধা পাওয়া যায়, তার দুটি প্রধান নিয়ম কী কী?",
+    "hint": "একই সময়ে হয় যেকোনো সংখ্যক ইমিউটেবল রেফারেন্স (`&T`) থাকতে পারে, অথবা সর্বোচ্চ একটিমাত্র মিউটেবল রেফারেন্স (`&mut T`) থাকতে পারে। দ্বিতীয়ত, রেফারেন্স সর্বদা ভ্যালিড ডেটাকে পয়েন্ট করতে হবে।"
   },
   {
-    "id": "borrowing-references-2",
+    "id": "borrow-q2",
+    "difficulty": "medium",
+    "question": "নিচের কোডটি কেন কম্পাইল হবে না?\n\n```rust\nlet mut s = String::from(\"hello\");\nlet r1 = &s;\nlet r2 = &s;\nlet r3 = &mut s;\nprintln!(\"{}, {}, {}\", r1, r2, r3);\n```\n\nকম্পাইলার `cannot borrow s as mutable because it is also borrowed as immutable` এরর দেয় কেন? একই সময়ে পড়ার রেফারেন্স ও লেখার রেফারেন্স থাকলে কী সমস্যা হতো?",
+    "code": "let mut s = String::from(\"hello\");\nlet r1 = &s;\nlet r2 = &s;\nlet r3 = &mut s;\nprintln!(\"{}, {}, {}\", r1, r2, r3);",
+    "hint": "ডেটা রেস ও পয়েন্টার ইনভ্যালিডেশন। পড়ার সময় যদি অন্য কেউ মেমরি রি-এলোকেট বা পরিবর্তন করে ফেলে, তাহলে রিডাররা করাপ্টেড ডেটা পড়বে।"
+  },
+  {
+    "id": "borrow-q3",
     "difficulty": "easy",
-    "type": "code",
-    "prompt": "`s1` এর মালিকানা নষ্ট না করে শুধু পড়ার জন্য immutable reference হিসেবে ধার (borrow) দিতে আর্গুমেন্টে কী লিখবে?",
-    "code": "fn calculate_length(s: &String) -> usize {\n    s.len()\n}\n\nfn main() {\n    let s1 = String::from(\"hello\");\n    let len = calculate_length(____);\n    println!(\"{} {}\", s1, len);\n}",
-    "explanation": "মালিকানা না হারিয়ে কোনো ভ্যালু ধার দিতে & ব্যবহার করে immutable reference তৈরি করা হয়।",
-    "accept": [
-      "&s1"
-    ]
+    "question": "রাস্টে রেফারেন্স ডি-রেফারেন্স (Dereferencing) করার জন্য কোন অপারেটর ব্যবহার করা হয়? উদাহরণস্বরূপ `let mut x = 10; let r = &mut x;` হলে `r` দিয়ে `x` এর মান ২০ এ পরিবর্তন করতে কী লিখতে হবে?",
+    "hint": "অ্যাস্টেরিস্ক বা স্টার অপারেটর: `*r = 20;`।"
   },
   {
-    "id": "borrowing-references-3",
+    "id": "borrow-q4",
+    "difficulty": "hard",
+    "question": "একটি ভেক্টরে লুপ চালানোর সময় ইটারেশন চলাকালীন কোনো উপাদান যোগ করতে গেলে কম্পাইলার ত্রুটি দেয়:\n\n```rust\nlet mut v = vec![1, 2, 3];\nfor item in &v {\n    if *item == 2 {\n        v.push(4); // Error!\n    }\n}\n```\n\nমেমরি রি-এলোকেশন (Reallocation) কনসেপ্টের ভিত্তিতে ব্যাখ্যা করো কেন বরো চেকার এই পুশ অপারেশনটি কঠোরভাবে প্রতিরোধ করে?",
+    "code": "let mut v = vec![1, 2, 3];\nfor item in &v {\n    if *item == 2 { v.push(4); }\n}",
+    "hint": "নতুন এলিমেন্ট পুশ করার সময় ভেক্টরের বর্তমান ক্যাপাসিটি শেষ হয়ে থাকলে ওএস থেকে নতুন বড় হিপ মেমরিতে স্থানান্তর হতে পারে। এতে লুপের `item` রেফারেন্সটি একটি ফ্রি হয়ে যাওয়া পুরানো মেমরির দিকে নির্দেশ করে ড্যাংলিং পয়েন্টার সৃষ্টি করবে।"
+  },
+  {
+    "id": "borrow-q5",
+    "difficulty": "medium",
+    "question": "রাস্ট কম্পাইলারের NLL (Non-Lexical Lifetimes) ফিচার কীভাবে রেফারেন্সের স্কোপ নির্ধারণ করে? নিচের কোডটি কেন আধুনিক রাস্টে নিখুঁতভাবে কম্পাইল হয় অথচ পুরানো রাস্টে এরর দিত?\n\n```rust\nlet mut s = String::from(\"hello\");\nlet r1 = &s;\nprintln!(\"{}\", r1);\nlet r2 = &mut s;\nr2.push_str(\", world\");\nprintln!(\"{}\", r2);\n```",
+    "code": "let mut s = String::from(\"hello\");\nlet r1 = &s;\nprintln!(\"{}\", r1);\nlet r2 = &mut s;\nr2.push_str(\", world\");",
+    "hint": "NLL এর অধীনে একটি রেফারেন্সের আয়ু কার্লি ব্রেসের শেষ পর্যন্ত থাকে না, বরং কোডে শেষবার যেখানে তাকে ব্যবহার করা হয়েছে সেখানেই তার লাইফটাইম সমাপ্ত বলে গণ্য হয়।"
+  },
+  {
+    "id": "borrow-q6",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "`let s = String::from(\"hello\");` ঘোষণা করা আছে। এখন কেউ `change(&mut s)` করতে চাইলে কী হবে?",
-    "options": [
-      "চলবে — reference-এ `mut` থাকলেই সব হলো",
-      "compile error — `&mut` পেতে হলে original binding-ও `let mut s` হতে হবে",
-      "runtime-এ s নিজে থেকেই mutable হয়ে যাবে",
-      "শুধু unsafe block-এর ভেতরে চলবে"
-    ],
-    "answer": 1,
-    "explanation": "Mutable reference চাইলে মূল value-টাও `mut` ঘোষিত হতে হবে। আর মজার ব্যাপার — `&mut String` runtime-এ সেই একই ৮-byte pointer, কোনো \"mutable badge\" পাহারা দেওয়ার ব্যবস্থা নেই; push_str-এর মতো method-গুলোর signature-ই `&mut self` — type system-ই নিয়ন্ত্রণ করে।"
+    "question": "স্ট্রিং স্লাইস `&str` কী? যদি একটি স্ট্রিং `let s = String::from(\"hello world\");` থাকে, তবে এর প্রথম শব্দটির একটি স্লাইস তৈরি করতে কোন সিনট্যাক্স ব্যবহার করবে?",
+    "hint": "রেঞ্জ ইনডেক্সিং: `&s[0..5]` বা `&s[..5]`।"
   },
   {
-    "id": "borrowing-references-4",
+    "id": "borrow-q7",
+    "difficulty": "medium",
+    "question": "একটি ফাংশন লিখছ যা কোনো টেক্সট গ্রহণ করবে। ফাংশন প্যারামিটার হিসেবে `fn process(s: &String)` লেখার চেয়ে `fn process(s: &str)` লেখা কেন সবসময় বেশি ইডিওম্যাটিক ও সুবিধাজনক?",
+    "hint": "ডিরেফ কোয়ার্সন (Deref Coercion)। `&str` নিলে কলার `&String`, স্ট্রিং লিটারেল `\"...\"`, এবং স্লাইস — সব ধরনের ইনপুট পাঠাতে পারে।"
+  },
+  {
+    "id": "borrow-q8",
     "difficulty": "hard",
-    "type": "code",
-    "prompt": "`s` এর উপর একটি mutable reference ধার নিয়ে `r3` ভেরিয়েবলে রাখতে blank-এ কী লিখবে?",
-    "code": "let mut s = String::from(\"hello\");\nlet r3 = ____;\nr3.push_str(\"!\");",
-    "explanation": "কোনো ভ্যালুকে পরিবর্তন করতে হলে &mut দিয়ে mutable reference ধার নিতে হয়।",
-    "accept": [
-      "&mut s"
-    ]
+    "question": "রাস্টে ইউটিএফ-৮ (UTF-8) এনকোডিংয়ের কারণে স্ট্রিং স্লাইস করার সময় যদি কোনো মাল্টি-বাইট ক্যারেক্টারের মাঝখানের বাইট ইনডেক্স দেওয়া হয় (যেমন বাংলা অক্ষর ৩ বাইট নেয়), তাহলে কী ঘটবে?",
+    "hint": "কম্পাইল টাইমে নয়, রানটাইমে প্রোগ্রাম প্যানিক করবে (panicked at byte index ... is not a char boundary)। রাস্টের সেফ স্ট্রিং সবসময় ভ্যালিড UTF-8 নিশ্চিত করে।"
   },
   {
-    "id": "borrowing-references-5",
+    "id": "borrow-q9",
     "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "এই function-টা কি compile হবে?",
-    "code": "fn dangle() -> &String {\n    let s = String::from(\"hello\");\n    &s\n}",
-    "options": [
-      "হ্যাঁ — কিন্তু runtime-এ use-after-free হবে",
-      "হ্যাঁ — GC s-কে বাঁচিয়ে রাখবে",
-      "না — Rust-এ dangling reference কখনোই possible না; s তো function শেষে drop হবে, compiler ধরে ফেলবে",
-      "হ্যাঁ — কিন্তে return value হবে null"
-    ],
-    "answer": 2,
-    "explanation": "Borrowing-এর দ্বিতীয় rule — reference সবসময় valid থাকতে হবে। s এই function-এর শেষে drop হবে, তাই ওর reference ফেরানো compiler আটকে দেবে। C/C++-এ এটা runtime crash হতো, Python-এ GC সামলাত — Rust-এ compile error, আগেই ধরা পড়ে।"
+    "question": "অ্যারে স্লাইস `&[T]` এর বাস্তব উপযোগিতা কী? একটি সম্পূর্ণ অ্যারে বা ভেক্টরের মাত্র আংশিক অংশ অন্য একটি অ্যালগরিদমে পাস করার সময় মেমরি কপি ছাড়া কীভাবে এটি কাজ করে?",
+    "hint": "স্লাইস হলো ভিউ (View) — এতে কেবল মূল মেমরির একটি পয়েন্টার এবং এলিমেন্ট সংখ্যা সংরক্ষিত থাকে, কোনো উপাদান নতুন করে কপি হয় না।"
   },
   {
-    "id": "borrowing-references-6",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "`&str` slice-টা ভেতরে কী দিয়ে তৈরি?",
-    "options": [
-      "পুরো string-এর একটা copy — নিজস্ব আলাদা buffer",
-      "দুটো machine word — শুরুর address আর length; কোনো data copy হয় না",
-      "শুধু একটা pointer — length আলাদা কোথাও রাখা থাকে না",
-      "pointer + reference count"
-    ],
-    "answer": 1,
-    "explanation": "`&str` হলো fat pointer — address + length, মাত্র দুই machine word। `&s[0..5]` করলে boundary check হয় (UTF-8 character যেন না ভাঙে), তারপর `(ptr + 0, 5)` জাতীয় নতুন fat pointer — zero allocation, O(1)। Python-এর `s[0:5]` নতুন string বানায় (copy); Rust-এ slice শুধু একটা জানালা।"
+    "id": "borrow-q10",
+    "difficulty": "easy",
+    "question": "একটি ফাংশনে মিউটেবল রেফারেন্স পাঠানো হলো: `fn add_prefix(s: &mut String)`. কলার সাইডে কল করার সঠিক সিনট্যাক্স কী হবে?",
+    "hint": "কলের সময়ও এক্সপ্লিসিটলি `&mut` দিতে হয়: `add_prefix(&mut my_string);`।"
   },
   {
-    "id": "borrowing-references-7",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "`s` স্ট্রিংটির শুরু থেকে প্রথম ৫টি ক্যারেক্টার (\"hello\") ধার নিয়ে স্লাইস তৈরি করতে blank-এ কী লিখবে?",
-    "code": "let s = String::from(\"hello world\");\nlet hello = ____;",
-    "explanation": "স্ট্রিং স্লাইস হলো মূল স্ট্রিংয়ের একটি অংশের রেফারেন্স। &s[0..5] বা &s[..5] দিয়ে শুরু থেকে ৫টি বাইটের রেফারেন্স তৈরি হয়।",
-    "accept": [
-      "&s[0..5]",
-      "&s[..5]"
-    ]
-  },
-  {
-    "id": "borrowing-references-8",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "`greet`-কে String-এর reference আর string literal — দুটোই accept করতে হবে। Parameter-এর type হিসেবে blank-এ কী লিখবে?",
-    "code": "fn greet(name: ____) {\n    println!(\"Hello, {}!\", name);\n}\n\nfn main() {\n    let s = String::from(\"Karim\");\n    greet(&s);\n    greet(\"Rahim\");\n}",
-    "accept": [
-      "&str"
-    ],
-    "explanation": "`&str` String-ও literal-ও দুটোই shared/reference-এ ধরতে পারে — `&String`-কে deref coercion দিয়ে `&str`-এ পরিণত করা যায়, আর literal নিজেই `&str`। তাই সবচেয়ে flexible parameter type।"
-  },
-  {
-    "id": "borrowing-references-9",
+    "id": "borrow-q11",
     "difficulty": "hard",
-    "type": "code",
-    "prompt": "`first_word` ফাংশনটি ইনপুট স্ট্রিংয়ের একটি স্লাইস রিটার্ন করবে। ফাংশনের রিটার্ন টাইপ হিসেবে blank-এ কী লিখবে?",
-    "code": "fn first_word(s: &str) -> ____ {\n    let bytes = s.as_bytes();\n    for (i, &byte) in bytes.iter().enumerate() {\n        if byte == b' ' {\n            return &s[..i];\n        }\n    }\n    &s[..]\n}",
-    "explanation": "স্ট্রিং স্লাইসের টাইপ হলো &str। এটি কোনো মেমোরি কপি না করে সরাসরি মূল ডেটার ভিউ প্রদান করে।",
-    "accept": [
-      "&str"
-    ]
+    "question": "রাস্টে অটোমেটিক ডিরেফ কোয়ার্সন (Deref Coercion) মেকানিজম কী? যেমন `&String` পাস করলে কম্পাইলার কীভাবে স্বয়ংক্রিয়ভাবে এটিকে `&str` এ রূপান্তর করে?",
+    "hint": "স্ট্রিং টাইপ `Deref<Target = str>` ট্রেইট ইমপ্লিমেন্ট করে। কম্পাইলার ফাংশন সিগনেচার মেলাতে `deref()` মেথড কল ইনজেক্ট করে।"
   },
   {
-    "id": "borrowing-references-10",
+    "id": "borrow-q12",
+    "difficulty": "medium",
+    "question": "যদি একটি স্ট্রাক্টের রেফারেন্স থাকে `&User`, তবে তার ফিল্ড অ্যাক্সেস করতে `(*user).name` লেখার বদলে সরাসরি `user.name` লেখা যায় কেন?",
+    "hint": "ডট অপারেটর স্বয়ংক্রিয়ভাবে প্রয়োজনীয় ডিরিফারেন্সিং বা বরোয়িং (Auto-dereferencing) পরিচালনা করে।"
+  },
+  {
+    "id": "borrow-q13",
+    "difficulty": "easy",
+    "question": "রাস্টে রেফারেন্সের সাইজ কত বাইট? একটি ৩২-বিট এবং একটি ৬৪-বিট প্রসেসরে রেফারেন্সের সাইজের তফাত কী?",
+    "hint": "সাধারণ রেফারেন্স হলো র্যামের মেমরি অ্যাড্রেস পয়েন্টার। ৩২-বিট ওএসে ৪ বাইট এবং ৬৪-বিট ওএসে ৮ বাইট।"
+  },
+  {
+    "id": "borrow-q14",
     "difficulty": "hard",
-    "type": "code",
-    "prompt": "Call-টা ঠিকভাবে করতে blank-এ কী লিখবে, যাতে change-এর ভেতরে s-এ লেখা যায়? (Output হবে: hello, world)",
-    "code": "fn change(some_string: &mut String) {\n    some_string.push_str(\", world\");\n}\n\nfn main() {\n    let mut s = String::from(\"hello\");\n    change(____);\n    println!(\"{}\", s);\n}",
-    "accept": [
-      "&mut s"
-    ],
-    "explanation": "change-এর ভেতরে লেখা যায় মানে mutable borrow দরকার — তাই `&mut s`। `s`-ও `mut` রাখা হয়েছে যাতে mutable reference valid হয়।"
+    "question": "নিচের কোডটি লক্ষ্য করো:\n\n```rust\nfn get_first(v: &Vec<i32>) -> &i32 {\n    &v[0]\n}\n```\n\nফাংশনের ইনপুট রেফারেন্সের লাইফটাইমের সাথে রিটার্ন করা রেফারেন্সের লাইফটাইম কীভাবে স্বয়ংক্রিয়ভাবে লিংকড হয়ে যায় (Lifetime Elision)?",
+    "code": "fn get_first(v: &Vec<i32>) -> &i32 { &v[0] }",
+    "hint": "লাইফটাইম এলিশন রুলস অনুসারে, ইনপুটে একক রেফারেন্স থাকলে আউটপুটের অজ্ঞাত লাইফটাইম স্বয়ংক্রিয়ভাবে ইনপুটের লাইফটাইম পায়।"
+  },
+  {
+    "id": "borrow-q15",
+    "difficulty": "medium",
+    "question": "আলিআসিং (Aliasing) এবং মিউট্যাবিলিটি (Mutability) এর সংমিশ্রণকে কনকারেন্সিতে সবচেয়ে বিপজ্জনক মনে করা হয় কেন? রাস্টের বরো চেকার কীভাবে এই দুটিকে একসাথে ঘটা নিষিদ্ধ করে?",
+    "hint": "আলিআসিং মানে একাধিক পয়েন্টার একই মেমরি নির্দেশ করা। একই সাথে কেউ লিখলে অন্যরা রেস কন্ডিশনে পড়ে। রাস্টে \"Mutually Exclusive\": হয় অনেকে শুধু পড়বে, নয়তো একা একজন লিখবে।"
+  },
+  {
+    "id": "borrow-q16",
+    "difficulty": "easy",
+    "question": "একটি স্ট্রিং লিটারেল `let s = \"Hello\";` এর টাইপ কী এবং এই ডেটাটি মেমরির কোথায় সংরক্ষিত থাকে?",
+    "hint": "এর টাইপ `&'static str`। এটি সরাসরি কম্পাইল্ড বাইনারির রিড-অনলি ডেটা সেগমেন্টে সংরক্ষিত থাকে।"
+  },
+  {
+    "id": "borrow-q17",
+    "difficulty": "hard",
+    "question": "একটি ফাংশনে দুটি আলাদা আর্গুমেন্টের মিউটেবল রেফারেন্স নেওয়া হলো: `fn swap(a: &mut i32, b: &mut i32)`. কিন্তু কলার সাইডে যদি কেউ `swap(&mut x, &mut x)` কল করার চেষ্টা করে, তবে কম্পাইলার কী এরর দেবে?",
+    "hint": "`cannot borrow x as mutable more than once at a time`। একই ভ্যারিয়েবলের দুটি সক্রিয় মিউটেবল রেফারেন্স তৈরি করা সম্পূর্ণ নিষিদ্ধ।"
+  },
+  {
+    "id": "borrow-q18",
+    "difficulty": "medium",
+    "question": "একটি ভেক্টরের দুটি আলাদা অংশের মিউটেবল রেফারেন্স একই সাথে পেতে চাইলে (যেমন ইনডেক্স ২ এবং ইনডেক্স ৫ এর ভ্যালু পরিবর্তন), সরাসরি ইনডেক্সিং এরর দেয়। স্ট্যান্ডার্ড লাইব্রেরির কোন মেথড এই সেফ স্প্লিটিং করতে দেয়?",
+    "hint": "`v.split_at_mut(mid)` মেথড।"
+  },
+  {
+    "id": "borrow-q19",
+    "difficulty": "easy",
+    "question": "রাস্টে কি নাল পয়েন্টার (Null Pointer) এর মতো কোনো রেফারেন্স তৈরি করা সম্ভব? যেমন সি এর `int* p = NULL;` এর সমতুল্য কি রেফারেন্সে আছে?",
+    "hint": "না, রাস্টের রেফারেন্স গ্যারান্টিযুক্তভাবে নন-নাল (Non-null)। অনুপস্থিতি বোঝাতে `Option<&T>` ব্যবহার করতে হয়।"
+  },
+  {
+    "id": "borrow-q20",
+    "difficulty": "hard",
+    "question": "ইন্টারনাল মিউট্যাবিলিটি (Interior Mutability) কী? যদি একটি ডেটা ইমিউটেবল রেফারেন্স দ্বারা আবৃত থাকে, তবুও কি কোনো বিশেষ র‍্যাপার টাইপ ব্যবহার করে তার ভেতরের ডেটা নিরাপদে পরিবর্তন করা সম্ভব?",
+    "hint": "`Cell<T>` এবং `RefCell<T>` টাইপসমূহ, যা কম্পাইল টাইমের বরো চেকিংকে রানটাইমে ডায়নামিকালি পরীক্ষা করে।"
   }
 ]

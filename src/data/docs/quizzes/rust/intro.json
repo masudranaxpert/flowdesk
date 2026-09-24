@@ -1,117 +1,123 @@
 [
   {
-    "id": "intro-1",
+    "id": "intro-q1",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "Rust-এর মূল প্রতিশ্রুতিটা কোনটা — যেটার উপরে পুরো ownership system-এর ভিত্তি?",
-    "options": [
-      "Garbage collector ছাড়াই memory safety — সব check compile time-এ শেষ",
-      "Garbage collector দিয়ে নিশ্চিত memory safety",
-      "JIT compilation-এর মাধ্যমে ধীর কিন্তু নিরাপদ execution",
-      "Runtime-এ interpreter সব error ধরে ফেলে"
-    ],
-    "answer": 0,
-    "explanation": "Chapter-এ বলা হয়েছে — Rust-এর মূল innovation হলো ownership system: GC লাগে না, memory compile time-এ manage হয়, চলন্ত program-এ কোনো runtime overhead নেই। Python/Java-র মতো GC-নির্ভর safety Rust-এর পথ না।"
+    "question": "একটি হাই-পারফরম্যান্স নেটওয়ার্কিং সার্ভিস ডিজাইনের সময় তোমাকে সি/সি++ অথবা রাস্ট বেছে নিতে বলা হলো। সি/সি++ এ সাধারণত নাল পয়েন্টার ডিরিফারেন্সিং ও ইউজ-আফটার-ফ্রি (Use-After-Free) এর কারণে সিকিউরিটি বাবল তৈরি হয়। রাস্ট কোনো রানটাইম গার্বেজ কালেক্টর (GC) ব্যবহার না করেও কীভাবে কম্পাইল টাইমে শতভাগ মেমরি সেফটি নিশ্চিত করে?",
+    "hint": "রাস্টের ওনারশিপ (Ownership), বরোয়িং (Borrowing) এবং লাইফটাইম সিস্টেম চিন্তা করো। কম্পাইলার মেমরির মালিক কে এবং কখন তা মুক্ত হবে তা কোড বিল্ড করার সময়ই জেনে ফেলে।"
   },
   {
-    "id": "intro-2",
+    "id": "intro-q2",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "`cargo`-কে এই docs-এ কী বলে পরিচয় করানো হয়েছে?",
-    "options": [
-      "শুধু একটা package manager — pip-এর মতো",
-      "Package manager + build tool + test runner একসাথে (pip + venv + pytest)",
-      "Rust compiler-এর আরেকটা নাম",
-      "Rust toolchain ইনস্টল করার টুল — rustup-এর মতো"
-    ],
-    "answer": 1,
-    "explanation": "cargo একই সাথে package manager, build tool আর test runner। ভুল করো না — toolchain ইনস্টল করে rustup, আর compile করে rustc; cargo হলো দৈনন্দিন কাজের ভিতরের টুল।"
+    "question": "প্রজেক্ট ডেভেলপমেন্ট চলাকালীন প্রতিবার কোড পরিবর্তনের পর `cargo build` না চালিয়ে পেশাদার রাস্ট ডেভেলপাররা কেন বারবার `cargo check` কমান্ড ব্যবহার করেন? আর্কিটেকচারালি এই দুটি কমান্ডের মধ্যে মূল কাজের পার্থক্য কী?",
+    "hint": "কোড জেনারেশন (LLVM Codegen, Machine Code, বাইনারি লিংকিং) সময়সাপেক্ষ। চেক কমান্ড শুধুমাত্র টাইপ ও বরো চেকিং শেষ করেই থেমে যায়।"
   },
   {
-    "id": "intro-3",
+    "id": "intro-q3",
+    "difficulty": "medium",
+    "question": "নিচের কোডটি লক্ষ্য করো:\n\n```rust\nfn main() {\n    let mut name = String::new();\n    std::io::stdin().read_line(&mut name).expect(\"Failed to read\");\n    if name == \"admin\" {\n        println!(\"স্বাগতম অ্যাডমিন!\");\n    } else {\n        println!(\"প্রবেশাধিকার নেই!\");\n    }\n}\n```\n\nইউজার টার্মিনালে \"admin\" লিখে Enter প্রেস করলেও প্রোগ্রামটি \"প্রবেশাধিকার নেই!\" প্রিন্ট করছে। এর অন্তর্নিহিত মেমরি/স্ট্রিং কারণ কী এবং কীভাবে এটি ফিক্স করবে?",
+    "code": "let mut name = String::new();\nstd::io::stdin().read_line(&mut name).expect(\"Failed\");\n// name == \"admin\" মিথ্যা হয় কেন?",
+    "hint": "টার্মিনালে Enter চাপলে ইনপুটের শেষে নিউলাইন ক্যারেক্টার (`\\n` বা `\\r\\n`) যুক্ত থাকে। স্ট্রিং মেথড `.trim()` এর কথা ভাবো।"
+  },
+  {
+    "id": "intro-q4",
     "difficulty": "easy",
-    "type": "code",
-    "prompt": "Terminal-এ \"Hello, World!\" প্রিন্ট করার জন্য Rust-এর স্ট্যান্ডার্ড প্রিন্ট ম্যাক্রোটি কল করো:",
-    "code": "fn main() {\n    ____;\n}",
-    "explanation": "Rust-এ কনসোলে টেক্সট প্রিন্ট করার সবচেয়ে সাধারণ ম্যাক্রো হলো println!। নামের শেষে ! চিহ্ন ম্যাক্রো নির্দেশ করে, যা কম্পাইল টাইমে টেক্সট ফরম্যাট ভ্যালিডেট করে।",
-    "accept": [
-      "println!(\"Hello, World!\")",
-      "println!(\"Hello, World!\");"
-    ]
+    "question": "`println!` ফাংশন না হয়ে একটি ম্যাক্রো (Macro) হওয়ার মূল কারণ কী? যদি এটি একটি সাধারণ ফাংশন হতো, তবে কম্পাইল টাইমে ফরম্যাট স্ট্রিং আর্গুমেণ্টের টাইপ ও সংখ্যা যাচাই করতে কী সমস্যা হতো?",
+    "hint": "রাস্টে সাধারণ ফাংশনে ভ্যারিয়াডিক আর্গুমেণ্ট (ভেরিয়েবল সংখ্যক প্যারামিটার) সাপোর্ট করে না। ম্যাক্রো কম্পাইল টাইমে কোড এক্সপ্যান্ড করে আর্গুমেন্ট সংখ্যা ও টাইপ যাচাই করে।"
   },
   {
-    "id": "intro-4",
+    "id": "intro-q5",
     "difficulty": "medium",
-    "type": "code",
-    "prompt": "`lang` ভেরিয়েবলের মান \"আমি Rust শিখছি\" হিসেবে প্রিন্ট করতে format string-এর ভেতরে সঠিক placeholder বসাও:",
-    "code": "fn main() {\n    let lang = \"Rust\";\n    println!(\"আমি ____ শিখছি\", lang);\n}",
-    "explanation": "Rust-এর println! ম্যাক্রোতে format specifier হিসেবে {} ব্যবহার করা হয়। কম্পাইলার আর্গুমেন্টের টাইপ দেখে নিজেই ডিসপ্লে কোড তৈরি করে নেয়।",
-    "accept": [
-      "{}"
-    ]
+    "question": "`io::stdin().read_line(&mut name)` লাইনে যদি তুমি `&name` (ইমিউটেবল রেফারেন্স) পাঠাও অথবা সরাসরি `name` পাস করো, তবে কম্পাইলার কী ধরনের এরর দেবে এবং কেন ইনপুট ফাংশনের জন্য মেমরির এক্সক্লুসিভ মিউটেবল রেফারেন্স বাধ্যতামূলক?",
+    "hint": "রিড ফাংশনটিকে বাইরে থেকে মেমরি বাফারে নতুন বাইট লিখতে (append করতে) হয়। ইমিউটেবল রেফারেন্সে ডেটা মডিফাই করা নিষিদ্ধ, আর ওনারশিপ মুভ করলে ফাংশন শেষে ডেটা ড্রপ হয়ে যাবে।"
   },
   {
-    "id": "intro-5",
+    "id": "intro-q6",
+    "difficulty": "hard",
+    "question": "একটি প্রোডাকশন সার্ভারে অপ্রত্যাশিত ইনপুটের ক্ষেত্রে `.expect(\"Crash message\")` বা `.unwrap()` ব্যবহার করা কেন অ্যান্টি-প্যাটার্ন হিসেবে গণ্য করা হয়? যখন এই মেথড ব্যর্থ হয়, তখন রাস্ট রানটাইমে স্ট্যাক আনওয়াইন্ডিং (Stack Unwinding) প্রক্রিয়ায় কী ঘটে?",
+    "hint": "expect ব্যর্থ হলে panic! তৈরি হয়। এটি থ্রেড ক্র্যাশ করায় এবং রিসোর্স রিকভারি করতে দেয় না। প্রোডাকশনে Result ও ? অপারেটরের মাধ্যমে গ্রেসফুল হ্যান্ডলিং প্রয়োজন।"
+  },
+  {
+    "id": "intro-q7",
     "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "`let mut name = String::new();` লাইনটা চলার মুহূর্তে ভেতরে কী ঘটে?",
-    "options": [
-      "সাথে সাথে heap-এ বড় একটা buffer allocate হয়",
-      "কোনো heap allocation হয় না — শুধু খালি String header তৈরি হয় (len = 0, capacity = 0); memory লাগবে প্রথম byte ঢোকার সময়",
-      "string-টা binary-র read-only section-এ বসে যায়",
-      "stack-এ \"hello\" copy করা হয়"
-    ],
-    "answer": 1,
-    "explanation": "Chapter-এর ব্যাখ্যা — String::new() এই মুহূর্তে heap ছোঁয় না; শুধু len = 0, capacity = 0 এর একটা header। read_line প্রথম byte লিখতে গেলে buffer বড় করে নেয়। Read-only section-এ বসে string literal — নতুন String না।"
+    "question": "`cargo build` এবং `cargo build --release` দিয়ে তৈরি এক্সিকিউটেবল বাইনারির পারফরম্যান্সে অনেক সময় ১০ গুণ থেকে ৫০ গুণ পর্যন্ত পার্থক্য দেখা যায়। কম্পাইলার অপটিমাইজেশন লেভেল (`opt-level = 3`), ইনলাইনিং (Inlining), এবং বাউন্ডস চেকিং (Bounds Checking) কীভাবে এতে ভূমিকা রাখে?",
+    "hint": "ডিবাগ বিল্ড দ্রুত কম্পাইল হওয়ার জন্য অপটিমাইজেশন বন্ধ রাখে। রিলিজ বিল্ডে ডেড কোড এলিমিনেশন, লুপ আনরোলিং ও ফাংশন ইনলাইনিং হয়।"
   },
   {
-    "id": "intro-6",
+    "id": "intro-q8",
+    "difficulty": "easy",
+    "question": "কম্পাইলার যখন `error[E0382]: borrow of moved value` এর মতো এরর দেখায়, তখন টার্মিনাল থেকে `rustc --explain E0382` রান করলে তুমি ঠিক কী অতিরিক্ত তথ্য পাবে এবং বিগিনারদের জন্য এটি কীভাবে একটি ইন্টারেক্টিভ শিক্ষক হিসেবে কাজ করে?",
+    "hint": "রাস্ট কম্পাইলারে প্রতিটি এরর কোডের জন্য অফিশিয়াল রেফারেন্স ও কোড উদাহরণসহ বিস্তারিত টিউটোরিয়াল বিল্ট-ইন থাকে।"
+  },
+  {
+    "id": "intro-q9",
     "difficulty": "medium",
-    "type": "code",
-    "prompt": "Blank-এ কী লিখতে হবে যাতে read_line user-এর লেখা সরাসরি `name`-এর buffer-এ পড়ে?",
-    "code": "use std::io;\n\nfn main() {\n    println!(\"তোমার নাম কী?\");\n\n    let mut name = String::new();\n    io::stdin()\n        .read_line(____)\n        .expect(\"Failed to read line\");\n\n    println!(\"হ্যালো, {}! Rust শেখায় স্বাগতম।\", name.trim());\n}",
-    "accept": [
-      "&mut name"
-    ],
-    "explanation": "`.read_line` নিজে ownership নেয় না — buffer-এর reference চায়। `&mut name` দিলে নতুন ব্যবহারের জায়গায় `String` modify হয়, তাই reference-টা mutable হওয়া জরুরি।"
+    "question": "লাইব্রেরি ক্রেট তৈরি করার সময় `Cargo.lock` ফাইলটি গিট ইগনোর (.gitignore) এ রাখা সাধারণ প্র্যাকটিস হলেও, বাইনারি অ্যাপ্লিকেশনের ক্ষেত্রে এটিকে গিটে কমিট করা বাধ্যতামূলক কেন?",
+    "hint": "রিপ্রোডিউসিবল বিল্ড (Reproducible Builds)। অ্যাপের জন্য নিশ্চিত করতে হয় যেন সব সার্ভারে ঠিক একই ডিপেন্ডেন্সি ভার্সন ইনস্টল হয়, কিন্তু লাইব্রেরির ক্ষেত্রে কনজিউমার অ্যাপের নিজস্ব রেজোলিউশন প্রয়োজন।"
   },
   {
-    "id": "intro-7",
-    "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "`cargo run` দিলে ভেতরে pipeline চলে: parse → type check → borrow check, তারপর MIR → LLVM IR → machine code। Ownership/borrowing-এর rule গুলো verify হয় কোথায়?",
-    "options": [
-      "LLVM optimizer-এর ধাপে — optimization চলার সময়",
-      "rustc-এর compile ধাপেই (MIR-এ), binary তৈরির আগে",
-      "Program চালানোর শুরুতে একবার runtime startup check",
-      "cargo-র config file-এ"
-    ],
-    "answer": 1,
-    "explanation": "Pipeline অনুযায়ী rustc-ই parse, type check আর borrow check করে — ভেতরের form MIR-এ নেমে। LLVM আসে তার পরে, শুধু optimize করতে। চলন্ত program-এ ownership-এর কোনো runtime check নেই — safety-র বিল build time-এই পরিশোধ হয়।"
+    "id": "intro-q10",
+    "difficulty": "easy",
+    "question": "রাস্টে কোনো ভেরিয়েবল ডিক্লেয়ার করার পর যদি তা ব্যবহার না করা হয়, কম্পাইলার আনইউজড ভেরিয়েবল ওয়ার্নিং দেয়। কম্পাইলারকে স্পষ্ট জানাতে যে \"আমি সচেতনভাবেই এটি এখনই ব্যবহার করছি না\", ভেরিয়েবলের নামের আগে কী চিহ্ন দিতে হয়?",
+    "hint": "আন্ডারস্কোর (`_`) প্রিফিক্স কম্পাইলারকে নীরব থাকার নির্দেশ দেয়।"
   },
   {
-    "id": "intro-8",
-    "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "`.expect(\"Failed to read line\")` আসলে কী করে?",
-    "options": [
-      "Err হলে নীরবে চলতে থাকে, শুধু লগ করে",
-      "Err হলে আবার চেষ্টা করে — একটা retry loop",
-      "read_line-এর return হলো `io::Result<usize>` — expect করা `Ok` হলে ভেতরের value বের করে দেয়, `Err` হলে তোমার message দিয়ে সাথে সাথে panic করে",
-      "Err-কে `None`-এ বদলে দেয়"
-    ],
-    "answer": 2,
-    "explanation": "read_line `Ok(কত byte পড়লাম)` অথবা `Err` return করে — এই error handle না করলে compiler ছাড়ে না। expect হলো check + early exit: Ok হলে value, Err হলে message দিয়ে program বন্ধ (panic)। Magic কিছু না।"
+    "id": "intro-q11",
+    "difficulty": "medium",
+    "question": "রাস্টের টুলচেইনে `rustup` কমান্ডের মূল কাজ কী? যদি তোমার প্রজেক্টে একটি এক্সপেরিমেন্টাল ফিচারের জন্য Nightly কম্পাইলার প্রয়োজন হয়, তবে তুমি সিস্টেমের গ্লোবাল ভার্সন না ভেঙে কেবল নির্দিষ্ট ফোল্ডারে কীভাবে নাইটলি সেট করবে?",
+    "hint": "ভাবো `rustup override set nightly` কমান্ডের কার্যপদ্ধতি নিয়ে।"
   },
   {
-    "id": "intro-9",
+    "id": "intro-q12",
     "difficulty": "hard",
-    "type": "code",
-    "prompt": "User-এর টাইপা নাম ছাপতে হবে, কিন্তু Enter চাপার newline যেন ছাপা না হয়। Blank-এ কী লিখবে?",
-    "code": "use std::io;\n\nfn main() {\n    let mut name = String::new();\n    io::stdin()\n        .read_line(&mut name)\n        .expect(\"Failed to read line\");\n\n    println!(\"হ্যালো, {}!\", ____);\n}",
-    "accept": [
-      "name.trim()"
-    ],
-    "explanation": "read_line newline-সহ পড়ে। `.trim()` সেই নতুনলাইন বাদ দিয়ে heartbeat slice ফেরত দেয় — ছাপার জন্য আরও clean।"
+    "question": "সি বা সি++ এ ডায়নামিক মেমরি অ্যালোকেট করার পর `free()` বা `delete` করতে ভুলে গেলে মেমরি লিক হয়, আবার ডাবল ফ্রি করলে ক্র্যাশ হয়। রাস্টে এই দুটি ভুলের কোনোটিই কেন সাধারণ সেফ কোডে ঘটা সম্ভব নয়?",
+    "hint": "RAII (Resource Acquisition Is Initialization) প্যাটার্ন এবং স্কোপ শেষে কম্পাইলার কর্তৃক স্বয়ংক্রিয়ভাবে জেনারেট হওয়া `drop` কলের মেকানিজম চিন্তা করো।"
+  },
+  {
+    "id": "intro-q13",
+    "difficulty": "medium",
+    "question": "`fn main()` ফাংশন থেকে কোনো ভ্যালু রিটার্ন না করলেও বাইনারিটি অপারেটিং সিস্টেমে এক্সিট কোড `0` প্রদান করে কীভাবে? যদি তুমি মেইন ফাংশন থেকে এরর এক্সিট কোড প্রদান করতে চাও, তবে মেইনের রিটার্ন টাইপ হিসেবে কী ব্যবহার করা যায়?",
+    "hint": "`std::process::Termination` ট্রেইট এবং `fn main() -> Result<(), Box<dyn std::error::Error>>` এর কথা ভাবো।"
+  },
+  {
+    "id": "intro-q14",
+    "difficulty": "easy",
+    "question": "`cargo clippy` এবং সাধারণ `cargo check` এর মধ্যে ফিলোসফিক্যাল পার্থক্য কী? ক্লিপি কেন একজন সিনিয়র ডেভেলপারের কোড রিভিউর মতো পরামর্শ প্রদান করতে পারে?",
+    "hint": "চেক শুধু কম্পাইলারের সিনট্যাক্স ও টাইপ নিয়ম দেখে। ক্লিপি অতিরিক্তভাবে পারফরম্যান্স খারাপ হওয়া কোড, অপ্রয়োজনীয় ক্লোন ও নন-ইডিওম্যাটিক রাস্ট কোড শনাক্ত করে।"
+  },
+  {
+    "id": "intro-q15",
+    "difficulty": "medium",
+    "question": "একটি প্রোগ্রামে ইউজারকে বয়স ইনপুট দিতে বলা হলো। `read_line` দিয়ে স্ট্রিং রিড করার পর এটিকে ইন্টিজারে রূপান্তর করার নিরাপদ উপায় কী যাতে ইউজার অক্ষর লিখলে প্রোগ্রাম ক্র্যাশ না করে?",
+    "hint": "`input.trim().parse::<u32>()` একটি `Result` প্রদান করে। এটিকে `match` বা `if let` দিয়ে হ্যান্ডেল করার কথা চিন্তা করো।"
+  },
+  {
+    "id": "intro-q16",
+    "difficulty": "hard",
+    "question": "রাস্টের \"Zero-Cost Abstraction\" ফিলোসফির মূল ভিত্তি কী? উচ্চ-স্তরের অ্যাবস্ট্রাকশন (যেমন ইটারেটর বা জেনেরিক্স) ব্যবহার করলেও কেন লো-লেভেল হ্যান্ড-ক্রাফটেড সি কোডের সমান বা তার চেয়ে দ্রুত রানটাইম পারফরম্যান্স পাওয়া যায়?",
+    "hint": "কম্পাইল টাইমে মোনোমরফাইজেশন (Monomorphization) এবং ফাংশন ইনলাইনিং সমস্ত অ্যাবস্ট্রাকশনকে ফ্ল্যাট মেশিন কোডে রূপান্তর করে ফেলে।"
+  },
+  {
+    "id": "intro-q17",
+    "difficulty": "easy",
+    "question": "`Cargo.toml` ফাইলে `[dependencies]` সেকশনে যখন কোনো লাইব্রেরি উল্লেখ করা হয়, তখন কার্গো সেন্ট্রাল কোন রেজিস্ট্রি থেকে প্যাকেজটি নামিয়ে কম্পাইল করে?",
+    "hint": "রাস্ট ইকোসিস্টেমের অফিশিয়াল প্যাকেজ রিপোজিটরি crates.io।"
+  },
+  {
+    "id": "intro-q18",
+    "difficulty": "medium",
+    "question": "যদি একাধিক সোর্স ফাইল থাকে, যেমন `main.rs` এর পাশাপাশি `helper.rs`, তাহলে `main.rs` এ হেল্পার ফাইলের কোড ব্যবহার করতে কার্গোকে কীভাবে মডিউল হিসেবে পরিচিত করাতে হয়?",
+    "hint": "`mod helper;` ডিক্লেয়ারেশনের মাধ্যমে কম্পাইলারকে অন্য ফাইলটি ট্রি তে অন্তর্ভুক্ত করতে হয়।"
+  },
+  {
+    "id": "intro-q19",
+    "difficulty": "hard",
+    "question": "`std::io::stdin().read_line(&mut buffer)` ব্যবহার করার সময় যদি বাফারটি লুপের ভেতরে ক্লিয়ার (`buffer.clear()`) না করা হয়, তবে পরবর্তী ইনপুটগুলোর ক্ষেত্রে মেমরি ও স্ট্রিং কনটেন্টে কী সমস্যা দেখা দেবে?",
+    "hint": "`read_line` বাফারের বর্তমান কন্টেন্ট মুছে ফেলে না, বরং তার শেষে নতুন ক্যারেক্টার যোগ (append) করে যায়।"
+  },
+  {
+    "id": "intro-q20",
+    "difficulty": "medium",
+    "question": "রাস্টে ভেরিয়েবল বাই ডিফল্ট ইমিউটেবল (Immutable) কেন রাখা হয়েছে? জাভাস্ক্রিপ্ট বা পাইথনের মতো মিউটেবল রাখলে সিস্টেম প্রোগ্রামিংয়ে কনকারেন্সি ও বাগ ট্র্যাকিংয়ে কী অসুবিধা হতো?",
+    "hint": "ফাংশনাল প্রোগ্রামিং প্রিন্সিপল এবং প্যারালাল থ্রেডে ডেটা রেস (Data Race) প্রতিরোধের কথা ভাবো। অপরিবর্তনীয় ডেটা শেয়ার করা সর্বদা নিরাপদ।"
   }
 ]

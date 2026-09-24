@@ -1,130 +1,122 @@
 [
   {
-    "id": "testing-1",
+    "id": "test-q1",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "Unit test গুলো Rust convention অনুযায়ী কোথাযে থাকে?",
-    "options": [
-      "tests/ ফোল্ডারের আলাদা ফাইলে",
-      "doc comment (///)-এর ভেতরে",
-      "src/-র ভেতরে #[cfg(test)] mod tests ব্লকে — private function-ও test করা যায়",
-      "benches/ ফোল্ডারে, criterion দিয়ে"
-    ],
-    "answer": 2,
-    "explanation": "unit test থাকে src/-র ভেতরে #[cfg(test)] mod tests-এ, আর use super::* দিয়ে parent module-এর সব (private সহ) আনা হয়। #[cfg(test)] থাকায় module-টা শুধু test build-এ compile হয় — production binary-তে যায় না। integration test রেখে যাওয়া হয় tests/ ফোল্ডারে — ওরা শুধু public API দেখতে পায়।"
+    "question": "রাস্টে ইউনিট টেস্ট (Unit Test) লেখার জন্য কোনো আলাদা এক্সটার্নাল ফ্রেমওয়ার্ক ইনস্টল করতে হয় না কেন? কোন অ্যাট্রিবিউট দিয়ে একটি ফাংশনকে টেস্ট ফাংশন হিসেবে চিহ্নিত করা হয়?",
+    "hint": "রাস্টে বিল্ট-ইন টেস্ট হার্নেস রয়েছে। যেকোনো ফাংশনের উপরে `#[test]` অ্যাট্রিবিউট দিলে কার্গো তাকে টেস্ট হিসেবে এক্সিকিউট করে।"
   },
   {
-    "id": "testing-2",
+    "id": "test-q2",
+    "difficulty": "medium",
+    "question": "ইউনিট টেস্টগুলো সোর্স কোডের একই ফাইলে মডিউল আকারে রাখা হয় এবং মডিউলের উপরে `#[cfg(test)]` অ্যাট্রিবিউট দেওয়া হয় কেন? এই অ্যাট্রিবিউট না দিলে রিলিজ বাইনারিতে কী অসুবিধা হতো?",
+    "hint": "`#[cfg(test)]` কম্পাইলারকে নির্দেশ দেয় যেন টেস্ট মডিউলটি শুধুমাত্র `cargo test` চালানোর সময় কম্পাইল হয়, রিলিজ বিল্ডে টেস্ট কোড বাদ দিয়ে বাইনারি সাইজ ছোট রাখে।"
+  },
+  {
+    "id": "test-q3",
     "difficulty": "easy",
-    "type": "code",
-    "prompt": "একটি টেস্ট ফাংশন নির্দেশ করার জন্য ফাংশনের ঠিক উপরে কোন অ্যাট্রিবিউটটি ব্যবহার করা হয়?",
-    "code": "____\nfn test_addition() {\n    assert_eq!(2 + 2, 4);\n}",
-    "explanation": "#[test] অ্যাট্রিবিউট দিলে টেস্ট রানার (cargo test) ফাংশনটিকে একটি টেস্ট কেস হিসেবে শনাক্ত করে।",
-    "accept": [
-      "#[test]"
-    ]
+    "question": "দুটি মানের সমতা যাচাই করতে এবং মান অসমান হলে ফাইল ও লাইন নম্বর সহ বিস্তারিত ডিবাগ ভ্যালু প্রিন্ট করতে কোন অ্যাসারশন ম্যাক্রো ব্যবহৃত হয়?",
+    "hint": "`assert_eq!(left, right)` ম্যাক্রো।"
   },
   {
-    "id": "testing-3",
+    "id": "test-q4",
     "difficulty": "medium",
-    "type": "code",
-    "prompt": "দুটি মানের সমতা যাচাই করার জন্য স্ট্যান্ডার্ড টেস্ট ম্যাক্রোটি কল করো:",
-    "code": "let result = 2 + 2;\n____(result, 4);",
-    "explanation": "assert_eq!(left, right) ম্যাক্রো দুটি মান সমান না হলে প্যানিক তৈরি করে টেস্ট ফেইল করায়।",
-    "accept": [
-      "assert_eq!"
-    ]
+    "question": "যদি তুমি পরীক্ষা করতে চাও যে কোনো ভুল ইনপুট দিলে তোমার কোড প্রত্যাশিতভাবে `panic!` করছে কি না, তবে টেস্ট ফাংশনের উপরে কোন অ্যাট্রিবিউট যোগ করতে হয়?",
+    "hint": "`#[should_panic]` অ্যাট্রিবিউট এবং সুনির্দিষ্ট মেসেজ মেলাতে `#[should_panic(expected = \"...\")]`।"
   },
   {
-    "id": "testing-4",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "libtest harness-এর চোখে একটা test কখন fail হয়, আর সেটা কীভাবে ধরা হয়?",
-    "options": [
-      "test function false return করলে fail — assert! ম্যাক্রো bool ফেরত চায়",
-      "println!-এর output-এ error থাকলে fail হয় — harness সব output যাচাই করে",
-      "compile warning থাকলেই test fail হয়",
-      "test function panic করলেই fail — harness প্রতিটা test-কে catch_unwind-এ wrap করে চালায়, আর assert*! ম্যাক্রোগুলো fail করার একমাত্র উপায় panic!"
-    ],
-    "answer": 3,
-    "explanation": "cargo test চাইলে তোমার crate আলাদা test binary হয়ে compile হয় — নিজস্ব main() registered সব test চালায়। প্রতিটা test আসলে সাধারণ function: catch_unwind দিয়ে চালিয়ে Ok এলে ok, Err এলে FAILED। assert_eq!/assert! ইত্যাদি fail করার উপায় শুধু panic! — নিয়ম এটাই একটাই।"
-  },
-  {
-    "id": "testing-5",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "cargo test defaultভাবে test গুলো কীভাবে চালায়?",
-    "options": [
-      "একটার পর একটা sequentially — test কখনো parallel চলে না",
-      "worker thread তুলে (সংখ্যা = logical core) প্রতিটা test নিজের আলাদা thread-এ parallel চালায় — এজন্য পরস্পর-নির্ভর বা shared file/DB ছোঁয়া test বিপজ্জনক",
-      "প্রতিটা test-এর জন্য আলাদা process fork করে",
-      "সব test একটাই thread-এ চালায়, শুধু println output আলাদা করে capture হয়"
-    ],
-    "answer": 1,
-    "explanation": "harness default-এ worker thread তোলে এবং প্রতিটা test আলাদা thread-এ চলে। তাই test-এর মধ্যে dependency বা shared state রাখা বিপজ্জনক। sequential চাইলে cargo test -- --test-threads=1। আর প্রতিটা test-এর println output capture হয় — pass হলে বাদ; লাইভ দেখতে -- --nocapture।"
-  },
-  {
-    "id": "testing-6",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "Result return করা test-এ error propagate করতে blank-এ কী বসাতে হবে?",
-    "code": "use std::num::ParseIntError;\n\nfn parse_and_double(s: &str) -> Result<i32, ParseIntError> {\n    let n: i32 = s.parse()?;\n    Ok(n * 2)\n}\n\n#[test]\nfn test_parse_success() -> Result<(), ParseIntError> {\n    let result = parse_and_double(\"21\")____;\n    assert_eq!(result, 42);\n    Ok(())\n}",
-    "accept": [
-      "?"
-    ],
-    "explanation": "test function Result return করলে ? operator ব্যবহার করা যায়। ভেতরে জাদু কিছু নেই — harness-এর হাতে Err(e) এলে সে panic! করে দেয়, মানে fail হওয়ার প্রক্রিয়া একই, ? শুধু লেখাটা ছোট করে। unwrap-এর চেয়ে পরিষ্কার।"
-  },
-  {
-    "id": "testing-7",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "নির্দিষ্ট panic message match করতে blank-এ কোন key বসবে?",
-    "code": "pub fn index_element(v: &[i32], i: usize) -> i32 {\n    v[i]\n}\n\n#[test]\n#[should_panic(____ = \"index out of bounds\")]\nfn test_out_of_bounds() {\n    index_element(&[1, 2, 3], 99);\n}",
-    "accept": [
-      "expected"
-    ],
-    "explanation": "#[should_panic(expected = \"...\")] দিলে harness panic message-এর সাথে substring match দেখে — ভুল panic হলেও test fail। expected ছাড়া খালি #[should_panic] হলে যেকোনো panic-ই pass করে, তাই expected দেওয়াই নিরাপদ।"
-  },
-  {
-    "id": "testing-8",
+    "id": "test-q5",
     "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "#[should_panic] কীভাবে কাজ করে, আর কোন অবস্থায় ভেঙে পড়ে?",
-    "options": [
-      "abort থাকলেও ঠিক কাজ করে — harness abort signal-ও ধরে ফেলে",
-      "compiler panic-এর আগেই test pass করিয়ে দেয় — unwinding লাগেই না",
-      "harness panic-টা catch_unwind-এ ধরে expected message-এর সাথে substring মিলিয়ে দেখে; কিন্তু profile-এ panic = \\\"abort\\\" থাকলে unwinding বন্ধ — #[should_panic] তখন কাজ করে না",
-      "should_panic শুধু message check করে, panic আসলে ঘটেই না — abort নিয়ে ভাবার কিছু নেই"
-    ],
-    "answer": 2,
-    "explanation": "harness test-টাকে catch_unwind-এ wrap করে চালায় — panic হলে ধরে ফেলে (process মরে না), expected = \"...\" থাকলে panic message-এর সাথে substring match দেখে। panic না হলে বা message না মিললে test fail। কিন্তু panic = \"abort\" থাকলে unwinding বন্ধ — তখন এই পুরো ব্যবস্থাই কাজ করে না।"
+    "question": "ইন্টিগ্রেশন টেস্ট (Integration Test) এবং ইউনিট টেস্টের মধ্যে কাঠামোগত পার্থক্য কী? ইন্টিগ্রেশন টেস্ট ফাইলগুলো প্রজেক্টের কোন ফোল্ডারে রাখতে হয় এবং কেন তারা শুধুমাত্র পাবলিক API পরীক্ষা করতে পারে?",
+    "hint": "ইন্টিগ্রেশন টেস্ট `tests/` ডিরেক্টরিতে থাকে। তারা লাইব্রেরিকে একজন বাইরের ইউজারের মতো ইমপোর্ট করে, তাই প্রাইভেট ফাংশন এক্সেস করতে পারে না।"
   },
   {
-    "id": "testing-9",
-    "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "Doc test আসলে কীভাবে চলে?",
-    "options": [
-      "rustdoc doc comment-এর প্রতিটা code block বের করে তার জন্য আলাদা ছোট crate বানায় — snippet-টা generated main()-এর ভেতরে বসে compile + run হয়",
-      "doc-এর code শুধু syntax-highlight হয়, কখনো compile হয় না",
-      "doc-এর code runtime-এ interpret হয় প্রথম cargo doc call-এ",
-      "doc test চালাতে আলাদা tool install করতে হয় — cargo test-এ চলে না"
-    ],
-    "answer": 0,
-    "explanation": "rustdoc প্রতিটা doc comment-এর code block-এর জন্য আলাদা ছোট crate বানায়, তোমার snippet একটা generated main()-এর ভেতরে বসে, তারপর compile + run করা হয় — cargo test-এ automatic। এজন্য doc test একটু ধীর, কিন্তু documentation পুরনো হলে test fail হয়ে ধরা পড়ে। আর ```no_run compile করে run করে না, ```ignore পুরোপুরি skip করে।"
+    "id": "test-q6",
+    "difficulty": "medium",
+    "question": "টেস্ট ফাংশন থেকে কি `Result<(), E>` রিটার্ন করা সম্ভব? অ্যাসারশনের বদলে `?` অপারেটর ব্যবহার করে টেস্ট লেখা কেন অনেক সময় বেশি পরিষ্কার দেখায়?",
+    "hint": "হ্যাঁ, `fn test_something() -> Result<(), Box<dyn Error>>` লেখা যায়। কোনো অপারেশনে ফেইল হলে `?` এরর রিটার্ন করে টেস্ট স্বয়ংক্রিয়ভাবে ফেইল করায়।"
   },
   {
-    "id": "testing-10",
+    "id": "test-q7",
+    "difficulty": "easy",
+    "question": "দীর্ঘ সময় নেয় এমন কোনো টেস্টকে স্বাভাবিক টেস্ট রান থেকে বাদ রাখতে কোন অ্যাট্রিবিউট ব্যবহার করা হয় এবং পরবর্তীতে শুধু সেই ইগনোরড টেস্টটি চালাতে কার্গোকে কী নির্দেশ দিতে হয়?",
+    "hint": "`#[ignore]` অ্যাট্রিবিউট এবং চালানোর জন্য `cargo test -- --ignored`।"
+  },
+  {
+    "id": "test-q8",
     "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "mockall-এর #[automock] আসলে কী করে?",
-    "options": [
-      "runtime-এ reflection দিয়ে method call intercept করে — Python-এর MagicMock-এর মতো dynamic",
-      "test binary-এর vtable patch করে আসল method-এর জায়গায় mock বসিয়ে দেয়",
-      "যেকোনো call accept করা একটা generic dummy struct বানায়",
-      "একটা proc-macro — compile time-এ trait-টার নকল MockDatabase struct + expectation রাখার impl generate করে; runtime reflection না, তাই type-safe"
-    ],
-    "answer": 3,
-    "explanation": "#[automock] নিজেই একটা proc-macro — compile time-এ তোমার trait-কে দেখে MockDatabase struct আর expectation রাখার field সহ impl লিখে দেয়। mock-এর ভেতরে runtime reflection নেই — generated আসল code, তাই type-safe আর দ্রুত; Python-এর MagicMock-এর dynamic স্বাধীনতা নেই, বিনিময়ে ভুল হলে compile error।"
+    "question": "টেস্ট প্যারালালিজম ও থ্রেড কনকারেন্সি: ডিফল্টভাবে `cargo test` সমস্ত টেস্ট প্যারালালে একাধিক থ্রেডে রান করে। যদি টেস্টগুলো একটি শেয়ার্ড ডেটাবেজ বা ফাইল স্পর্শ করে, তবে টেস্টে কনফ্লিক্ট এড়াতে কীভাবে সিঙ্গেল থ্রেডে টেস্ট রান করতে হয়?",
+    "hint": "`cargo test -- --test-threads=1` কমান্ড পাস করতে হয়।"
+  },
+  {
+    "id": "test-q9",
+    "difficulty": "medium",
+    "question": "ডকুমেন্টেশন টেস্ট (Doc Tests) কী? ট্রিপল স্ল্যাশ `///` কমেন্টের ভেতরে লেখা রাস্ট কোড ব্লক কীভাবে লাইব্রেরির ডকুমেন্টেশন ও অটোমেটেড টেস্ট উভয় হিসেবে কাজ করে?",
+    "hint": "`cargo test` স্বয়ংক্রিয়ভাবে মার্কডাউন ডকুমেন্টেশনের কোড ব্লকগুলো সংগ্রহ করে স্বতন্ত্র টেস্ট হিসেবে কম্পাইল ও রান করে।"
+  },
+  {
+    "id": "test-q10",
+    "difficulty": "easy",
+    "question": "টেস্ট চলাকালীন কোডের ভেতরের `println!` স্টেটমেন্টগুলোর আউটপুট ডিফল্টভাবে টার্মিনালে দেখা যায় না কেন? আউটপুট ফোর্সফুলি দেখতে কার্গোকে কী ফ্ল্যাগ দিতে হয়?",
+    "hint": "সফল টেস্টের ক্ষেত্রে কার্গো স্ট্যান্ডার্ড আউটপুট ক্যাপচার করে রাখে। দেখতে চাইলে `cargo test -- --nocapture` দিতে হয়।"
+  },
+  {
+    "id": "test-q11",
+    "difficulty": "hard",
+    "question": "কমন টেস্ট হেল্পার বা শেয়ার্ড কোড: `tests/` ফোল্ডারের ভেতর কোনো ফাইল রাখলে কার্গো তাকে স্বতন্ত্র ইন্টিগ্রেশন টেস্ট ফাইল ভেবে রান করতে চায়। শেয়ার্ড টেস্ট হেল্পার তৈরি করতে কীভাবে `tests/common/mod.rs` তৈরি করতে হয়?",
+    "hint": "সাব-ডিরেক্টরিতে `mod.rs` রাখলে কার্গো তাকে ইন্টিগ্রেশন টেস্ট হিসেবে না দেখে শেয়ার্ড মডিউল হিসেবে বিবেচনা করে যা অন্য টেস্ট ফাইলে `mod common;` দিয়ে ব্যবহার করা যায়।"
+  },
+  {
+    "id": "test-q12",
+    "difficulty": "medium",
+    "question": "প্রাইভেট ফাংশন টেস্ট করা: রাস্টে কি কোনো মডিউলের প্রাইভেট ফাংশনকে ইউনিট টেস্ট করা বৈধ? এটি কীভাবে সমাধান করা হয়?",
+    "hint": "হ্যাঁ, সম্পূর্ণ বৈধ। যেহেতু টেস্ট মডিউলটি (`mod tests`) ফাইলের ভেতরেই থাকে, সে `use super::*;` দিয়ে সমস্ত প্রাইভেট ফাংশনও সরাসরি পরীক্ষা করতে পারে।"
+  },
+  {
+    "id": "test-q13",
+    "difficulty": "easy",
+    "question": "নির্দিষ্ট কোনো একটি মাত্র টেস্ট ফাংশন রান করতে চাইলে `cargo test` এর পর কীভাবে ফিল্টার স্ট্রিং উল্লেখ করতে হয়?",
+    "hint": "`cargo test test_function_name`।"
+  },
+  {
+    "id": "test-q14",
+    "difficulty": "hard",
+    "question": "বেন্চমার্কিং (Benchmarking): কোডের গতি ও ন্যানোসেকেন্ড পারফরম্যান্স নিখুঁতভাবে পরিমাপ করতে নাইটলি রাস্টে কোন অ্যাট্রিবিউট এবং স্টেবল রাস্টে কোন জনপ্রিয় থার্ড-পার্টি ক্রেট ব্যবহৃত হয়?",
+    "hint": "নাইটলিতে `#[bench]` এবং স্টেবল রাস্টে `criterion` ক্রেট।"
+  },
+  {
+    "id": "test-q15",
+    "difficulty": "medium",
+    "question": "প্রোপার্টি-বেসড টেস্টিং (Property-Based Testing / Fuzzing): ফিক্সড ইনপুট টেস্টের বদলে হাজারো এলোমেলো ইনপুট দিয়ে অ্যালগরিদমের বাউন্ডারি ক্র্যাশ টেস্ট করতে কোন ক্রেট ব্যবহার করা হয়?",
+    "hint": "`proptest` অথবা `quickcheck` ক্রেট।"
+  },
+  {
+    "id": "test-q16",
+    "difficulty": "easy",
+    "question": "কাস্টম ফেইলিউর মেসেজ: `assert!` বা `assert_eq!` এ টেস্ট ফেইল করলে নিজের মতো কাস্টম ডেসক্রিপশন ফরম্যাট করে দিতে কীভাবে আর্গুমেন্ট পাস করতে হয়?",
+    "hint": "`assert_eq!(result, expected, \"Failed with input value: {}\", input);`।"
+  },
+  {
+    "id": "test-q17",
+    "difficulty": "hard",
+    "question": "মকিং এবং ডিপেন্ডেন্সি ইনজেকশন: নেটওয়ার্ক রিকোয়েস্ট বা ডেটাবেজ অ্যাক্সেসের মতো এক্সটার্নাল ডিপেন্ডেন্সিকে টেস্টে ফেক বা মক করতে রাস্টে ট্রেইট অবজেক্ট বা জেনেরিক্স কীভাবে ব্যবহৃত হয়?",
+    "hint": "সরাসরি কংক্রিট স্ট্রাক্টের বদলে মেথডে ট্রেইট গ্রহণ করা হয়, যাতে টেস্টের সময় একটি ডামি মক ট্রেইট ইমপ্লিমেন্টেশন সহজে ইনজেক্ট করা যায়।"
+  },
+  {
+    "id": "test-q18",
+    "difficulty": "medium",
+    "question": "টেস্ট কভারেজ (Test Coverage): রাস্ট প্রজেক্টের কোডের কত শতাংশ টেস্ট দ্বারা আচ্ছাদিত তা বিশ্লেষণ করতে বহুল ব্যবহৃত টুল কোনটি?",
+    "hint": "`cargo-tarpaulin` বা `cargo-llvm-cov` টুল।"
+  },
+  {
+    "id": "test-q19",
+    "difficulty": "easy",
+    "question": "একটি টেস্ট ফাংশন টেস্ট পাসের জন্য আসলে কী প্রত্যাশা করে? টেস্ট ফেইল্ড হিসেবে গণ্য হওয়ার একমাত্র শর্ত কী?",
+    "hint": "ফাংশনটি যদি কোনো প্যানিক ছাড়া স্বাভাবিকভাবে সমাপ্ত হয় তবে টেস্ট পাস। যদি কোডে কোনো প্যানিক (`panic!`) ঘটে তবে টেস্ট ফেইল।"
+  },
+  {
+    "id": "test-q20",
+    "difficulty": "hard",
+    "question": "অ্যাসিঙ্ক টেস্ট (Async Testing): অ্যাসিঙ্ক ফাংশন টেস্ট করার জন্য টোকিও ব্যবহার করলে টেস্ট ফাংশনের উপরে সাধারণ `#[test]` এর বদলে কোন ম্যাক্রো ব্যবহার করতে হয়?",
+    "hint": "`#[tokio::test]` অ্যাট্রিবিউট ম্যাক্রো।"
   }
 ]

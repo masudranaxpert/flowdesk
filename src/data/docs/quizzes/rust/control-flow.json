@@ -1,121 +1,125 @@
 [
   {
-    "id": "control-flow-1",
+    "id": "cf-q1",
     "difficulty": "easy",
-    "type": "code",
-    "prompt": "`score` এর মান 80 বা তার বেশি হলে \"A\", অন্যথায় \"B\" রিটার্ন করতে if এক্সপ্রেশনটি লিখো:",
-    "code": "let score = 75;\nlet grade = ____;\nprintln!(\"{}\", grade); // B",
-    "explanation": "Rust-এ if/else একটি এক্সপ্রেশন যা সরাসরি মান রিটার্ন করতে পারে। উভয় ব্রাঞ্চের রিটার্ন টাইপ অবশ্যই একই হতে হয়।",
-    "accept": [
-      "if score >= 80 { \"A\" } else { \"B\" }",
-      "if score >= 80 { \"A\" } else { \"B\" };"
-    ]
+    "question": "পাইথন বা জাভাস্ক্রিপ্টে `if (x = 5)` বা `if (1)` লিখে ট্রুথি/ফলসি কনসেপ্ট কাজ করে। কিন্তু রাস্টে `let x = 5; if x { ... }` লিখলে কম্পাইলার কেন কোড সম্পূর্ণ রিজেক্ট করে?",
+    "hint": "রাস্টে কোনো ট্রুথি বা ফলসি কোয়ার্সন নেই। `if` এর কন্ডিশন এক্সপ্রেশনকে কঠোরভাবে `bool` টাইপের (`true` অথবা `false`) হতে হয়।"
   },
   {
-    "id": "control-flow-2",
+    "id": "cf-q2",
+    "difficulty": "medium",
+    "question": "রাস্টে `if` একটি এক্সপ্রেশন হওয়ায় টারনারি অপারেটর (`condition ? a : b`) এর আলাদা কোনো প্রয়োজন নেই। কিন্তু নিচের কোডটি কেন কম্পাইল হবে না?\n\n```rust\nlet condition = true;\nlet number = if condition { 5 } else { \"six\" };\n```\n\nকম্পাইলারের মেমরি লেআউটের দিক থেকে এই বিধিনিষেধের মূল কারণ কী?",
+    "code": "let number = if condition { 5 } else { \"six\" };",
+    "hint": "রাস্ট একটি স্ট্যাটিক্যালি টাইপড ল্যাঙ্গুয়েজ। কম্পাইল টাইমে প্রতিটি ভেরিয়েবলের জন্য ফিক্সড মেমরি ও সিঙ্গেল টাইপ জানতে হয়। একটি ব্রাঞ্চ `i32` আর অন্যটি `&str` দিলে কম্পাইলার টাইপ ইউনিফাই করতে পারে না।"
+  },
+  {
+    "id": "cf-q3",
+    "difficulty": "medium",
+    "question": "সি বা সি++ এ `while (true)` দিয়ে ইনফিনিট লুপ চালানো সাধারণ অভ্যাস। কিন্তু রাস্টে একই কাজের জন্য আলাদা ডেডিকেটেড কি-ওয়ার্ড `loop` রাখা হয়েছে কেন? কম্পাইলারের স্ট্যাটিক অ্যানালাইসিস ও কোড অপটিমাইজেশনে `loop` ব্যবহারের সুবিধা কী?",
+    "hint": "কম্পাইলার নিশ্চিতভাবে জানে যে `loop` এর ভেতর `break` না পেলে কোড থামবে না। ফলে এর ভেতর ইনিশিয়ালাইজ করা ভেরিয়েবল লুপের বাইরে নিশ্চিতভাবে ইনিশিয়ালাইজড হিসেবে বিবেচিত হয়।"
+  },
+  {
+    "id": "cf-q4",
     "difficulty": "easy",
-    "type": "code",
-    "prompt": "1 থেকে 5 পর্যন্ত (5 সহ) প্রতিটি সংখ্যা লুপ চালানোর জন্য inclusive range এক্সপ্রেশনটি লিখো:",
-    "code": "let mut total = 0;\nfor i in ____ {\n    total += i;\n}\nprintln!(\"{}\", total); // 15",
-    "explanation": "Rust-এ 1..=5 হলো inclusive range (1, 2, 3, 4, 5 পর্যন্ত সবগুলো আসবে)। 1..5 দিলে exclusive range হতো (4 পর্যন্ত)।",
-    "accept": [
-      "1..=5"
-    ]
+    "question": "রাস্টের `loop` কি-ওয়ার্ড থেকে সরাসরি ভ্যালু রিটার্ন করে একটি ভেরিয়েবলে স্টোর করা যায়। নিচের কোডে `result` এর মান কত হবে এবং সিনট্যাক্সটি কীভাবে কাজ করে?\n\n```rust\nlet mut counter = 0;\nlet result = loop {\n    counter += 1;\n    if counter == 10 {\n        break counter * 2;\n    }\n};\n```",
+    "code": "let mut counter = 0;\nlet result = loop {\n    counter += 1;\n    if counter == 10 {\n        break counter * 2;\n    }\n};",
+    "hint": "`break` কি-ওয়ার্ডের পরে যে এক্সপ্রেশনটি লেখা হয়, সেটি লুপের রিটার্ন ভ্যালু হিসেবে অ্যাসাইন হয়। এখানে ১০ * ২ = ২০।"
   },
   {
-    "id": "control-flow-3",
+    "id": "cf-q5",
+    "difficulty": "medium",
+    "question": "নেস্টেড লুপের ভেতরে কাজ করার সময় তুমি চাচ্ছ ভেতরের লুপ থেকে এক ক্লিকে সরাসরি একদম বাইরের লুপটি ব্রেক করতে। রাস্টে এই ধরনের কন্ট্রোল ফ্লো কীভাবে লুপ লেবেল (Loop Labels) দিয়ে বাস্তবায়ন করা হয়?",
+    "hint": "লেবেল ডিক্লেয়ারেশন সিনট্যাক্স: `'outer: loop { loop { break 'outer; } }`।"
+  },
+  {
+    "id": "cf-q6",
+    "difficulty": "hard",
+    "question": "একটি অ্যারে ইটারেট করার জন্য সি-স্টাইল ইনডেক্স ভিত্তিক লুপ (`for i in 0..arr.len()`) চালানোর চেয়ে সরাসরি আইটেম ধরে লুপ (`for item in &arr`) চালানো কেন বেশি নিরাপদ এবং দ্রুততর?",
+    "hint": "সরাসরি ইটারেটর লুপে রাস্ট কম্পাইলার বাউন্ডস চেকিং ওভারহেড পুরোপুরি অপটিমাইজ আউট করে দেয়, ফলে কোনো রানটাইম এরর বা স্লোনেস থাকে না।"
+  },
+  {
+    "id": "cf-q7",
+    "difficulty": "medium",
+    "question": "রেঞ্জ সিনট্যাক্সে `1..5` এবং `1..=5` এর মধ্যে পার্থক্য কী? যদি ১ থেকে ১০ পর্যন্ত সংখ্যার যোগফল নির্ণয় করতে চাও, তবে কোন রেঞ্জটি ব্যবহার করবে?",
+    "hint": "`..` এক্সক্লুসিভ (শেষের সংখ্যা বাদে), আর `..=` ইনক্লুসিভ (শেষের সংখ্যা সহ)। ১ থেকে ১০ চাইলে `1..=10`।"
+  },
+  {
+    "id": "cf-q8",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "এই match থেকে `_` arm-টা বাদ দিলে কী হবে?",
-    "code": "fn main() {\n    let number = 3;\n    match number {\n        1 => println!(\"One\"),\n        2 => println!(\"Two\"),\n        3 => println!(\"Three\"),\n    }\n}",
-    "options": [
-      "চলবেই — 3 তো একটা arm-এ আছে",
-      "compile error — non-exhaustive patterns: i32-এর সব সম্ভাব্য value cover করতে হবে",
-      "runtime-এ match না মিললে panic করত",
-      "শেষ arm-এর ভেতরে নীরবে fallback হয়"
-    ],
-    "answer": 1,
-    "explanation": "match-এ সব case cover করা বাধ্যতামূলক — compiler pattern থেকে decision tree বানিয়ে verify করে। i32-এর সম্ভাব্য value অসীম, তাই `_` wildcard লাগেই; না দিলে compile error। 3-এর জন্য চলুক আর না চলুক — exhaustiveness হলো type-এর সব value-র জন্য guarantee।"
+    "question": "লুপের বর্তমান ইটারেশন তৎক্ষণাৎ স্কিপ করে পরবর্তী ইটারেশনে চলে যাওয়ার জন্য কোন কি-ওয়ার্ড ব্যবহার করা হয় এবং লেবেলযুক্ত লুপে এটি কীভাবে কাজ করে?",
+    "hint": "লেবেলযুক্ত লুপে `continue` এবং `continue 'label` কি-ওয়ার্ড ব্যবহৃত হয়।"
   },
   {
-    "id": "control-flow-4",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "`number` এর মান যতক্ষণ পর্যন্ত 0 এর চেয়ে বড় থাকবে ততক্ষণ লুপ চালাতে while কন্ডিশনটি লিখো:",
-    "code": "let mut number = 3;\nwhile ____ {\n    println!(\"{}\", number);\n    number -= 1;\n}",
-    "explanation": "while লুপে কন্ডিশন true থাকা পর্যন্ত লুপের বডি রান করে। কোনো বন্ধনী (parentheses) দরকার হয় না।",
-    "accept": [
-      "number > 0"
-    ]
-  },
-  {
-    "id": "control-flow-5",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "Rust-এ `if 5 { }` লিখলে কী হবে আর কেন?",
-    "options": [
-      "চলবে — Python-এর মতো 5 truthy",
-      "compile error — condition অবশ্যই `bool` হতে হবে, কোনো truthy/falsy coercion নেই",
-      "চলবে — 5 odd সংখ্যা তাই true ধরা হয়",
-      "compile error — if-এর condition-এ parentheses লাগবে"
-    ],
-    "answer": 1,
-    "explanation": "Rust-এ condition সবসময় bool — C/Python-এর মতো truthy/falsy ব্যাপার নেই। Machine level-এ branch-এর জন্য ১-bit উত্তর লাগে, `5` দিয়ে jump decision নেওয়া যায় না। আর parentheses optional — সেটা error এর কারণ না।"
-  },
-  {
-    "id": "control-flow-6",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "`stack.pop()` থেকে পাওয়া মানগুলো যতক্ষণ Some(top) আসবে ততক্ষণ আনপ্যাক করে লুপ চালানোর জন্য pattern matching কন্ডিশনটি লিখো:",
-    "code": "let mut stack = vec![1, 2, 3];\nwhile let ____ = stack.pop() {\n    println!(\"{}\", top);\n}",
-    "explanation": "while let Some(top) = stack.pop() লুপটি প্রতি ধাপে চেক করে; যতক্ষণ মান থাকে ততক্ষণ top-এ আনপ্যাক করে বডি চালায়, আর None হলে লুপ থামিয়ে দেয়।",
-    "accept": [
-      "Some(top)"
-    ]
-  },
-  {
-    "id": "control-flow-7",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "Compile করাতে হলে শেষ arm-এর pattern কী লিখতে হবে — যাতে বাকি সব value-ও cover হয়?",
-    "code": "fn main() {\n    let grade = 85;\n\n    let letter = match grade {\n        90..=100 => \"A\",\n        80..=89 => \"B\",\n        70..=79 => \"C\",\n        ____ => \"F\",\n    };\n\n    println!(\"{}\", letter);\n}",
-    "accept": [
-      "_"
-    ],
-    "explanation": "`match`-কে exhaustive হতে হয় — সব সম্ভাব্য value cover করতে হবে। `_` wildcard বাকি সব ভেলু cover করে, তাই compile হয়।"
-  },
-  {
-    "id": "control-flow-8",
+    "id": "cf-q9",
     "difficulty": "hard",
-    "type": "code",
-    "prompt": "বাইরের লুপের লেবেল 'outer দেওয়া আছে। ভেতর থেকে সরাসরি বাইরের লুপটি ব্রেক করতে কী লিখবে?",
-    "code": "'outer: loop {\n    loop {\n        if count == 3 {\n            ____;\n        }\n    }\n}",
-    "explanation": "নেস্টেড লুপের ক্ষেত্রে সরাসরি নির্দিষ্ট কোনো বাইরের লুপ থামাতে break 'label সিনট্যাক্স ব্যবহার করা হয়।",
-    "accept": [
-      "break 'outer",
-      "break 'outer;"
-    ]
+    "question": "রাস্টের `match` এক্সপ্রেশনকে কেন \"এক্সহস্টিভ\" (Exhaustive) বলা হয়? যদি কোনো এনামের ৫টি ভ্যারিয়েন্ট থাকে এবং তুমি মাত্র ৪টি হ্যান্ডেল করো, তবে কম্পাইলার কোড বিল্ড করতে বাধা দেয় কেন?",
+    "hint": "সব কেস কভার না করলে রানটাইমে আনহ্যান্ডেলড স্টেট তৈরি হতে পারে যা ক্র্যাশ বা বাগ সৃষ্টি করে। সব কেস কভার না করতে চাইলে ওয়াইল্ডকার্ড প্যাটার্ন `_` দিতে হয়।"
   },
   {
-    "id": "control-flow-9",
-    "difficulty": "hard",
-    "type": "code",
-    "prompt": "`result`-এ 20 আসতে হবে — blank-এ কী লিখবে?",
-    "code": "fn main() {\n    let mut counter = 0;\n\n    let result = loop {\n        counter += 1;\n        if counter == 10 {\n            ____;\n        }\n    };\n\n    println!(\"{}\", result);\n}",
-    "accept": [
-      "break counter * 2"
-    ],
-    "explanation": "loop-এর body থেকে value ফেরত দিতে `break expression` — এখানে `break counter * 2` loop থেকে 20 (counter==10-এ) ফেরত দেয়, যা `result`-এ বসে।"
+    "id": "cf-q10",
+    "difficulty": "medium",
+    "question": "`match` আর্মে একাধিক শর্ত বা প্যাটার্ন একসাথে মেলানোর জন্য কোন অপারেটর ব্যবহার করা হয় এবং ম্যাচ গার্ড (Match Guard: `if` কন্ডিশন) কীভাবে অতিরিক্ত লজিক প্রয়োগ করতে সাহায্য করে?",
+    "hint": "পাইপ অপারেটর `|` একাধিক প্যাটার্নের জন্য (যেমন `1 | 2 => ...`) এবং প্যাটার্নের পর `x if x > 10 => ...` হলো ম্যাচ গার্ড।"
   },
   {
-    "id": "control-flow-10",
+    "id": "cf-q11",
+    "difficulty": "easy",
+    "question": "যখন তুমি শুধুমাত্র একটি নির্দিষ্ট প্যাটার্ন বা অপশন হ্যান্ডেল করতে চাও এবং বাকি সব কেস উপেক্ষা করতে চাও, তখন ভার্বোস `match` এর পরিবর্তে কোন সংক্ষিপ্ত কন্ট্রোল ফ্লো সিনট্যাক্স ব্যবহার করা উচিত?",
+    "hint": "`if let Some(val) = option { ... }` সিনট্যাক্স।"
+  },
+  {
+    "id": "cf-q12",
+    "difficulty": "medium",
+    "question": "একইভাবে যদি তুমি কোনো লুপে বারবার প্যাটার্ন ম্যাচ করাতে চাও যতক্ষণ না প্যাটার্নটি ব্যর্থ হয় (যেমন স্ট্যাক থেকে এলিমেন্ট পপ করা), তবে কোন লুপ কনস্ট্রাক্ট ব্যবহার করা সবচেয়ে ইডিওম্যাটিক?",
+    "hint": "`while let Some(top) = stack.pop() { ... }` সিনট্যাক্স।"
+  },
+  {
+    "id": "cf-q13",
     "difficulty": "hard",
-    "type": "code",
-    "prompt": "সংখ্যাটি 3 এবং 5 উভয় দ্বারা বিভাজ্য (রিমাইন্ডার 0) কিনা চেক করতে tuple matching এর প্রথম প্যাটার্নটি কী লিখবে?",
-    "code": "let result = match (n % 3, n % 5) {\n    ____ => \"FizzBuzz\",\n    (0, _) => \"Fizz\",\n    (_, 0) => \"Buzz\",\n    _ => \"Number\",\n};",
-    "explanation": "Tuple matching-এ (0, 0) প্যাটার্নটি নির্দেশ করে যে উভয় এক্সপ্রেশনের মান 0 হতে হবে, যা FizzBuzz কন্ডিশন পূরণ করে।",
-    "accept": [
-      "(0, 0)"
-    ]
+    "question": "নিচের কোডে ম্যাচ ব্লকে ভ্যারিয়েবল শ্যাডোয়িং লক্ষ্য করো:\n\n```rust\nlet x = Some(5);\nlet y = 10;\nmatch x {\n    Some(50) => println!(\"Got 50\"),\n    Some(y) => println!(\"Matched, y = {:?}\", y),\n    _ => println!(\"Default case\"),\n}\nprintln!(\"at the end: x = {:?}, y = {:?}\", x, y);\n```\n\nদ্বিতীয় আর্মে `Some(y)` কি বাইরের `y` (যার মান ১০) এর সাথে তুলনা করবে, নাকি নতুন ভ্যারিয়েবল বাঁধবে? আউটপুটে শেষের প্রিন্টে `y` এর মান কত থাকবে?",
+    "code": "let x = Some(5);\nlet y = 10;\nmatch x {\n    Some(50) => println!(\"Got 50\"),\n    Some(y) => println!(\"Matched, y = {:?}\", y),\n    _ => println!(\"Default\"),\n};",
+    "hint": "ম্যাচ প্যাটার্নের ভেতর নতুন আইডেন্টিফায়ার একটি নতুন শ্যাডো ভ্যারিয়েবল তৈরি করে যা ভেতরের মান ধরে নেয়। এটি বাইরের ১০ এর সাথে মেলায় না। বাইরের y অপরিবর্তিত ১০ থাকবে।"
+  },
+  {
+    "id": "cf-q14",
+    "difficulty": "medium",
+    "question": "`if let` এর সাথে `else` এবং `else if` চেইনিং কীভাবে করা যায়? যদি `if let Some(x) = opt` না মেলে, তখন সরাসরি ফলব্যাক এক্সিকিউট করতে `else` ব্লক কীভাবে কাজ করে?",
+    "hint": "সাধারণ `if-else` এর মতোই `if let Some(x) = opt { ... } else { ... }` ব্যবহার করা যায়।"
+  },
+  {
+    "id": "cf-q15",
+    "difficulty": "hard",
+    "question": "সি ল্যাঙ্গুয়েজে `switch-case` এ `break` না দিলে সাইলেন্টলি ফল-থ্রু (Fall-through) হয়ে নিচের সব কেস এক্সিকিউট হয়। রাস্টের `match` এ কেন ইচ্ছাকৃতভাবেই কোনো ফল-থ্রু রাখা হয়নি?",
+    "hint": "ফল-থ্রু সি প্রোগ্রামের অন্যতম প্রধান সিকিউরিটি বাগ তৈরি করে। রাস্টে প্রতিটি প্যাটার্ন আর্ম সম্পূর্ণ বিচ্ছিন্ন ও স্বাধীন।"
+  },
+  {
+    "id": "cf-q16",
+    "difficulty": "easy",
+    "question": "একটি রিভার্স লুপ চালাতে চাও (যেমন ৫ থেকে ১ পর্যন্ত কাউন্টডাউন)। রাস্টে `(1..=5).rev()` মেথড ব্যবহার করে কীভাবে লুপ তৈরি করবে?",
+    "hint": "`for num in (1..=5).rev() { println!(\"{}\", num); }`।"
+  },
+  {
+    "id": "cf-q17",
+    "difficulty": "medium",
+    "question": "লুপের ভেতরে কোনো কালেকশন মডিফাই করার সময় (যেমন `for item in &mut list`) এলিমেন্ট রিমুভ করতে গেলে বরো চেকার এরর দেয় কেন? এই সমস্যার সমাধান কী?",
+    "hint": "একই সাথে ইটারেট করা ও কালেকশন মিউটেট করা অবৈধ। সমাধান হলো `retain` মেথড ব্যবহার করা অথবা ফিল্টার করে নতুন ভেক্টর তৈরি করা।"
+  },
+  {
+    "id": "cf-q18",
+    "difficulty": "hard",
+    "question": "প্যাটার্ন ম্যাচিংয়ে `@` (at binding) অপারেটর কী কাজে লাগে? যেমন `Message::Hello { id: id_range @ 3..=7 }` লিখলে কী সুবিধা পাওয়া যায়?",
+    "hint": "এটি একই সাথে একটি মানের রেঞ্জ টেস্ট করে এবং সফল হলে ভেতরের মানটিকে একটি নির্দিষ্ট নামে ভ্যারিয়েবলে বাইন্ড করে ব্যবহারের সুযোগ দেয়।"
+  },
+  {
+    "id": "cf-q19",
+    "difficulty": "medium",
+    "question": "একটি ইনফিনিট লুপের ভেতরে কোনো কন্ডিশনে `return` এবং `break` করার মধ্যকার সূক্ষ্ম পার্থক্য কী?",
+    "hint": "`break` শুধুমাত্র সংশ্লিষ্ট লুপ থেকে বের হয়, কিন্তু `return` সম্পূর্ণ প্যারেন্ট ফাংশন থেকেই এক্সিকিউশন শেষ করে মান ফেরত দেয়।"
+  },
+  {
+    "id": "cf-q20",
+    "difficulty": "easy",
+    "question": "`matches!` ম্যাক্রো কখন ব্যবহার করা হয়? উদাহরণস্বরূপ `if matches!(status, Status::Active) { ... }` সাধারণ `match` এর তুলনায় কী সুবিধা দেয়?",
+    "hint": "এটি একটি বুলিয়ান এক্সপ্রেশন প্রদান করে যা শুধুমাত্র প্যাটার্ন মিলেছে কিনা তা পরীক্ষা করার কোডকে অনেক বেশি সংক্ষিপ্ত ও পঠনযোগ্য করে তোলে।"
   }
 ]

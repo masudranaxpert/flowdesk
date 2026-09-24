@@ -1,131 +1,123 @@
 [
   {
-    "id": "async-await-1",
+    "id": "async-q1",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "async fn fetch_data() -> String-কে fetch_data(); লিখে call করলেই কি তার ভেতরের কাজ শুরু হয়?",
-    "options": [
-      "হ্যাঁ — call করামাত্র background thread-এ চলা শুরু হয়ে যায়",
-      "হ্যাঁ — compiler-এর বানানো state machine সাথে সাথে poll হয়ে যায়",
-      "না — future lazy; .await বা spawn না করা পর্যন্ত কোনো কাজই শুরু হয় না",
-      "শুধু release build-এ চলে যায়, debug-এ .await লাগে"
-    ],
-    "answer": 2,
-    "explanation": "async fn call করা মানে শুধু compiler-এর বানানো state machine enum-টার value হিসেবে পাওয়া — এখনো একবারও poll হয়নি, কোনো কাজ শুরু হয়নি। .await করলে executor future-টাকে poll করে, তখনই execution চলে। এজন্যই future-কে lazy বলে।"
+    "question": "ওএস থ্রেড এবং অ্যাসিঙ্ক টাস্ক (Async Task) এর মধ্যে মৌলিক পার্থক্য কী? ১ লক্ষ ওয়েব সকেট কানেকশন হ্যান্ডেল করতে ওএস থ্রেডের বদলে অ্যাসিঙ্ক কেন শতগুণ কম মেমরি ব্যবহার করে?",
+    "hint": "প্রতিটি ওএস থ্রেড প্রায় ২ মেগাবাইট স্ট্যাক দখল করে, ফলে ১ লক্ষ থ্রেডে ২০০ জিবি মেমরি লাগত। কিন্তু অ্যাসিঙ্ক টাস্ক স্ট্যাক-লেস কো-রুটিন যা মাত্র কয়েকশো বাইট হিপ মেমরি নেয়।"
   },
   {
-    "id": "async-await-2",
+    "id": "async-q2",
+    "difficulty": "medium",
+    "question": "রাস্টে `async fn` ফাংশন কল করলে কি ফাংশনটির কোড তৎক্ষণাৎ এক্সিকিউট হওয়া শুরু করে? কেন বলা হয় \"Rust futures are lazy\"?",
+    "hint": "না, কিছুই এক্সিকিউট হয় না! এটি কেবল একটি আন-এক্সিকিউটেড `Future` অবজেক্ট রিটার্ন করে। যতক্ষণ না তাকে `.await` করা হয় বা কোনো রানটাইমে স্পন করা হয়, কোনো কোড রান করে না।"
+  },
+  {
+    "id": "async-q3",
+    "difficulty": "hard",
+    "question": "কম্পাইলার যখন একটি `async fn` কে কম্পাইল করে, তখন ইন্টারনালি তার বডিকে কিসে রূপান্তর করে? প্রতিটি `.await` পয়েন্ট কীভাবে স্টেট মেশিনের ট্রানজিশন হিসেবে কাজ করে?",
+    "hint": "একটি বিশাল স্টেট মেশিন (enum)। প্রতিটি `.await` হলো একটি সাসপেন্ড পয়েন্ট যেখানে টাস্ক পজ হয় এবং রেজাল্ট আসার পর পরবর্তী ভ্যারিয়েন্টে স্টেট ট্রানজিশন ঘটে।"
+  },
+  {
+    "id": "async-q4",
     "difficulty": "easy",
-    "type": "code",
-    "prompt": "Tokio রানটাইমে একটি async মেইন ফাংশন ডিক্লেয়ার করতে fn এর আগে কোন কিওয়ার্ড লিখবে?",
-    "code": "#[tokio::main]\n____ fn main() {\n    println!(\"Running async main!\");\n}",
-    "explanation": "অ্যাসিনক্রোনাস ফাংশন ডিক্লেয়ার করতে fn কিওয়ার্ডের পূর্বে async লিখতে হয়।",
-    "accept": [
-      "async"
-    ]
+    "question": "রাস্ট ল্যাঙ্গুয়েজে `async/await` সিনট্যাক্স বিল্ট-ইন থাকলেও স্ট্যান্ডার্ড লাইব্রেরিতে কোনো অ্যাসিঙ্ক রানটাইম (Async Runtime) নেই কেন? সবচেয়ে জনপ্রিয় থার্ড-পার্টি রানটাইম কোনটি?",
+    "hint": "জিরো-কস্ট ফিলোসফি এবং এমবেডেড সিস্টেম সাপোর্ট। যাতে ব্যবহারকারী তার প্রয়োজনমতো রানটাইম বেছে নিতে পারে। সবচেয়ে জনপ্রিয় হলো Tokio।"
   },
   {
-    "id": "async-await-3",
+    "id": "async-q5",
     "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "async fn compile হলে compiler আসলে কী বানায়?",
-    "options": [
-      "প্রতিটা async fn-এর জন্য একটা OS thread বরাদ্দ থাকে, sleep-এ ঘুমিয়ে যায়",
-      "সব async fn স্বয়ংক্রিয়ভাবে Box<dyn Future> হয়ে heap-এ চলে যায়",
-      "stackful coroutine — প্রতিটা task-এর নিজস্ব ছোট stack allocate হয়",
-      "পুরো body-একটা enum state machine — প্রতিটা .await একটা suspend point/state, আর future-এর size সবচেয়ে বড় variant-এর সমান করেই compile-এ জানা যায়"
-    ],
-    "answer": 3,
-    "explanation": "chapter-এর FetchData enum-এর মতো: প্রতিটা .await একটা state, সেখানে থামলে যা যা দরকার তা variant-এ জমা থাকে। এটা stack-less coroutine — future-এর size আগে থেকেই জানা, তাই heap allocation লাগে না; শুধু spawn বা Box::pin করলে তবেই heap-এ যায়।"
+    "question": "`Future` ট্রেইটের কোর সিগনেচার কী? এক্সিকিউটর যখন কোনো ফিউচারকে পোল (Poll) করে, তখন এটি কোন এনামটি রিটার্ন করতে পারে?",
+    "hint": "`fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output>`। রিটার্ন ভ্যালু হয় `Poll::Ready(val)` নচেৎ `Poll::Pending`।"
   },
   {
-    "id": "async-await-4",
+    "id": "async-q6",
+    "difficulty": "hard",
+    "question": "`Waker` এর মেকানিজম কী? যখন কোনো ফিউচার `Poll::Pending` রিটার্ন করে, তখন ওএস আই/ও ইভেন্ট সম্পন্ন হলে এক্সিকিউটরকে কীভাবে জাগানো (Wake) হয়?",
+    "hint": "ফিউচারটি ওএস ইভেন্ট ড্রাইভারের (যেমন epoll) কাছে Context থেকে পাওয়া Waker অবজেক্টটি রেজিস্টার করে রেখে আসে। ডেটা রেডি হলে ওএস waker.wake() কল করে টাস্ককে এক্সিকিউটরের রান-কিউতে ফেরত পাঠায়।"
+  },
+  {
+    "id": "async-q7",
     "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "কোনো future poll করে Poll::Pending return করলে সে পরে আবার poll হয় কীভাবে?",
-    "options": [
-      "executor নির্দিষ্ট interval-এ সব Pending future বারবার poll করে (busy polling)",
-      "future নিজেই একটা thread spawn করে সেখানে অপেক্ষা করে",
-      "Pending দেওয়ার আগে future নিজের জাগানোর টিকিট — cx.waker()-এর clone — I/O driver বা timer-এর কাছে রেখে দেয়; ঘটনা ঘটলে ওরা wake() করে, task আবার run queue-তে ঢোকে",
-      "Pending হলে task-টা ফেলে দেওয়া হয়, নতুন করে আবার spawn করতে হয়"
-    ],
-    "answer": 2,
-    "explanation": "Waker আসলে একটা ছোট vtable-ভিত্তিক callback object। socket-এ data না এলে future ওই Waker-টা epoll-ভিত্তিক I/O driver-এর কাছে রেখে Pending দেয়; data এলে বা timer-এ সময় হলে wake() হয় এবং task আবার executor-এর queue-তে ঢুকে পরের poll-এর জন্য অপেক্ষা করে। Pending অবস্থায় task কোনো CPU খায় না — busy-waiting নেই।"
+    "question": "টোকিও (Tokio) ব্যবহার করে অ্যাসিঙ্ক মেইন ফাংশন ডিক্লেয়ার করার জন্য কোন অ্যাট্রিবিউট ম্যাক্রো ব্যবহার করতে হয় এবং এটি আন্ডার দ্য হুড কী কোড জেনারেট করে?\n\n```rust\n#[tokio::main]\nasync fn main() {\n    println!(\"Hello Async\");\n}\n```",
+    "code": "#[tokio::main]\nasync fn main() { ... }",
+    "hint": "এটি একটি সাধারণ সিনক্রোনাস `fn main()` তৈরি করে যা ভেতরে টোকিও রানটাইম ইনিশিয়ালাইজ করে এবং `runtime.block_on(async { ... })` কল করে।"
   },
   {
-    "id": "async-await-5",
+    "id": "async-q8",
+    "difficulty": "easy",
+    "question": "টোকিওতে ব্যাকগ্রাউন্ডে একটি কনকারেন্ট অ্যাসিঙ্ক টাস্ক চালু করতে কোন ফাংশন ব্যবহার করা হয় (যা ওএস থ্রেডের `thread::spawn` এর সমতুল্য)?",
+    "hint": "`tokio::spawn(async { ... })`।"
+  },
+  {
+    "id": "async-q9",
+    "difficulty": "hard",
+    "question": "অ্যাসিঙ্ক ব্লকের ভেতরে দীর্ঘমেয়াদী সিপিইউ-হেভি কাজ (যেমন ইমেজ প্রসেসিং বা ক্রিপ্টোগ্রাফিক হ্যাশিং) চালানো কেন বিপজ্জনক? এর ফলে ইভেন্ট লুপে কী ক্ষতি হয় এবং সমাধান কী?",
+    "hint": "সিপিইউ-বাউন্ড কাজ এক্সিকিউটর থ্রেডকে ব্লক করে রাখে, ফলে হাজারো আই/ও টাস্ক আটকে যায় (Starvation)। সমাধান হলো `tokio::task::spawn_blocking` ব্যবহার করা।"
+  },
+  {
+    "id": "async-q10",
     "difficulty": "medium",
-    "type": "code",
-    "prompt": "দুটি async টাস্ক task1 এবং task2 কে কনকারেন্টলি রান করে একসাথে ফলাফল পেতে Tokio-র ম্যাক্রোটি লিখো:",
-    "code": "let (res1, res2) = ____(task1(), task2());",
-    "explanation": "tokio::join! একাধিক ফিউচারকে কনকারেন্টলি এক্সিকিউট করে সবগুলোর সমাপ্তির পর ফলাফল টাপল হিসেবে প্রদান করে।",
-    "accept": [
-      "tokio::join!",
-      "join!"
-    ]
+    "question": "একাধিক ফিউচারকে একই সাথে প্যারালালে এক্সিকিউট করে তাদের সমস্ত রেজাল্ট একসাথে পেতে টোকিওর কোন ম্যাক্রো ব্যবহার করা হয়?",
+    "hint": "`tokio::join!(future1, future2, future3)`।"
   },
   {
-    "id": "async-await-6",
+    "id": "async-q11",
+    "difficulty": "hard",
+    "question": "ফিউচার রেসিং (`tokio::select!`): দুটি আলাদা অ্যাসিঙ্ক অপারেশনের মধ্যে যেটি প্রথমে সম্পন্ন হবে তার রেজাল্ট নিয়ে অন্যটি সাথে সাথে ক্যানসেল (Drop) করতে কোন ম্যাক্রো ব্যবহার করা হয় এবং এর মাধ্যমে টাইম-আউট কীভাবে হ্যান্ডেল করা হয়?",
+    "hint": "`tokio::select!` ম্যাক্রো। একটি আর্ম নেটওয়ার্ক রিকোয়েস্ট এবং অন্য আর্মে `tokio::time::sleep` দিলে চমৎকার টাইমআউট তৈরি হয়।"
+  },
+  {
+    "id": "async-q12",
     "difficulty": "medium",
-    "type": "code",
-    "prompt": "user-এর ভেতরে User 1 String-টা পেতে blank-এ কী বসাতে হবে?",
-    "code": "async fn fetch_user(id: u32) -> String {\n    format!(\"User {}\", id)\n}\n\n#[tokio::main]\nasync fn main() {\n    let user = fetch_user(1)____;\n    println!(\"{}\", user);\n}",
-    "accept": [
-      ".await"
-    ],
-    "explanation": "fetch_user(1) call করলে শুধু future পাওয়া যায় — কাজ শুরুই হয়নি। .await করলে executor সেটাকে poll করে আর user পায় String মান। await ছাড়া user হতো future-ই — println!-এ display করতে গিয়ে compile error আসত।"
+    "question": "`Pin` এবং `Unpin` ট্রেইট: অ্যাসিঙ্ক স্টেট মেশিনে সেলফ-রেফারেনশিয়াল মেমরি তৈরি হলে তাকে কেন `Pin<&mut T>` দিয়ে মেমরিতে লক করতে হয়? মেমরিতে অবজেক্ট মুভ হলে কী সমস্যা হতো?",
+    "hint": "স্টেট মেশিনের ভেতরের পয়েন্টারগুলো নিজেরই অন্য ফিল্ডকে নির্দেশ করে। অবজেক্ট র্যামে মুভ হলে পয়েন্টারগুলো ইনভ্যালিড হয়ে ক্র্যাশ ঘটাত। `Pin` অবজেক্টের মেমরি মুভ বন্ধ করে দেয়।"
   },
   {
-    "id": "async-await-7",
-    "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "tokio::spawn-এ দেওয়া future কেন Send + 'static হতে হবে?",
-    "options": [
-      "সব tokio worker আলাদা process-এ চলে — process-এর মধ্যে data পাঠানো যায় না",
-      "task-টা heap-এ wrap হয়ে worker-দের queue-তে ঢোকে, আর work-stealing scheduler-এ যেকোনো worker thread-এ সরে যেতে পারে — যেখানে বানানো হয়েছে সেখানেই শেষ হবে এমন guarantee নেই, তাই borrowed data ধরে রাখা চলে না",
-      "Send লাগে heap allocation করার জন্য, 'static লাগে waker register করার জন্য",
-      "future সবসময় main thread-এই শেষ হয় — 'static শুধু একটা formal শর্ত"
-    ],
-    "answer": 1,
-    "explanation": "spawn ভেতরে future-টাকে একটা task struct-এ মোড়ায় (task header + future + result slot) আর heap-এ allocate করে — মাত্র কয়েকশো byte, তাই ১০,০০০ task-ও কয়েক MB। task যেকোনো worker thread-এ poll হতে পারে বলে future-টা thread-এর মধ্যে সরানোর যোগ্য (Send) আর বাইরের stack-এর reference ছাড়া বাঁচতে সক্ষম ('static) হতে হয়।"
+    "id": "async-q13",
+    "difficulty": "easy",
+    "question": "অ্যাসিঙ্ক কোডে সাধারণ সিনক্রোনাস `std::thread::sleep` ব্যবহার করলে কী সমস্যা দেখা দেবে এবং এর বদলে অ্যাসিঙ্ক-ফ্রেন্ডলি কোন মেথড ব্যবহার করা উচিত?",
+    "hint": "`std::thread::sleep` সম্পূর্ণ ওএস থ্রেড ফ্রিজ করে দেয়। অ্যাসিঙ্কে সর্বদা নন-ব্লকিং `tokio::time::sleep` ব্যবহার করতে হয়।"
   },
   {
-    "id": "async-await-8",
+    "id": "async-q14",
     "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "select!-এ একটা branch Ready হয়ে গেলে বাকি branch-এর future-দের কী হয়?",
-    "options": [
-      "background-এ চলতেই থাকে, শুধু ফলাফল discard হয়",
-      "freeze হয়ে memory-তে অপেক্ষা করে — পরের select!-এ সেখান থেকেই resume হয়",
-      "executor ওদের জন্য নতুন task spawn করে দেয়",
-      "বাকি branch-এর future গুলো drop হয়ে যায় — অসম্পূর্ণ কাজ বাতিল"
-    ],
-    "answer": 3,
-    "explanation": "select! সব branch-এর future পালা করে poll করে (fairness-এর জন্য order প্রতিবার ঘোরে); যেটা আগে Ready হয় তার arm চলে আর বাকি future গুলো drop হয়ে যায়। timeout function-টাও আসলে তোমার future + একটা timer future-এর উপর এই select-ই — deadline আগে গেলে Err(Elapsed), কাজ আগে শেষ হলে Ok(value)।"
+    "question": "অ্যাসিঙ্ক এবং সিনক্রোনাস মিউটেক্স: অ্যাসিঙ্ক কোডের ভেতরে `std::sync::Mutex` ব্যবহার করা যাবে কি? যদি কোনো টাস্ক লক ধরে রেখে `.await` করে, তবে ডেডলক হওয়ার ঝুঁকি কেন থাকে এবং কখন `tokio::sync::Mutex` দরকার হয়?",
+    "hint": "লক ধরে রেখে .await করলে থ্রেড অন্য টাস্কে সুইচ হতে পারে এবং একই থ্রেডে আবার লক চাওয়ায় ডেডলক হতে পারে। যদি .await এর ওপারে লক ধরে রাখতে হয়, তবে `tokio::sync::Mutex` আবশ্যক।"
   },
   {
-    "id": "async-await-9",
-    "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "tokio::fs::File দিয়ে read করলে আসলে ভেতরে কী চলে?",
-    "options": [
-      "io_uring/epoll দিয়ে সত্যিকারের non-blocking ফাইল read হয়",
-      "executor worker thread-ই blocking read করে ফেলে — একাধিক read-এ scheduler আটকে যায়",
-      "সাধারণ blocking ফাইল syscall-গুলো (open, read, write) আলাদা একটা blocking threadpool-এ পাঠানো হয় — spawn_blocking-এর মতোই; এটা কোনো magic non-blocking file I/O না",
-      "ফাইলটা kernel page cache-তে mmap করা হয়, syscall-ই লাগে না"
-    ],
-    "answer": 2,
-    "explanation": "tokio::fs-এ রহস্য কমই আছে — blocking ফাইল syscall গুলো আলাদা blocking threadpool-এ যায়, আর .await করার সময় তোমার task শুধু Pending হয়ে বসে থাকে, executor thread আটকে থাকে না। অনেক concurrent ফাইল read করলে সেই threadpool-ই bottleneck হবে — এজন্যই টেবিলে File I/O-কে async বা thread দুটোই লেখা।"
+    "id": "async-q15",
+    "difficulty": "medium",
+    "question": "অ্যাসিঙ্ক ইটারেটর বা স্ট্রিম (Stream): সাধারণ ইটারেটর যেমন একের পর এক আইটেম দেয়, অ্যাসিঙ্ক ডেটার ক্রমাগত স্ট্রিম (যেমন ওয়েবসকেট মেসেজ) প্রসেস করতে কোন ট্রেইট ব্যবহার করা হয়?",
+    "hint": "`futures::Stream` বা `tokio_stream::Stream` ট্রেইট এবং এর মেথড `next().await`।"
   },
   {
-    "id": "async-await-10",
+    "id": "async-q16",
+    "difficulty": "easy",
+    "question": "একটি অ্যাসিঙ্ক ফাংশনে প্যারামিটার হিসেবে রেফারেন্স পাস করলে রিটার্ন করা ফিউচারের লাইফটাইমের ওপর কী প্রভাব পড়ে?",
+    "hint": "ফিউচারটি সেই ইনপুট রেফারেন্সের লাইফটাইমের সাথে বাউন্ড হয়ে যায়। ফিউচার এক্সিকিউট হওয়া পর্যন্ত মূল ডেটাকে অবশ্যই বেঁচে থাকতে হয়।"
+  },
+  {
+    "id": "async-q17",
     "difficulty": "hard",
-    "type": "code",
-    "prompt": "consumer loop-এ blank-এ কী বসালে producer-এর পাঠানো ০ থেকে ৪ পর্যন্ত সব message পাওয়া যাবে?",
-    "code": "use tokio::sync::mpsc;\n\n#[tokio::main]\nasync fn main() {\n    let (tx, mut rx) = mpsc::channel(100);\n\n    tokio::spawn(async move {\n        for i in 0..5 {\n            tx.send(i).await.unwrap();\n            println!(\"Sent: {}\", i);\n        }\n    });\n\n    while let Some(msg) = rx.____().await {\n        println!(\"Received: {}\", msg);\n    }\n}",
-    "accept": [
-      "recv"
-    ],
-    "explanation": "tokio-র mpsc-তে rx.recv().await — queue খালি হলে Pending হয়ে অপেক্ষা করে, সব sender drop হলে None দেয়, তাই while let Some(msg) loop ঠিকভাবে শেষ হয়। channel(100)-এর ring buffer + permit ব্যবস্থাই backpressure — buffer ভর্তি হলে send().await নিজেই অপেক্ষা করে, memory ফুলে ওঠে না।"
+    "question": "অ্যাসিঙ্ক ট্রেইট (Async fn in traits): রাস্ট ১.৭৫ এর পূর্বে কেন ট্রেইটের ভেতর সরাসরি `async fn` লেখা যেত না এবং এর জন্য কেন `async-trait` ক্রেট ব্যবহার করতে হতো?",
+    "hint": "প্রতিটি async fn একটি বেনামী ফিউচার টাইপ রিটার্ন করে, যা ট্রেইটের vtable এ রাখা অসম্ভব ছিল। ১.৭৫ ভার্সন থেকে স্ট্যাটিক ডিসপ্যাচে এটি সমাধান হয়েছে।"
+  },
+  {
+    "id": "async-q18",
+    "difficulty": "medium",
+    "question": "অ্যাসিঙ্ক ক্যানসেলেশন (Cancellation Safety): টোকিওতে একটি ফিউচার যদি শেষ হওয়ার পূর্বেই ড্রপ হয়ে যায়, তবে মেমরির অবস্থা কী হয়? কোনো পার্শিয়ালি রিড ডেটা কি হারিয়ে যেতে পারে?",
+    "hint": "ফিউচার ড্রপ হলে তার ড্রপ মেথড কল হয়। যদি কোনো মেথড (যেমন বাফার রিড) মাঝপথে ড্রপ হলে ডেটা ইনকনসিস্টেন্ট করে ফেলে, তাকে Cancellation-Unsafe বলা হয়।"
+  },
+  {
+    "id": "async-q19",
+    "difficulty": "easy",
+    "question": "অ্যাসিঙ্ক চ্যানেলে একাধিক টাস্কের মাঝে ব্রডকাস্ট (এক মেসেজ সব গ্রাহকের কাছে পাঠানো) করতে টোকিওর কোন চ্যানেল প্রোভাইডার ব্যবহৃত হয়?",
+    "hint": "`tokio::sync::broadcast` চ্যানেল।"
+  },
+  {
+    "id": "async-q20",
+    "difficulty": "hard",
+    "question": "টোকিওর মাল্টি-থ্রেডেড ওয়ার্ক-স্টিলিং শিডিউলার (Work-Stealing Scheduler) কীভাবে কাজ করে? কোনো একটি থ্রেডের রান-কিউ খালি হয়ে গেলে সে কী করে?",
+    "hint": "সে অলস বসে না থেকে অন্য ব্যস্ত থ্রেডের রান-কিউ থেকে অর্ধেক কাজ চুরি (Steal) করে নিজের কোর এ প্রসেস করে, যা সর্বোচ্চ সিপিইউ ইউটিলাইজেশন নিশ্চিত করে।"
   }
 ]

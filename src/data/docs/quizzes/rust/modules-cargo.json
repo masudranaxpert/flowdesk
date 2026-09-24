@@ -1,131 +1,122 @@
 [
   {
-    "id": "modules-cargo-1",
+    "id": "mod-q1",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "Crate দুই রকম হয়। `main.rs`-ওয়ালা আর `lib.rs`-ওয়ালা — কোনটা কী বানায়?",
-    "options": [
-      "`main.rs`-সহ binary crate → executable বানায়; `lib.rs`-সহ library crate → অন্যরা যা use করে",
-      "দুটোই executable বানায়, শুধু নাম আলাদা",
-      "`main.rs` library, `lib.rs` binary বানায়",
-      "একটা package-এ হয় শুধু binary, নয় শুধু library — দুটো একসাথে অসম্ভব"
-    ],
-    "answer": 0,
-    "explanation": "Binary crate (main.rs) executable বানায়, library crate (lib.rs) library বানায়। আর একটা package-এ একটা library crate আর একাধিক binary crate একসাথে থাকতে পারে — অসম্ভব কিছু না।"
+    "question": "রাস্টের মডিউল সিস্টেমের ৩টি মৌলিক বিল্ডিং ব্লক কী কী: প্যাকেজ (Package), ক্রেট (Crate), এবং মডিউল (Module)? তাদের মধ্যকার হায়ারার্কিকাল সম্পর্ক কী?",
+    "hint": "প্যাকেজ হলো একটি কার্গো ওয়ার্কস্পেস যাতে একটি Cargo.toml থাকে। প্যাকেজে একাধিক ক্রেট (বাইনারি বা লাইব্রেরি) থাকতে পারে। ক্রেটের ভেতরে কোড ভাগ করার জন্য মডিউল ব্যবহৃত হয়।"
   },
   {
-    "id": "modules-cargo-2",
+    "id": "mod-q2",
+    "difficulty": "medium",
+    "question": "রাস্টে মডিউলের ভেতরের সমস্ত ফাংশন, স্ট্রাক্ট ও এনাম বাই ডিফল্ট কী প্রাইভেট থাকে নাকি পাবলিক থাকে? বাইরের কোনো মডিউল থেকে প্রবেশাধিকার দিতে কোন কি-ওয়ার্ড ব্যবহার করতে হয়?",
+    "hint": "বাই ডিফল্ট সমস্ত আইটেম সম্পূর্ণ প্রাইভেট। এক্সপোজ করতে নামের পূর্বে `pub` কি-ওয়ার্ড যোগ করতে হয়।"
+  },
+  {
+    "id": "mod-q3",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "`pub` ছাড়া লেখা একটা function module-এর বাইরে থেকে access করা যায়? Rust-এ default visibility কেমন?",
-    "options": [
-      "সবকিছু default private — শুধু নিজের module (আর তার child module) থেকে দেখা যায়; বাইরে দেখাতে `pub` লাগে",
-      "সবকিছু default public — `pub` শুধু documentation-এর জন্য",
-      "Default একই crate-এ public, বাইরের crate-এ private",
-      "Default protected — শুধু child module থেকে দেখা যায়"
-    ],
-    "answer": 0,
-    "explanation": "Rust-এ সবকিছু default ভাবে private; `pub` দিলে তবেই module tree-র অন্য শাখা থেকে দেখা যায়। মাঝামাঝি দরকারে আছে `pub(crate)` (শুধু এই crate), `pub(super)` (শুধু parent)।"
+    "question": "কার্গো প্রজেক্টে একটি লাইব্রেরি ক্রেটের রুট এন্ট্রি ফাইল কোনটি এবং একটি বাইনারি ক্রেটের রুট এন্ট্রি ফাইল কোনটি?",
+    "hint": "লাইব্রেরির রুট ফাইল হলো `src/lib.rs` এবং বাইনারির রুট ফাইল হলো `src/main.rs`।"
   },
   {
-    "id": "modules-cargo-3",
-    "difficulty": "easy",
-    "type": "code",
-    "prompt": "`math_utils` মডিউলের ভেতরের `add` ফাংশনটিকে মডিউলের বাইরে থেকে ব্যবহারের জন্য public করার কিওয়ার্ডটি লিখো:",
-    "code": "mod math_utils {\n    ____ fn add(a: i32, b: i32) -> i32 {\n        a + b\n    }\n}",
-    "explanation": "Rust-এ সব আইটেম ডিফল্টভাবে private। বাইরে এক্সপোজ করতে pub কিওয়ার্ড ব্যবহার করতে হয়।",
-    "accept": [
-      "pub"
-    ]
-  },
-  {
-    "id": "modules-cargo-4",
+    "id": "mod-q4",
     "difficulty": "medium",
-    "type": "code",
-    "prompt": "Function-টা পুরো crate-এর ভেতরের যেকোনো module থেকে call করা যাবে, কিন্তু বাইরের crate থেকে না — blank-এ কী লিখবে?",
-    "code": "mod my_module {\n    ____ fn crate_only() {\n        println!(\"internal helper\");\n    }\n}",
-    "accept": [
-      "pub(crate)"
-    ],
-    "explanation": "`pub(crate)` — visibility সীমিত শুধু এই crate-এ। পুরোপুরি `pub` হলে বাইরের crate-এও খুলে যেত, আর কিছু না দিলে শুধু `my_module`-এর ভেতরেই থাকত। আরও সরু পরিসর চাইলে `pub(super)` (শুধু parent module)।"
+    "question": "পাথ রেফারেন্সিংয়ে এবসলিউট পাথ (Absolute Path) এবং রিলেটিভ পাথ (Relative Path) এর মধ্যে পার্থক্য কী? রুট ক্রেট থেকে পাথ শুরু করতে কোন কি-ওয়ার্ড দিয়ে শুরু হয়?",
+    "hint": "এবসলিউট পাথ `crate::...` দিয়ে শুরু হয় যা ক্রেটের মূল রুট নির্দেশ করে। রিলেটিভ পাথ শুরু হয় বর্তমান অবস্থান থেকে বা প্যারেন্ট নির্দেশক `super::` দিয়ে।"
   },
   {
-    "id": "modules-cargo-5",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "Crate root-এ `mod math_utils;` (semicolon সহ) লিখলে আসলে কী হয়?",
-    "options": [
-      "Compile time-এ module tree-তে একটা node যোগ হয়, আর compiler ডিস্ক থেকে `math_utils.rs` (বা `math_utils/mod.rs`) খুঁজে parse করে ঠিক ওই জায়গায় বসিয়ে দেয় — কোনো runtime file search নেই",
-      "Runtime-এ ওই ফাইলটা লোড আর execute হয় — Python-এর import-এর মতো",
-      "আলাদা একটা crate তৈরি হয়ে আলাদা ভাবে compile হয়",
-      "শুধু একটা namespace alias তৈরি হয়, ফাইলের সাথে সম্পর্ক থাকে না"
-    ],
-    "answer": 0,
-    "explanation": "`mod x;` মানেই compiler নিজেই ফাইলটা খুঁজে নিয়ে inline block-এর মতো ওই জায়গায় splice করে — পুরো crate এক compile unit। Python import-এর মতো runtime কিছু না: কোনো file search, কোনো module side-effect execute নেই।"
-  },
-  {
-    "id": "modules-cargo-6",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "`cargo build` ভেতরে চারটা ধাপ কোন ক্রমে চালায়?",
-    "options": [
-      "Resolve (dependency graph + Cargo.lock-এ lock) → Order (topological ক্রম) → Compile (rustc প্রতি crate-এ .rmeta + .rlib) → Link (সব জুড়ে executable)",
-      "Compile → Resolve → Order → Link",
-      "Link → Compile → Order → Resolve",
-      "Resolve → Link → Order → Compile"
-    ],
-    "answer": 0,
-    "explanation": "আগে Cargo.toml পড়ে semver মেনে version resolve করে Cargo.lock-এ lock করে; তারপর dependency graph থেকে topological ক্রম (যার উপর কেউ নির্ভর করে না সে আগে); প্রতিটা crate আলাদা compile unit — rustc দেয় .rmeta (type/signature metadata) + .rlib (compiled code); শেষে linker সব rlib জুড়ে target/debug/-এ executable বানায়।"
-  },
-  {
-    "id": "modules-cargo-7",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "`cargo check` কেন `cargo build`-এর চেয়ে অনেক দ্রুত?",
-    "options": [
-      "Type/borrow check পর্যন্তই চালায় — codegen (machine code বানানো) আর link ধাপ পুরোপুরি বাদ দেয়, কারণ check-এ binary দরকারই নেই",
-      "নতুন করে dependency গুলো একেবারেই compile করে না",
-      "শুধু syntax check করে — type error ধরে না",
-      "Check-এর সময় compiler কম CPU core ব্যবহার করে"
-    ],
-    "answer": 0,
-    "explanation": "Check একই resolve/order/type-check পথ চালায়, কিন্তু codegen আর link বাদ — binary লাগেই না। Type/borrow error সব ধরা পড়ে (শুধু syntax না); শুধু চালানোর মতো executable তৈরি হয় না।"
-  },
-  {
-    "id": "modules-cargo-8",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "Library-র user-রা পুরো path (`my_lib::internal::helper`) না লিখে সরাসরি `my_lib::helper` লিখতে পারবে — internal module ঢাকা রেখে blank-এ কী লিখবে?",
-    "code": "mod internal {\n    pub fn helper() {\n        println!(\"helping\");\n    }\n}\n\n____\n// external user এখন লিখতে পারবে: use my_lib::helper;",
-    "accept": [
-      "pub use internal::helper;"
-    ],
-    "explanation": "`pub use` re-export — item একবারই define থাকে, কিন্তু module tree-তে তার দ্বিতীয় একটা public path খুলে দেয়: `my_lib::helper` আর `my_lib::internal::helper` দুটোই একই function। সাধারণ `use` নিজের ফাইলের shortcut মাত্র; `pub use` বাইরের user-এর জন্য পথ খোলে — দুটোই compile-time path aliasing, binary-তে খরচ নেই।"
-  },
-  {
-    "id": "modules-cargo-9",
+    "id": "mod-q5",
     "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "প্রথম `cargo build` ধীর, কিন্তু কোড ছোঁয়ার পরেও পরের build প্রায় তাৎক্ষণিক কেন?",
-    "options": [
-      "প্রতিটা compile unit-এর fingerprint `target/`-এ জমে থাকে — যে crate বদলায়নি সেটা আর compile-ই হয় না; আর তোমার crate-এর type check নির্ভরতাদের `.rmeta` (metadata) দেখেই চলে, তাদের পুরো কোড আবার লাগে না",
-      "দ্বিতীয়বার compiler RAM-এ cache করা ফলাফল সরাসরি paste করে দেয়",
-      "দ্বিতীয় build নিজে থেকেই `--release` মোডে চলে",
-      "Linker-এর দ্বিতীয়বার কোনো কাজ থাকে না বলেই"
-    ],
-    "answer": 0,
-    "explanation": "Incremental build-এর মূল হিসাব fingerprint-ভিত্তিক: অপরিবর্তিত crate আবার compile হয় না। নির্ভরতাদের থেকে তোমার crate-এর type check চলে .rmeta (type/signature metadata) দেখেই — compiled code (.rlib) লাগে শুধু link ধাপে। এজন্যই প্রথম build ধীর, দ্বিতীয়টা প্রায় তাৎক্ষণিক।"
+    "question": "মডিউল ফাইল স্ট্রাকচার: আধুনিক রাস্টে (রাস্ট ২০১৮+ এডিশন) `models.rs` এবং তার সাব-মডিউলগুলোর জন্য পুরানো `models/mod.rs` লেখার বদলে কোন ক্লিন ডিরেক্টরি স্ট্রাকচার ব্যবহার করা হয়?",
+    "hint": "`src/models.rs` ফাইল এবং একই নামে `src/models/` ফোল্ডারের ভেতরে সাব-ফাইলসমূহ (যেমন `src/models/user.rs`) রাখা হয়।"
   },
   {
-    "id": "modules-cargo-10",
+    "id": "mod-q6",
+    "difficulty": "medium",
+    "question": "রিয়েল এক্সপোর্ট (Re-exporting): যখন কোনো ডিপ নেস্টেড মডিউলের আইটেমকে তোমার ক্রেটের রুটে সরাসরি সহজে ব্যবহারের সুযোগ দিতে চাও, তখন `pub use` কীভাবে কাজ করে?",
+    "hint": "`pub use crate::internal::deep::MyType;` — এর ফলে ব্যবহারকারীরা সরাসরি `my_crate::MyType` নামে ইমপোর্ট করতে পারে।"
+  },
+  {
+    "id": "mod-q7",
+    "difficulty": "easy",
+    "question": "একটি মডিউল থেকে একাধিক আইটেম একসাথে সংক্ষিপ্ত উপায়ে ইমপোর্ট করতে কার্লি ব্রেস গ্রুপিং কীভাবে লেখা হয়?",
+    "hint": "`use std::collections::{HashMap, HashSet, BTreeMap};`।"
+  },
+  {
+    "id": "mod-q8",
+    "difficulty": "medium",
+    "question": "গ্লোব অপারেটর বা ওয়াইল্ডকার্ড ইমপোর্ট (`use std::io::prelude::*;`): সাধারণ অ্যাপ্লিকেশন কোডে ওয়াইল্ডকার্ড স্টার ব্যবহার করা কেন সাধারণত ডিসকারেজ করা হয়?",
+    "hint": "এটি লোকাল স্কোপকে শত শত বেনামী ফাংশন দিয়ে দূষিত করে এবং বিভিন্ন মডিউলের আইটেমের মাঝে নেমিং কলিশন সৃষ্টি করে।"
+  },
+  {
+    "id": "mod-q9",
     "difficulty": "hard",
-    "type": "code",
-    "prompt": "std::collections থেকে HashMap কে বর্তমান স্কোপে ইম্পোর্ট করতে use স্টেটমেন্টটি লিখো:",
-    "code": "____\n\nfn main() {\n    let mut map = HashMap::new();\n}",
-    "explanation": "মডিউল বা টাইপ ইম্পোর্ট করতে use path::Item; সিনট্যাক্স ব্যবহার করা হয়।",
-    "accept": [
-      "use std::collections::HashMap;",
-      "use std::collections::HashMap"
-    ]
+    "question": "রেস্ট্রিক্টেড ভিজিবিলিটি (Restricted Visibility): যদি তুমি কোনো ফাংশন শুধুমাত্র তোমার নিজস্ব প্যারেন্ট মডিউলের কাছে অথবা নির্দিষ্ট ক্রেটের কাছে দৃশ্যমান করতে চাও, তবে `pub(crate)` এবং `pub(super)` কীভাবে সাহায্য করে?",
+    "hint": "`pub(crate)` সমস্ত ক্রেটের ভেতর পাবলিক কিন্তু ক্রেটের বাইরে প্রাইভেট রাখে। `pub(super)` কেবল সরাসরি প্যারেন্ট মডিউলকে এক্সেস দেয়।"
+  },
+  {
+    "id": "mod-q10",
+    "difficulty": "easy",
+    "question": "ইমপোর্ট করা আইটেমের নাম রিনেম বা এলিয়াস করতে কোন কি-ওয়ার্ড ব্যবহার করা হয়? যেমন দুটি মডিউলের Result নাম কনফ্লিক্ট এড়াতে।",
+    "hint": "`as` কি-ওয়ার্ড। যেমন `use std::io::Result as IoResult;`।"
+  },
+  {
+    "id": "mod-q11",
+    "difficulty": "hard",
+    "question": "কার্গো ওয়ার্কস্পেস (Cargo Workspace) কী? একটি বিশাল মনোরিপো প্রজেক্টে একাধিক লাইব্রেরি ও মাইক্রোসার্ভিস ক্রেট একই সাথে শেয়ার্ড `Cargo.lock` এবং সিঙ্গেল `target/` ফোল্ডারে বিল্ড করতে ওয়ার্কস্পেস কীভাবে কনফিগার করা হয়?",
+    "hint": "রুট `Cargo.toml` এ `[workspace]` সেকশন রেখে `members = [\"core\", \"api\", \"cli\"]` ডিফাইন করা হয়।"
+  },
+  {
+    "id": "mod-q12",
+    "difficulty": "medium",
+    "question": "ফিচার ফ্ল্যাগ (Cargo Features): একটি লাইব্রেরির কিছু অপশনাল ডিপেন্ডেন্সি বা ভারী ফিচার কেবল প্রয়োজনে অন করার জন্য `Cargo.toml` এ কীভাবে `[features]` ডিক্লেয়ার ও কোডে `#[cfg(feature = \"...\")]` ব্যবহার করা হয়?",
+    "hint": "`[features]` ব্লকে ফ্ল্যাগ নির্ধারণ করা হয় এবং কোডে কন্ডিশনাল কম্পাইলেশন গেট দিয়ে সেই কোড নির্দিষ্ট ফিচারের জন্য কম্পাইল করা হয়।"
+  },
+  {
+    "id": "mod-q13",
+    "difficulty": "easy",
+    "question": "সেমান্টিক ভার্সনিং (SemVer): `Cargo.toml` এ ডিপেন্ডেন্সি হিসেবে `serde = \"1.0.40\"` লিখলে কার্গো কি ঠিক এই নির্দিষ্ট ভার্সনই নেবে নাকি মাইনর/প্যাচ আপডেট অনুমোদন করবে?",
+    "hint": "ক্যারট রিকোয়ারমেন্ট (`^1.0.40`)। এটি কোনো ব্রেকিং পরিবর্তন ছাড়া যেকোনো নন-ব্রেকিং মাইনর বা প্যাচ আপডেট (যেমন 1.0.90) অনুমোদন করে।"
+  },
+  {
+    "id": "mod-q14",
+    "difficulty": "hard",
+    "question": "বিল্ড স্ক্রিপ্ট (`build.rs`): কার্গো প্রজেক্টের রুটে এই ফাইলটি রাখলে কার্গো কখন এটি এক্সিকিউট করে? সি-কোড কম্পাইল করা বা কোড জেনারেশনে এর ভূমিকা কী?",
+    "hint": "মূল প্রজেক্ট কম্পাইল হওয়ার পূর্বেই `build.rs` হোস্ট মেশিনে কম্পাইল হয়ে রান করে এবং বিভিন্ন সি-লাইব্রেরি লিংক বা এনভায়রনমেন্ট ভেরিয়েবল সেট করে।"
+  },
+  {
+    "id": "mod-q15",
+    "difficulty": "medium",
+    "question": "কন্ডিশনাল কম্পাইলেশন (`#[cfg(target_os = \"windows\")]`): ভিন্ন অপারেটিং সিস্টেমের জন্য আলাদা কোড কম্পাইল করতে এই অ্যাট্রিবিউট কীভাবে কাজ করে?",
+    "hint": "কম্পাইলার শুধুমাত্র টার্গেট ওএস মিলে গেলেই সংশ্লিষ্ট ফাংশন বা মডিউল বাইনারিতে অন্তর্ভুক্ত করে, নচেৎ কোড সম্পূর্ণ বাদ দেয়।"
+  },
+  {
+    "id": "mod-q16",
+    "difficulty": "easy",
+    "question": "প্রজেক্টের ডকুমেন্টেশন স্বয়ংক্রিয়ভাবে তৈরি করে লোকাল ব্রাউজারে প্রিভিউ দেখতে কার্গোর কোন কমান্ড ব্যবহার করা হয়?",
+    "hint": "`cargo doc --open` কমান্ড।"
+  },
+  {
+    "id": "mod-q17",
+    "difficulty": "hard",
+    "question": "প্যাচিং এবং ভেন্ডরিং: কোনো ডিপেন্ডেন্সিতে বাগ থাকলে গিটের সেন্ট্রাল রিলিজের অপেক্ষা না করে লোকাল ফোল্ডারের কোড দিয়ে কার্গোকে রিপ্লেস করতে `[patch.crates-io]` কীভাবে কাজ করে?",
+    "hint": "রুট Cargo.toml এ `[patch.crates-io]` সেকশনে প্যাকেজটির পাথ লোকাল ফোল্ডারে রিডাইরেক্ট করে দিলে কার্গো লোকাল সোর্স ব্যবহার করে।"
+  },
+  {
+    "id": "mod-q18",
+    "difficulty": "medium",
+    "question": "প্রজেক্টে একই সাথে একটি লাইব্রেরি ক্রেট এবং একাধিক এক্সিকিউটেবল টুলস বা বাইনারি রাখতে চাইলে অতিরিক্ত ফাইলগুলো কোন ফোল্ডারে রাখতে হয়?",
+    "hint": "`src/bin/` ফোল্ডারের ভেতরে প্রতিটি `.rs` ফাইল আলাদা একটি স্বাধীন এক্সিকিউটেবল বাইনারি হিসেবে কম্পাইল হয়।"
+  },
+  {
+    "id": "mod-q19",
+    "difficulty": "easy",
+    "question": "বিল্ড প্রোফাইল অপটিমাইজেশন: রিলিজ বিল্ডে LTO (Link-Time Optimization) চালু করতে `Cargo.toml` এ কী কনফিগারেশন যোগ করতে হয়?",
+    "hint": "`[profile.release]` সেকশনের অধীনে `lto = true` বা `lto = \"thin\"`।"
+  },
+  {
+    "id": "mod-q20",
+    "difficulty": "hard",
+    "question": "প্রাইভেট বনাম পাবলিক ক্রেট পাবলিশিং: ভুলবশত কোনো সিক্রেট বা প্রোপ্রাইটারি কোম্পানি ক্রেট `crates.io` তে পাবলিকলি আপলোড হওয়া চিরতরে বন্ধ করতে `Cargo.toml` এ কোন সেফটি কি যোগ করা বাধ্যতামূলক?",
+    "hint": "`[package]` এর ভেতরে `publish = false` যোগ করা।"
   }
 ]

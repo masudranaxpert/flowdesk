@@ -1,132 +1,126 @@
 [
   {
-    "id": "lifetimes-1",
+    "id": "life-q1",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "Compiled program-এর runtime-এ lifetime-এর (`'a` ইত্যাদি) কী দশা?",
-    "options": [
-      "Compiler প্রতিটা reference-এর জন্য validity check চালিয়ে রাখে",
-      "কিছুই না — lifetime পুরোপুরি compile-time ব্যাপার, binary তৈরির আগেই মুছে যায়; runtime-এ `&i32` আর `*const i32` একই ৮ byte pointer",
-      "প্রতিটা reference একটা reference count বহন করে",
-      "Memory-তে প্রতিটা reference-এর সাথে একটা expiry timestamp থাকে"
-    ],
-    "answer": 1,
-    "explanation": "`'a` কোনো value, counter বা timestamp না — type system-এর একটা label, compiler নিজের হিসাবে ব্যবহার করে binary তৈরির আগেই মুছে দেয়। নিরাপত্তা আসে borrow checker-এর compile-time analysis থেকে (C++ `shared_ptr`-এর মতো runtime counting না), তাই cost শূন্য।"
+    "question": "রাস্টে লাইফটাইম (Lifetime) কী? রেফারেন্সের সাথে লাইফটাইমের সম্পর্ক কী এবং এটি রানটাইমে কোনো মেমরি বা পারফরম্যান্স খরচ তৈরি করে কি?",
+    "hint": "লাইফটাইম হলো একটি কম্পাইল-টাইম কনস্ট্রাক্ট যা নিশ্চিত করে একটি রেফারেন্স কতক্ষণ ভ্যালিড থাকবে। রানটাইমে এর কোনো অস্তিত্ব বা পারফরম্যান্স ওভারহেড নেই।"
   },
   {
-    "id": "lifetimes-2",
+    "id": "life-q2",
+    "difficulty": "medium",
+    "question": "নিচের কোডটি কেন কম্পাইল হবে না?\n\n```rust\nfn longest(x: &str, y: &str) -> &str {\n    if x.len() > y.len() { x } else { y }\n}\n```\n\nকম্পাইলার `expected named lifetime parameter` এরর দেয় কেন এবং ফাংশন সিগনেচারে কীভাবে জেনেরিক লাইফটাইম যোগ করে এটি সমাধান করা যায়?",
+    "code": "fn longest(x: &str, y: &str) -> &str {\n    if x.len() > y.len() { x } else { y }\n}",
+    "hint": "রিটার্ন করা রেফারেন্সটি x নাকি y তা রানটাইমে কন্ডিশনের ওপর নির্ভর করে। কম্পাইলারকে জানাতে হয় যে রিটার্ন রেফারেন্সের লাইফটাইম x এবং y এর মধ্যে যেটি ছোট তার সমান হবে: `fn longest<'a>(x: &'a str, y: &'a str) -> &'a str`।"
+  },
+  {
+    "id": "life-q3",
+    "difficulty": "hard",
+    "question": "নিচের কোডে `result` প্রিন্ট করতে গেলে কম্পাইলার ত্রুটি দেয়:\n\n```rust\nlet string1 = String::from(\"long string is long\");\nlet result;\n{\n    let string2 = String::from(\"xyz\");\n    result = longest(string1.as_str(), string2.as_str());\n}\nprintln!(\"The longest string is {}\", result);\n```\n\nকম্পাইলার `string2 does not live long enough` বলে কেন? যদিও রানটাইমে `string1` বড় এবং সেটাই রিটার্ন হতো, তবুও কম্পাইলার কেন কোড আটকে দেয়?",
+    "code": "let string1 = String::from(\"long\");\nlet result;\n{\n    let string2 = String::from(\"xyz\");\n    result = longest(string1.as_str(), string2.as_str());\n}\nprintln!(\"{}\", result);",
+    "hint": "কম্পাইলার রানটাইম ভ্যালু চেক করে না। সিগনেচার অনুযায়ী লাইফটাইম 'a হলো দুটি ইনপুটের স্কোপের ইন্টারসেকশন (ছোট স্কোপ)। string2 এর স্কোপ শেষ হয়ে গেছে, তাই result সেই স্কোপের বাইরে ব্যবহার করা নিষিদ্ধ।"
+  },
+  {
+    "id": "life-q4",
     "difficulty": "easy",
-    "type": "mcq",
-    "prompt": "`let s: &'static str = \"I live forever\";` — এখানে `'static`-এর মানে কী?",
-    "options": [
-      "Variable-টা কখনো free হবে না — এটা memory leak",
-      "Reference শুধু main function-এর ভেতরে valid",
-      "Reference টা পুরো program জুড়ে valid — string literal binary-এর read-only section-এ stored থাকে",
-      "এটা global mutable state বোঝায়"
-    ],
-    "answer": 2,
-    "explanation": "`'static` হলো সবচেয়ে বড় lifetime — পুরো program জুড়ে valid। সব string literal `'static` পায়, কারণ এরা binary-এর read-only section-এ থাকে। তবে মনে রাখো: lifetime error সামলাতে গিয়ে `'static` বসিয়ে দেওয়া সমাধান না — data সত্যিই program-জুড়ে লাগলেই এটা ব্যবহার করো।"
+    "question": "লাইফটাইম এলিশন রুলস (Lifetime Elision Rules) কী? কেন সাধারণ ফাংশনে যেমন `fn first_word(s: &str) -> &str` লাইফটাইম প্যারামিটার হাতে লিখে উল্লেখ করতে হয় না?",
+    "hint": "কম্পাইলারের ৩টি বিল্ট-ইন নিয়ম রয়েছে যা ইনপুটে একক রেফারেন্স থাকলে আউটপুটে স্বয়ংক্রিয়ভাবে সেই লাইফটাইম অ্যাসাইন করে দেয়।"
   },
   {
-    "id": "lifetimes-3",
+    "id": "life-q5",
     "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "নিচের function-টা annotation ছাড়া compile হয় না। Elision rule গুলো ক্রমান্বয়ে apply করলে সমস্যাটা ঠিক কোথায়?",
-    "code": "fn longest(x: &str, y: &str) -> &str {\n    if x.len() > y.len() {\n        x\n    } else {\n        y\n    }\n}",
-    "options": [
-      "তিনটা rule শেষ করেও output-এর lifetime কোন input-এর সাথে যুক্ত হবে সেটা পাওয়া যায় না — দুটো input reference, আর `&self`-ও নেই",
-      "Compiler দুটো string-এর মধ্যে কোনটা বড় সেটা compile time-এ বের করতে পারে না",
-      "`if`-এর ভিতরে reference compare করা নিষিদ্ধ",
-      "দুটি `&str` parameter নিলে Rust-এ function define করাই যায় না"
-    ],
-    "answer": 0,
-    "explanation": "Rule ১ দুটো parameter-কে দুটো আলাদা lifetime দেয়; Rule ২ লাগে শুধু একটাই input reference থাকলে; Rule ৩ লাগে `&self` থাকলে — কোনোটাই এখানে output-এর lifetime দিতে পারে না। তখনই সম্পর্কটা হাতে বলতে হয়: `fn longest<'a>(x: &'a str, y: &'a str) -> &'a str`।"
+    "question": "লাইফটাইম এলিশনের ৩টি মৌলিক নিয়ম কী কী যার মাধ্যমে কম্পাইলার নিজেই লাইফটাইম অনুমান করে?",
+    "hint": "১. প্রতিটি ইনপুট প্যারামিটার নিজস্ব লাইফটাইম পায়। ২. ইনপুটে একটিমাত্র রেফারেন্স থাকলে আউটপুটও সেই লাইফটাইম পায়। ৩. মেথডে `&self` বা `&mut self` থাকলে আউটপুট রেফারেন্স সেলফের লাইফটাইম পায়।"
   },
   {
-    "id": "lifetimes-4",
-    "difficulty": "medium",
-    "type": "mcq",
-    "prompt": "Struct-এ reference field থাকলে কী করতে হয়?",
-    "options": [
-      "কিছু করা লাগে না — compiler struct-এর জন্য নিজেই সব infer করে নেয়",
-      "Reference field-টা `Box`-এ wrap করতে হয়",
-      "Struct-টা অবশ্যই `'static` বানাতে হয়",
-      "Lifetime annotation বাধ্যতামূলক — `struct Excerpt<'a> { part: &'a str }`; struct যতক্ষণ alive, মূল data-ও ততক্ষণ alive থাকতে হবে"
-    ],
-    "answer": 3,
-    "explanation": "`part: &'a str` মানে `Excerpt` যতক্ষণ ব্যবহৃত হবে, মূল string-ও ততক্ষণ valid থাকতে হবে — নাহলে dangling reference। Function-এর elision rule struct field-এ চলে না, তাই struct-এ reference থাকলে annotation লেখা বাধ্য।"
-  },
-  {
-    "id": "lifetimes-5",
+    "id": "life-q6",
     "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "`fn display(&self, x: &str) -> &str` — lifetime elision অনুযায়ী return করা `&str` কার lifetime পাবে?",
-    "options": [
-      "x-এর",
-      "self-এর",
-      "x আর self — দুটোর মধ্যে যেটা ছোট",
-      "কারও না — annotation ছাড়া এটা কখনোই compile হবে না"
-    ],
-    "answer": 1,
-    "explanation": "এটাই Rule ৩: `&self` বা `&mut self` থাকলে output-এর lifetime হয় self-এর। এ কারণেই chapter-এর `Config::display(&self) -> &str` annotation ছাড়াই compile করে — `self.name` struct-এর নিজের ভেতরের data, সম্পর্কটা unambiguous।"
+    "question": "স্ট্রাক্টে লাইফটাইম ব্যবহারের প্রয়োজনীয়তা:\n\n```rust\nstruct Excerpt<'a> {\n    part: &'a str,\n}\n```\n\nএখানে `'a` এনোটেশন কম্পাইলারকে কী গ্যারান্টি দেয়? যদি মূল স্ট্রিংটি এই স্ট্রাক্ট ইনস্ট্যান্সের আগেই মেমরি থেকে ড্রপ হয়ে যায়, তবে কম্পাইলার কী করবে?",
+    "code": "struct Excerpt<'a> {\n    part: &'a str,\n}",
+    "hint": "এটি নিশ্চিত করে যে `Excerpt` স্ট্রাক্টের ইনস্ট্যান্স কখনোই তার `part` ফিল্ডে থাকা মূল স্ট্রিংটির আয়ুর চেয়ে বেশি বাঁচতে পারবে না। ড্যাংলিং রেফারেন্স রোধ হয়।"
   },
   {
-    "id": "lifetimes-6",
-    "difficulty": "hard",
-    "type": "mcq",
-    "prompt": "NLL (non-lexical lifetimes) অনুযায়ী একটা borrow-এর lifetime আসলে কোথায় গিয়ে শেষ হয়?",
-    "options": [
-      "Block-এর closing brace `}` পর্যন্ত — scope-এর একেবারে শেষে",
-      "Program শেষ না হওয়া পর্যন্ত",
-      "নির্দিষ্ট করা যায় না — প্রতি run-এ বদলে যায়",
-      "Reference-টা যেখানে শেষ বার ব্যবহৃত হলো, সেই জায়গা পর্যন্ত"
-    ],
-    "answer": 3,
-    "explanation": "Borrow checker প্রতিটা function-এর control-flow graph ধরে দেখে reference শেষ বার কোথায় ব্যবহৃত হলো — lifetime scope-এর শেষে না, শেষ ব্যবহারেই শেষ হয়। এটাই NLL; এজন্য একটা borrow আগে শেষ হয়ে গেলে scope শেষ হওয়ার আগেই আবার মিউটেট করা যায়।"
-  },
-  {
-    "id": "lifetimes-7",
+    "id": "life-q7",
     "difficulty": "easy",
-    "type": "code",
-    "prompt": "`longest` ফাংশনের প্যারামিটারগুলোতে একই লাইফটাইম 'a অ্যাসাইন করতে `y` প্যারামিটারটির টাইপ অ্যানোটেশন লিখো:",
-    "code": "fn longest<'a>(x: &'a str, y: ____) -> &'a str {\n    if x.len() > y.len() {\n        x\n    } else {\n        y\n    }\n}",
-    "explanation": "উভয় প্যারামিটার এবং রিটার্ন ভ্যালুর লাইফটাইম একই রাখতে &'a str ব্যবহার করা হয়।",
-    "accept": [
-      "&'a str"
-    ]
+    "question": "স্ট্যাটিক লাইফটাইম `'static` কী? কোন ধরনের রেফারেন্স ডিফল্টভাবে `'static` লাইফটাইম পায় এবং প্রোগ্রাম চলাকালীন মেমরিতে এটি কতক্ষণ বাঁচে?",
+    "hint": "পুরো প্রোগ্রামের সম্পূর্ণ এক্সিকিউশন টাইম জুড়ে বাঁচে। সমস্ত স্ট্রিং লিটারেল (যেমন `\"hello\"`) ডিফল্টভাবে `&'static str`।"
   },
   {
-    "id": "lifetimes-8",
+    "id": "life-q8",
     "difficulty": "medium",
-    "type": "code",
-    "prompt": "`struct Excerpt` এ `part` ফিল্ডটিতে রেফারেন্স রাখার জন্য স্ট্রাক্ট নামের পাশে জেনেরিক লাইফটাইম প্যারামিটার ডিক্লেয়ার করো:",
-    "code": "struct Excerpt<____> {\n    part: &'a str,\n}",
-    "explanation": "স্ট্রাক্টের ভেতরে রেফারেন্স ফিল্ড থাকলে স্ট্রাক্টের নামের সাথে <'a> লাইফটাইম জেনেরিক ঘোষণা করতে হয়।",
-    "accept": [
-      "'a"
-    ]
+    "question": "একটি ফাংশনের ভেতরে লোকাল ভ্যারিয়েবল তৈরি করে তার রেফারেন্স কোনোভাবেই কি `'static` লাইফটাইম দিয়ে রিটার্ন করা সম্ভব? কেন `&String::from(\"abc\")` স্ট্যাটিক হতে পারে না?",
+    "hint": "না, কারণ লোকাল ভ্যারিয়েবলটি স্ট্যাকে তৈরি হয় এবং ফাংশন শেষ হলে সাথে সাথে ড্রপ হয়। শুধুমাত্র গ্লোবাল রিড-অনলি ডেটা বা মেমরি লিক করানো (`Box::leak`) পয়েন্টারই স্ট্যাটিক হতে পারে।"
   },
   {
-    "id": "lifetimes-9",
-    "difficulty": "medium",
-    "type": "code",
-    "prompt": "Blank-এ কী বসালে `display` method-টা compile করবে?",
-    "code": "struct Config<'a> {\n    name: &'a str,\n}\n\nimpl<'a> Config<'a> {\n    fn display(&self) -> ____ {\n        self.name\n    }\n}",
-    "accept": [
-      "&str",
-      "&'a str"
-    ],
-    "explanation": "`&self` থাকায় elision Rule ৩ চালু — output স্বয়ংক্রিয়ভাবে self-এর lifetime পায়, তাই খালি `&str`-ই চলে। চাইলে `&'a str` লিখলেও হয় — `name` field-এর lifetime-ই তো ফেরত যাচ্ছে; দুটোই সঠিক।"
-  },
-  {
-    "id": "lifetimes-10",
+    "id": "life-q9",
     "difficulty": "hard",
-    "type": "code",
-    "prompt": "`longest` compile করাতে return type-এর blank-এ কী লাগবে?",
-    "code": "fn longest<'a>(x: &'a str, y: &'a str) -> ____ {\n    if x.len() > y.len() {\n        x\n    } else {\n        y\n    }\n}",
-    "accept": [
-      "&'a str"
-    ],
-    "explanation": "দুটো input reference থেকে যেকোনো একটা return হতে পারে — তাই return-এর lifetime দুটোর সাথেই বাঁধতে হয়: `&'a str`। অর্থাৎ x, y আর return — তিনটাই এক `'a`-তে আটকা; এই constraint caller-এর কাছে যায়।"
+    "question": "লাইফটাইম সাব-টাইপিং বা বাউন্ডিং: `<'a, 'b: 'a>` সিনট্যাক্সটির অর্থ কী? কখন এমন শর্ত দিতে হয় যে একটি লাইফটাইমকে অন্য একটি লাইফটাইমের চেয়ে দীর্ঘজীবী বা সমান হতে হবে?",
+    "hint": "'b: 'a মানে \"লাইফটাইম 'b অবশ্যই লাইফটাইম 'a এর চেয়ে দীর্ঘজীবী বা অন্তত তার সমান\"। যখন একটি রেফারেন্সের ভেতর অন্য রেফারেন্স নেস্ট করা থাকে তখন এটি প্রয়োজন হয়।"
+  },
+  {
+    "id": "life-q10",
+    "difficulty": "medium",
+    "question": "মেথড ইমপ্লিমেন্টেশনে স্ট্রাক্টের লাইফটাইম সিনট্যাক্স কীভাবে লিখতে হয়? যেমন `struct Highlight<'a>` এর মেথড ব্লকে `impl<'a> Highlight<'a>` লেখার কারণ কী?",
+    "hint": "`impl` এর পর `<'a>` দিয়ে লাইফটাইম প্যারামিটার ডিক্লেয়ার করতে হয়, যাতে কম্পাইলার বোঝে এটি একটি জেনেরিক লাইফটাইম এবং স্ট্রাক্টের নামের সাথে তা ম্যাপ করতে পারে।"
+  },
+  {
+    "id": "life-q11",
+    "difficulty": "easy",
+    "question": "যদি একটি ফাংশনে একাধিক ইনপুট রেফারেন্স থাকে এবং কোনো আউটপুট রেফারেন্স না থাকে (যেমন শুধুমাত্র প্রিন্ট করে), তবে সেখানে কি কোনো লাইফটাইম এনোটেশন দেওয়া বাধ্যতামূলক?",
+    "hint": "না, কোনো আউটপুট রেফারেন্স না থাকলে লাইফটাইম এলিশন নিজে থেকেই প্রতিটি ইনপুটকে আলাদা লাইফটাইম বরাদ্দ করে নেয়।"
+  },
+  {
+    "id": "life-q12",
+    "difficulty": "hard",
+    "question": "এনোনিমাস লাইফটাইম `'_` (Underscore Lifetime) কখন ব্যবহার করা হয়? উদাহরণস্বরূপ `impl Component<'_> { ... }` লেখার সুবিধা কী?",
+    "hint": "যখন লাইফটাইমের নাম স্পষ্টভাবে ব্যবহারের দরকার নেই, কেবল কম্পাইলারকে বোঝাতে হয় যে এখানে একটি লাইফটাইম বিদ্যমান যা এলিশন রুল ফলো করবে।"
+  },
+  {
+    "id": "life-q13",
+    "difficulty": "medium",
+    "question": "নিচের কোডে কেন কম্পাইলার ত্রুটি দেবে এবং সমাধান কী?\n\n```rust\nfn parse_data<'a>() -> &'a str {\n    let s = String::from(\"123,456\");\n    &s[0..3] // Error!\n}\n```",
+    "code": "fn parse_data<'a>() -> &'a str {\n    let s = String::from(\"123,456\");\n    &s[0..3]\n}",
+    "hint": "`s` ফাংশন শেষে ড্রপ হবে। কোনো লাইফটাইম এনোটেশনই মৃত ডেটার রেফারেন্সকে বাঁচিয়ে রাখতে পারে না। সমাধান হলো ওনারশিপ সহ `String` রিটার্ন করা।"
+  },
+  {
+    "id": "life-q14",
+    "difficulty": "hard",
+    "question": "হায়ার-র্যাংকড ট্রেইট বাউন্ডস (HRTB: `for<'a>`): ক্লোজার বা ট্রেইট বাউন্ডে যখন কোনো রেফারেন্সের লাইফটাইম যেকোনো কাল্পনিক লাইফটাইমের জন্য ভ্যালিড হতে হয়, তখন এই সিনট্যাক্স কীভাবে কাজ করে?",
+    "hint": "`F: for<'a> Fn(&'a str) -> &'a str` — এটি নির্দিষ্ট করে যে ক্লোজারটি যেকোনো লাইফটাইমের স্ট্রিং রেফারেন্স গ্রহণ ও রিটার্ন করতে সক্ষম।"
+  },
+  {
+    "id": "life-q15",
+    "difficulty": "medium",
+    "question": "লাইফটাইম প্যারামিটার সহ জেনেরিক টাইপ প্যারামিটার একসাথে লেখার নিয়ম কী? কোনটি আগে লিখতে হয় (যেমন `<'a, T>` বনাম `<T, 'a>`)?",
+    "hint": "কনভেনশন এবং কম্পাইলার নিয়ম অনুসারে লাইফটাইম প্যারামিটার সর্বদা টাইপ প্যারামিটারের পূর্বে লিখতে হয়: `<'a, T>`।"
+  },
+  {
+    "id": "life-q16",
+    "difficulty": "easy",
+    "question": "যদি একটি ফাংশনে ইনপুট হিসেবে রেফারেন্স এবং আউটপুট হিসেবে সম্পূর্ণ নতুন একটি ওনড ভ্যালু (যেমন `String` বা `Vec<i32>`) রিটার্ন করা হয়, তবে কি রিটার্ন টাইপে কোনো লাইফটাইম লাগবে?",
+    "hint": "না, ওনড ভ্যালুর ওনারশিপ কলারের কাছে স্থানান্তরিত হয়, তাই কোনো লাইফটাইম সংযোগের প্রয়োজন পড়ে না।"
+  },
+  {
+    "id": "life-q17",
+    "difficulty": "hard",
+    "question": "সেলফ-রেফারেনশিয়াল স্ট্রাক্ট (Self-Referential Struct): একটি স্ট্রাক্ট কি তার নিজের ফিল্ডের ডেটার রেফারেন্স অন্য ফিল্ডে ধরে রাখতে পারে? কেন রাস্টের সাধারণ বরো চেকার এটি প্রতিরোধ করে এবং এর সমাধান কী?",
+    "hint": "অবজেক্ট মুভ হলে ইন্টারনাল পয়েন্টার ইনভ্যালিড হয়ে যায়। সাধারণ সেফ কোডে এটি অসম্ভব। সমাধানের জন্য `Pin` বা ইনডেক্স-ভিত্তিক ডেটা স্ট্রাকচার প্রয়োজন।"
+  },
+  {
+    "id": "life-q18",
+    "difficulty": "medium",
+    "question": "`Box::leak` ফাংশন কীভাবে কাজ করে এবং কেন এটি রানটাইমে তৈরি কোনো অবজেক্টের জন্য `'static` লাইফটাইম প্রদান করতে পারে?",
+    "hint": "এটি ইচ্ছাকৃতভাবে অবজেক্টের ড্রপ কল বন্ধ করে মেমরি চিরতরে ওএস মেমরিতে ধরে রাখে, ফলে কম্পাইলার নিশ্চিত হতে পারে যে ডেটা আর কখনোই রিলিজ হবে না।"
+  },
+  {
+    "id": "life-q19",
+    "difficulty": "easy",
+    "question": "লাইফটাইমের নামের শুরুতে কেন সর্বদা একটি সিঙ্গেল কোটেশন চিহ্ন (যেমন `'a`, `'ctx`) দিতে হয়?",
+    "hint": "কম্পাইলারের লেক্সিক্যাল পার্সারে সাধারণ ভ্যারিয়েবল ও টাইপের সাথে লাইফটাইম আইডেন্টিফায়ারকে আলাদাভাবে শনাক্ত করার জন্য।"
+  },
+  {
+    "id": "life-q20",
+    "difficulty": "hard",
+    "question": "কোভ্যারিয়েন্স এবং কনট্রাভ্যারিয়েন্স (Variance in Lifetimes): লাইফটাইম 'static কে কি ছোট লাইফটাইম 'a এর স্থানে সাবস্টিটিউট করা যায়? কেন ইমিউটেবল রেফারেন্স কোভ্যারিয়েন্ট কিন্তু মিউটেবল রেফারেন্স ইনভ্যারিয়েন্ট?",
+    "hint": "যদি `&mut &'static str` কে ছোট লাইফটাইমে কাস্ট করতে দেওয়া হতো, তবে কেউ ছোট লাইফটাইমের ডেটা স্ট্যাটিক লোকেশনে লিখে ড্যাংলিং পয়েন্টার বানিয়ে ফেলতে পারত।"
   }
 ]
