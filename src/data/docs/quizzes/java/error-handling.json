@@ -1,0 +1,125 @@
+[
+  {
+    "id": "eh-1",
+    "difficulty": "easy",
+    "question": "Java তে Throwable ক্লাসের দুটি প্রধান সাবক্লাস কী কী এবং এদের মধ্যে মৌলিক পার্থক্য কী?",
+    "hint": "একটি হলো রিকভারেবল অ্যাপ্লিকেশন ইস্যু (Exception) এবং অন্যটি আনরিকভারেবল সিস্টেম লেভেল বিপর্যয় (Error)।"
+  },
+  {
+    "id": "eh-2",
+    "difficulty": "easy",
+    "question": "Checked Exception এবং Unchecked Exception-এর মধ্যে কম্পাইলার চেকিংয়ের দৃষ্টিকোণ থেকে পার্থক্য ব্যাখ্যা করুন।",
+    "hint": "Checked Exception কম্পাইল টাইমে throws বা try-catch ছাড়া কম্পাইল হয় না, কিন্তু RuntimeException সাবক্লাসগুলোকে কম্পাইলার ফোর্স করে না।"
+  },
+  {
+    "id": "eh-3",
+    "difficulty": "medium",
+    "code": "try {\n    int x = 10 / 0;\n    return 1;\n} catch (ArithmeticException e) {\n    return 2;\n} finally {\n    return 3;\n}",
+    "question": "উপরের কোড ব্লকটি এক্সিকিউট করলে রিটার্ন ভ্যালু কত হবে এবং কেন finally-তে return স্টেটমেন্ট দেওয়াকে অ্যান্টি-প্যাটার্ন বলা হয়?",
+    "hint": "finally ব্লকের রিটার্ন স্টেটমেন্ট try এবং catch এর রিটার্ন ভ্যালু এমনকি থ্রো করা এক্সেপশনও সাপ্রেস বা ওভাররাইট করে দেয়।"
+  },
+  {
+    "id": "eh-4",
+    "difficulty": "easy",
+    "question": "Try-with-resources ব্লকে কোনো ক্লাস ব্যবহার করতে চাইলে সেই ক্লাসে কোন ইন্টারফেসটি অবশ্যই ইমপ্লিমেন্ট করা থাকতে হয়?",
+    "hint": "জাভা ৭ এ চালু হওয়া java.lang.AutoCloseable অথবা java.io.Closeable ইন্টারফেস।"
+  },
+  {
+    "id": "eh-5",
+    "difficulty": "medium",
+    "question": "Try-with-resources স্টেটমেন্টে যখন একাধিক রিসোর্স ডিক্লেয়ার করা হয়, তখন JVM কোন অর্ডারে সেগুলোকে ক্লোজ করে?",
+    "hint": "ডিক্লেয়ারেশন অর্ডারের বিপরীত ক্রমে (Reverse/LIFO order) অটোমেটিক ক্লোজ হয়।"
+  },
+  {
+    "id": "eh-6",
+    "difficulty": "hard",
+    "question": "Suppressed Exceptions কী এবং কীভাবে e.getSuppressed() মেথড ব্যবহার করে try ব্লক ও auto-close মেথড উভয়ের এরর একসাথে ট্র্যাক করা যায়?",
+    "hint": "try ব্লকে এক্সেপশন ঘটার পর রিসোর্স ক্লোজ করার সময় যদি আরেকটি এক্সেপশন ঘটে, ক্লোজিংয়ের এররটি মূল এক্সেপশনে সাপ্রেসড হিসেবে যুক্ত হয়।"
+  },
+  {
+    "id": "eh-7",
+    "difficulty": "medium",
+    "code": "try {\n    executeOperation();\n} catch (IOException | SQLException ex) {\n    ex = new IOException(); // Line 4\n}",
+    "question": "উপরের কোডের ৪ নম্বর লাইনে কেন কম্পাইলেশন এরর হবে?",
+    "hint": "Multi-catch ব্লকে ক্যাচ ভেরিয়েবলটি (ex) ইমপ্লিসিটলি final থাকে, তাই এটিকে রি-অ্যাসাইন করা যায় না।"
+  },
+  {
+    "id": "eh-8",
+    "difficulty": "medium",
+    "question": "Exception Chaining কী এবং কাস্টম এক্সেপশনের ভেতরে super(message, cause) কনস্ট্রাক্টর পাস করার প্রয়োজনীয়তা কী?",
+    "hint": "লো-লেভেল অরিজিনাল এররের স্ট্যাকট্রেস না হারিয়ে বিজনেস-লেভেল এক্সেপশনে র্যাপ করে পুরো কল-চেইনের ইতিহাস বজায় রাখা।"
+  },
+  {
+    "id": "eh-9",
+    "difficulty": "medium",
+    "question": "এন্টারপ্রাইজ অ্যাপ্লিকেশনে কেন কখনো খালি ক্যাচ ব্লক (Empty catch block / Exception swallowing) রাখা উচিত নয়?",
+    "hint": "এরর সাইলেন্টলি হাইড হয়ে যায়, সিস্টেম ফেইল করলেও কোনো লগ বা স্ট্যাকট্রেস থাকে না, ফলে প্রোডাকশন বাগ ডিবাগ করা অসম্ভব হয়ে পড়ে।"
+  },
+  {
+    "id": "eh-10",
+    "difficulty": "medium",
+    "question": "'Log and Throw' অ্যান্টি-প্যাটার্ন কী এবং কেন প্রতিটি লেয়ারে একই এক্সেপশন লগ করে আবার থ্রো করা ক্ষতিকর?",
+    "hint": "প্রতিটি লেয়ারে ডুপ্লিকেট স্ট্যাকট্রেস তৈরি হয়ে লগ ফাইল বিশাল অপ্রয়োজনীয় এরর ডেটায় ভরে যায়।"
+  },
+  {
+    "id": "eh-11",
+    "difficulty": "easy",
+    "question": "throw এবং throws কিওয়ার্ডের মধ্যকার মৌলিক পার্থক্য কী?",
+    "hint": "throw দিয়ে একটি নির্দিষ্ট এক্সেপশন অবজেক্ট সরাসরি নিক্ষেপ করা হয়, আর throws দিয়ে মেথড সিগনেচারে ডিক্লেয়ার করা হয় যে মেথডটি এক্সেপশন থ্রো করতে পারে।"
+  },
+  {
+    "id": "eh-12",
+    "difficulty": "hard",
+    "question": "সাধারণ প্রোগ্রাম ফ্লো কন্ট্রোলের (যেমন লুপ বা ভ্যালিডেশন ব্রেক করতে) জন্য এক্সেপশন থ্রো করাকে কেন পারফরম্যান্স অ্যান্টি-প্যাটার্ন বিবেচনা করা হয়?",
+    "hint": "Exception ইনস্ট্যান্স তৈরির সময় JVM কে fillInStackTrace() কল করে সম্পূর্ণ কল স্ট্যাক মেমোরিতে জেনারেট করতে হয়, যা প্রচুর CPU ও মেমোরি কনজিউম করে।"
+  },
+  {
+    "id": "eh-13",
+    "difficulty": "medium",
+    "code": "try {\n    throw new CustomException();\n} catch (Exception e) {\n    System.out.println(\"A\");\n} catch (CustomException e) {\n    System.out.println(\"B\");\n}",
+    "question": "উপরের কোডে কেন কম্পাইলেশন এরর হবে এবং একাধিক ক্যাচ ব্লকের সঠিক অর্ডার কী হওয়া উচিত?",
+    "hint": "বেশি জেনেরিক সুপারক্লাস (Exception) আগে দিলে সাবক্লাস (CustomException) আনরিচেবল কোড হয়ে পড়ে; তাই সাবক্লাস আগে দিতে হয়।"
+  },
+  {
+    "id": "eh-14",
+    "difficulty": "easy",
+    "question": "NullPointerException কোন ধরনের এক্সেপশনের অন্তর্ভুক্ত (Checked নাকি Unchecked) এবং এটি কেন ঘটে?",
+    "hint": "এটি RuntimeException এর সাবক্লাস (Unchecked); যখন null রেফারেন্সের ওপর মেথড কল বা ফিল্ড এক্সেস করার চেষ্টা করা হয় তখন ঘটে।"
+  },
+  {
+    "id": "eh-15",
+    "difficulty": "medium",
+    "question": "কখন কাস্টম এক্সেপশনকে RuntimeException এক্সটেন্ড করে তৈরি করা উচিত আর কখন Exception এক্সটেন্ড করে তৈরি করা উচিত?",
+    "hint": "যদি কলারের রিকভার করার সুনির্দিষ্ট সুযোগ থাকে তবে Checked; কিন্তু বিজনেস রুল ভায়োলেশন বা আনরিকভারেবল লজিক্যাল এররের ক্ষেত্রে Unchecked।"
+  },
+  {
+    "id": "eh-16",
+    "difficulty": "hard",
+    "question": "System.exit(0) কল করলে কি finally ব্লক এক্সিকিউট হবে? ব্যাখ্যা করুন।",
+    "hint": "না, System.exit() কল করার সাথে সাথে JVM প্রসেসটি তাত্ক্ষণিকভাবে টার্মিনেট হয়ে যায়, ফলে finally রান হওয়ার সুযোগ পায় না।"
+  },
+  {
+    "id": "eh-17",
+    "difficulty": "medium",
+    "question": "FileNotFoundException এবং IOException এর মধ্যে সম্পর্ক কী?",
+    "hint": "FileNotFoundException হলো IOException এর সরাসরি সাবক্লাস।"
+  },
+  {
+    "id": "eh-18",
+    "difficulty": "hard",
+    "question": "Out-of-memory error (OOM) কি catch ব্লকে ধরে অ্যাপ্লিকেশন স্বাভাবিকভাবে চালিয়ে নেওয়া নিরাপদ? কারণ বিশ্লেষণ করুন।",
+    "hint": "না, কারণ JVM এর হিপ মেমোরি স্টেট করাপ্ট হয়ে যায় এবং অন্যান্য গুরুত্বপূর্ণ সিস্টেম থ্রেডও ক্র্যাশ করতে পারে।"
+  },
+  {
+    "id": "eh-19",
+    "difficulty": "medium",
+    "question": "Final rethrow ফিচারটি কী যা জাভা ৭-এ যোগ করা হয়েছে?",
+    "hint": "মেথডে জেনেরিক Exception ক্যাচ করে throw e করলেও কম্পাইলার এক্স্যাক্ট থ্রো হওয়া স্পেসিফিক টাইপগুলো মেথড সিগনেচারে ভ্যালিডেট করতে পারে।"
+  },
+  {
+    "id": "eh-20",
+    "difficulty": "hard",
+    "question": "স্প্রিং বুট বা এন্টারপ্রাইজ মাইক্রোসার্ভিসে ControllerAdvice এবং ExceptionHandler কীভাবে সেন্ট্রালাইজড এরর হ্যান্ডলিং নিশ্চিত করে?",
+    "hint": "প্রতিটি কন্ট্রোলারে try-catch না লিখে গ্লোবালি সব এক্সেপশন ইন্টারসেপ্ট করে স্ট্যান্ডার্ড API এরর রেসপন্স (যেমন RFC 7807) রিটার্ন করা যায়।"
+  }
+]

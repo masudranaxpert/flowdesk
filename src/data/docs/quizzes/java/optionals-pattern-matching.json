@@ -1,0 +1,125 @@
+[
+  {
+    "id": "opm-1",
+    "difficulty": "easy",
+    "question": "Optional ক্লাসের মূল উদ্দেশ্য কী এবং কেন এটি মেথড রিটার্ন টাইপ ছাড়া অন্য কোথাও ব্যবহার করা নিরুৎসাহিত করা হয়?",
+    "hint": "রিটার্ন ভ্যালু অনুপস্থিত থাকার সম্ভাবনা স্পষ্টভাবে বোঝাতে ডিজাইন করা হয়েছে; ফিল্ডে রাখলে মেমোরি নষ্ট হয় এবং এটি Serializable নয়।"
+  },
+  {
+    "id": "opm-2",
+    "difficulty": "easy",
+    "question": "Optional.of() এবং Optional.ofNullable() মেথডের মধ্যে পার্থক্য কী?",
+    "hint": "Optional.of()-এ null পাস করলে সাথে সাথে NullPointerException ছুড়ে মারে; ofNullable() নাল পেলে নিরাপদভাবে Optional.empty() দেয়।"
+  },
+  {
+    "id": "opm-3",
+    "difficulty": "medium",
+    "code": "String name = opt.orElse(calculateExpensiveName());\nString safe = opt.orElseGet(() -> calculateExpensiveName());",
+    "question": "উপরের দুই লাইনের মধ্যে পারফরম্যান্সের দিক থেকে কী পার্থক্য এবং কেন opt পূর্ণ থাকলেও calculateExpensiveName রান করতে পারে?",
+    "hint": "orElse ইগারলি মেথড প্যারামিটার ইভালুয়েট করে; আর orElseGet লেজি ল্যাম্বডার কারণে শুধুমাত্র অপশনাল খালি থাকলেই মেথড রান করে।"
+  },
+  {
+    "id": "opm-4",
+    "difficulty": "easy",
+    "question": "কেন opt.get() সরাসরি কল করা একটি অ্যান্টি-প্যাটার্ন বিবেচনা করা হয়?",
+    "hint": "যদি ভ্যালু না থাকে তবে এটি NoSuchElementException থ্রো করে, যা সাধারণ NullPointerException-এর মতোই অনিরাপদ।"
+  },
+  {
+    "id": "opm-5",
+    "difficulty": "medium",
+    "question": "Optional.map() এবং Optional.flatMap() মেথডের মধ্যে পার্থক্য কী?",
+    "hint": "ম্যাপিং ফাংশন যদি সাধারণ অবজেক্ট রিটার্ন করে তবে map(); আর ম্যাপিং ফাংশন যদি নিজেও একটি Optional রিটার্ন করে তবে নেস্টেড Optional এড়াতে flatMap()।"
+  },
+  {
+    "id": "opm-6",
+    "difficulty": "medium",
+    "question": "Optional.ifPresentOrElse() মেথডটি জাভা ৯-এ কেন যুক্ত করা হয়েছিল?",
+    "hint": "ভ্যালু থাকলে একটি Consumer রান করা এবং খালি থাকলে একটি বিকল্প Runnable রান করার ডিক্লারেটিভ সমাধান দিতে।"
+  },
+  {
+    "id": "opm-7",
+    "difficulty": "medium",
+    "question": "Optional.stream() কীভাবে কালেকশনের মধ্যে থেকে নাল-সেফ ফিল্টারিং করতে সাহায্য করে?",
+    "hint": "ভ্যালু থাকলে ১টি উপাদানের স্ট্রিম এবং খালি থাকলে empty stream রিটার্ন করে, যা flatMap-এর সাথে সহজে কম্বাইন করা যায়।"
+  },
+  {
+    "id": "opm-8",
+    "difficulty": "easy",
+    "code": "if (obj instanceof String s) {\n    System.out.println(s.length());\n}",
+    "question": "জাভা ১৬-এর এই Pattern Matching for instanceof কীভাবে ক্লাসিকাল কোডের তুলনায় বয়লারপ্লেট ও ভুল কমায়?",
+    "hint": "টাইপ চেকের পর আলাদা লাইনে ম্যানুয়াল টাইপ কাস্টিং (String s = (String) obj;) করার প্রয়োজন পুরোপুরি দূর করে।"
+  },
+  {
+    "id": "opm-9",
+    "difficulty": "medium",
+    "question": "Pattern Matching for instanceof-এ প্যাটার্ন ভেরিয়েবলের স্কোপ (Flow Scoping) কীভাবে নির্ধারিত হয়?",
+    "hint": "প্যাটার্ন ভেরিয়েবল শুধুমাত্র সেই ব্রাঞ্চেই এভেইলেবল থাকে যেখানে কন্ডিশনটি নিশ্চিতভাবে true প্রমাণিত হয় (যেমন if (obj instanceof String s && s.length() > 0))।"
+  },
+  {
+    "id": "opm-10",
+    "difficulty": "medium",
+    "question": "Java 21-এর Pattern Matching for switch-এ 'when' ক্লজের কাজ কী?",
+    "hint": "টাইপ প্যাটার্নের সাথে অতিরিক্ত বুলিয়ান গার্ড কন্ডিশন যোগ করা, যাতে নির্দিষ্ট শর্ত মিললেই কেবল সেই কেস এক্সিকিউট হয়।"
+  },
+  {
+    "id": "opm-11",
+    "difficulty": "easy",
+    "question": "Java 21-এর সুইচে 'case null' কীভাবে NullPointerException সমাধান করে?",
+    "hint": "আগের জাভায় সুইচ এক্সপ্রেশনে null আসলে সাথে সাথে NPE হতো; এখন case null দিয়ে সরাসরি নাল ভ্যালু গ্রেসফুলি হ্যান্ডল করা যায়।"
+  },
+  {
+    "id": "opm-12",
+    "difficulty": "hard",
+    "question": "Sealed Classes-এর সাথে Pattern Matching switch ব্যবহার করলে কেন default ক্লজ দেওয়ার প্রয়োজন নাও হতে পারে?",
+    "hint": "কম্পাইলার জানে ঠিক কতগুলো পারমিটেড সাবটাইপ আছে; সব সাবটাইপ কাভার করা হলে এক্সহস্টিভনেস (Exhaustiveness) নিশ্চিত হয়।"
+  },
+  {
+    "id": "opm-13",
+    "difficulty": "medium",
+    "code": "public record Point(int x, int y) {}\npublic record Line(Point start, Point end) {}",
+    "question": "Java 21 Record Pattern ব্যবহার করে উপরের Line অবজেক্ট থেকে start পয়েন্টের x কোঅর্ডিনেট কীভাবে এক লাইনে ডিকনস্ট্রাক্ট করবেন?",
+    "hint": "case Line(Point(int x, int y), Point end) -> ... সিনট্যাক্স দিয়ে নেস্টেড ডিকনস্ট্রাকশন করা যায়।"
+  },
+  {
+    "id": "opm-14",
+    "difficulty": "hard",
+    "question": "কোনো সুইচে যদি case String s এবং case CharSequence cs থাকে, তবে তাদের অর্ডারিং কেমন হতে হবে এবং কেন?",
+    "hint": "সবচেয়ে স্পেসিফিক সাবটাইপ (String) আগে থাকতে হবে; কারণ CharSequence আগে থাকলে String কেসটি আনরিচেবল ডোমিন্যান্স এরর তৈরি করবে।"
+  },
+  {
+    "id": "opm-15",
+    "difficulty": "medium",
+    "question": "OptionalInt, OptionalLong এবং OptionalDouble কেন বিদ্যমান?",
+    "hint": "প্রিমিটিভ টাইপের ক্ষেত্রে অপশনাল র্যাপিংয়ের অটবক্সিং মেমোরি ওভারহেড দূর করতে।"
+  },
+  {
+    "id": "opm-16",
+    "difficulty": "easy",
+    "question": "কখন মেথডের প্যারামিটার হিসেবে Optional পাস করা অ্যান্টি-প্যাটার্ন এবং সঠিক বিকল্প কী?",
+    "hint": "প্যারামিটারে অপশনাল দিলে কলারকে Optional.ofNullable() তৈরি করতে বাধ্য করা হয়; বিকল্প হলো মেথড ওভারলোডিং বা সাধারণ নাল হ্যান্ডলিং।"
+  },
+  {
+    "id": "opm-17",
+    "difficulty": "medium",
+    "question": "Pattern matching switch-এ কীভাবে একাধিক কনস্ট্যান্ট ম্যাচিং এবং টাইপ প্যাটার্ন একসাথে কম্বাইন করা যায়?",
+    "hint": "কেস লেবেলে কমা দিয়ে একাধিক কনস্ট্যান্ট দেওয়া যায়, তবে টাইপ প্যাটার্ন ও গার্ডের ক্ষেত্রে স্বতন্ত্র ক্লজ ব্যবহার করতে হয়।"
+  },
+  {
+    "id": "opm-18",
+    "difficulty": "hard",
+    "question": "Unnamed Variables and Patterns (_) ফিচারটি জাভায় প্যাটার্ন ম্যাচিংকে কীভাবে পরিচ্ছন্ন করে?",
+    "hint": "ডিকনস্ট্রাকশনের সময় যে ফিল্ডটি ব্যবহারের প্রয়োজন নেই সেটিকে আন্ডারস্কোর (_) দিয়ে ইগনোর করা যায়।"
+  },
+  {
+    "id": "opm-19",
+    "difficulty": "medium",
+    "question": "Optional.or() মেথডের কাজ কী যা জাভা ৯-এ চালু হয়েছে?",
+    "hint": "যদি বর্তমান অপশনালটি খালি থাকে, তবে এটি অন্য একটি বিকল্প Supplier<Optional<T>> চেইন করার সুযোগ দেয়।"
+  },
+  {
+    "id": "opm-20",
+    "difficulty": "hard",
+    "question": "ডোমেন মডেল বা JPA Entity-র ভেতরের ফিল্ডে কেন Optional ব্যবহার করা উচিত নয়?",
+    "hint": "JPA স্পেসিফিকেশন এটিকে প্রোপার্টি হিসেবে রিকগনাইজ করে না এবং হাইবারনেটের পারসিস্টেন্সে জটিলতা ও সিরিয়ালাইজেশন ব্যর্থতা দেখা দেয়।"
+  }
+]

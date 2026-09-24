@@ -22,10 +22,12 @@ import {
   Radio,
   Flame,
   Boxes,
+  Coffee,
   type LucideIcon,
 } from 'lucide-react';
 
 const iconRegistry: Record<string, LucideIcon> = {
+  Coffee,
   FileCode2,
   Sigma,
   Table2,

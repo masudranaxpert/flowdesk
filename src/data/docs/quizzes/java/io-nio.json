@@ -1,0 +1,122 @@
+[
+  {
+    "id": "io-1",
+    "difficulty": "easy",
+    "question": "java.io (ক্লাসিক I/O) এবং java.nio (NIO/NIO.2) এর মধ্যে ডেটা হ্যান্ডলিং আর্কিটেকচারের প্রধান পার্থক্য কী?",
+    "hint": "ক্লাসিক I/O স্ট্রিম-ভিত্তিক এবং ব্লকিং; NIO হলো বাফার ও চ্যানেল ভিত্তিক এবং নন-ব্লকিং অপারেশন সাপোর্ট করে।"
+  },
+  {
+    "id": "io-2",
+    "difficulty": "easy",
+    "question": "জাভাতে Byte Stream (InputStream/OutputStream) এবং Character Stream (Reader/Writer) এর মধ্যকার মৌলিক পার্থক্য কী?",
+    "hint": "বাইট স্ট্রিম ৮-বিট র ডেটা হ্যান্ডল করে (ইমেজ, ভিডিও), আর ক্যারেক্টার স্ট্রিম ১৬-বিট ইউনিকোড টেক্সট এনকোডিং স্বয়ংক্রিয়ভাবে হ্যান্ডল করে।"
+  },
+  {
+    "id": "io-3",
+    "difficulty": "medium",
+    "question": "java.io.File এর তুলনায় java.nio.file.Path এবং Files ক্লাসের প্রধান সুবিধাগুলো কী কী?",
+    "hint": "Path আধুনিক OS ফাইল সিস্টেম আর্কিটেকচার সাপোর্ট করে, সঠিক এক্সেপশন ও মেটাডেটা দেয় এবং ফাইল ম্যানিপুলেশনে অনেক বেশি কার্যক্ষম।"
+  },
+  {
+    "id": "io-4",
+    "difficulty": "easy",
+    "question": "Java 11-এ একটি ছোট টেক্সট ফাইল এক লাইনে রিড ও রাইট করার জন্য Files ক্লাসের কোন মেথডগুলো ব্যবহৃত হয়?",
+    "hint": "Files.readString(path) এবং Files.writeString(path, content)।"
+  },
+  {
+    "id": "io-5",
+    "difficulty": "medium",
+    "question": "বড় সাইজের টেক্সট ফাইল প্রসেস করার ক্ষেত্রে কেন Files.readAllLines() ব্যবহার না করে Files.lines() ব্যবহার করা উচিত?",
+    "hint": "readAllLines পুরো ফাইলের সব লাইন একসাথে হিপ মেমোরিতে লোড করে OOM ঘটায়; আর Files.lines() লেজি স্ট্রিম দিয়ে লাইন বাই লাইন পড়ে।"
+  },
+  {
+    "id": "io-6",
+    "difficulty": "hard",
+    "question": "Files.lines() ব্যবহার করার সময় কেন অবশ্যই Try-with-resources ব্যবহার করতে হয়? না করলে কী ঝুঁকি থাকে?",
+    "hint": "রিটার্ন হওয়া Stream টি আন্ডারলায়িং ফাইল ডেসক্রিপ্টরের সাথে কানেক্টেড থাকে; ক্লোজ না করলে File Descriptor Leak ঘটে।"
+  },
+  {
+    "id": "io-7",
+    "difficulty": "medium",
+    "question": "Files.walk() এবং Files.list() এর মধ্যে ট্রাভার্সালের দিক থেকে পার্থক্য কী?",
+    "hint": "Files.list() শুধু কারেন্ট ডিরেক্টরির সরাসরি চাইল্ডগুলো দেয় (depth 1); Files.walk() রিকার্সিভলি সাবডিরেক্টরিগুলোর গভীরে স্ক্যান করে।"
+  },
+  {
+    "id": "io-8",
+    "difficulty": "medium",
+    "question": "NIO-তে ByteBuffer এর position, limit, এবং capacity বলতে কী বোঝায়?",
+    "hint": "Capacity হলো মোট ধারণক্ষমতা, Position হলো বর্তমান রিড/রাইট ইনডেক্স, এবং Limit হলো যে ইনডেক্স পর্যন্ত রিড বা রাইট করা অনুমোদিত।"
+  },
+  {
+    "id": "io-9",
+    "difficulty": "medium",
+    "question": "ByteBuffer এ ডেটা রাইট করার পর রিড করার আগে কেন flip() মেথড কল করতে হয়?",
+    "hint": "flip() মেথড Limit কে কারেন্ট Position এ সেট করে এবং Position কে 0 তে রিসেট করে, যাতে শুরু থেকে পড়া যায়।"
+  },
+  {
+    "id": "io-10",
+    "difficulty": "hard",
+    "question": "FileChannel.transferTo() মেথড কীভাবে Zero-Copy টেকনোলজি ব্যবহার করে ফাইল ট্রান্সফারকে অতি দ্রুত করে?",
+    "hint": "ইউজার স্পেস মেমোরিতে ডেটা কপি না করে সরাসরি OS কার্নেল স্পেস এবং পেজ ক্যাশ ব্যবহার করে সোর্স থেকে ডেস্টিনেশনে ডেটা পাঠিয়ে দেয়।"
+  },
+  {
+    "id": "io-11",
+    "difficulty": "easy",
+    "question": "StandardOpenOption.CREATE এবং StandardOpenOption.CREATE_NEW এর মধ্যে পার্থক্য কী?",
+    "hint": "CREATE ফাইল না থাকলে তৈরি করে আর থাকলে ওভাররাইট/ওপেন করে; CREATE_NEW ফাইলটি আগে থেকেই বিদ্যমান থাকলে FileAlreadyExistsException থ্রো করে।"
+  },
+  {
+    "id": "io-12",
+    "difficulty": "medium",
+    "question": "BufferedReader ব্যবহার করলে আনবাফার্ড FileReader এর তুলনায় কেন I/O পারফরম্যান্স নাটকীয়ভাবে বৃদ্ধি পায়?",
+    "hint": "প্রতি ক্যারেক্টারে আলাদা OS ডিস্ক সিস্টেমে কল না করে মেমোরি বাফারে বড় চাঙ্ক ডেটা প্রি-ফেচ করে ক্যাশ করে রাখে।"
+  },
+  {
+    "id": "io-13",
+    "difficulty": "medium",
+    "question": "জাভাতে অবজেক্ট সিরিয়ালাইজেশন (Serializable) কী এবং serialVersionUID এর ভূমিকা কী?",
+    "hint": "অবজেক্টের স্টেটকে বাইট স্ট্রিমে রূপান্তর করা; serialVersionUID নিশ্চিত করে যে ডিসিরিয়ালাইজেশনের সময় ক্লাস ভার্সন অপরিবর্তিত আছে।"
+  },
+  {
+    "id": "io-14",
+    "difficulty": "medium",
+    "question": "জাভাতে transient কিওয়ার্ডের কাজ কী যখন কোনো ক্লাস Serializable ইমপ্লিমেন্ট করে?",
+    "hint": "যে ফিল্ডটি transient চিহ্নিত থাকে, অবজেক্ট সিরিয়ালাইজ করার সময় তার ভ্যালু সেভ হয় না এবং ডিসিরিয়ালাইজেশনে ডিফল্ট মান পায়।"
+  },
+  {
+    "id": "io-15",
+    "difficulty": "hard",
+    "question": "জাভা স্ট্যান্ডার্ড অবজেক্ট সিরিয়ালাইজেশনকে কেন আধুনিক সিকিউরিটি স্ট্যান্ডার্ডে ঝুঁকিপূর্ণ বিবেচনা করা হয় এবং এর বিকল্প কী?",
+    "hint": "রিমোট কোড এক্সিকিউশন ও গ্যাজেট চেইন ভালনারেবিলিটি তৈরি করে; বিকল্প হলো JSON (Jackson), Protocol Buffers, বা Kryo ব্যবহার করা।"
+  },
+  {
+    "id": "io-16",
+    "difficulty": "medium",
+    "question": "Files.copy() মেথডে StandardCopyOption.REPLACE_EXISTING অপশনের কাজ কী?",
+    "hint": "টার্গেট ডেস্টিনেশনে আগে থেকেই ফাইল থাকলে তা এরর না দিয়ে নতুন ফাইল দিয়ে প্রতিস্থাপন করে।"
+  },
+  {
+    "id": "io-17",
+    "difficulty": "hard",
+    "question": "Java NIO-র Selector কী এবং কীভাবে একটি মাত্র থ্রেড দিয়ে হাজার হাজার কনকারেন্ট নেটওয়ার্ক সকেট কানেকশন হ্যান্ডল করা যায়?",
+    "hint": "এটি OS-এর epoll/kqueue ব্যবহার করে মাল্টিপল চ্যানেল রেজিস্টার করে এবং কোনো চ্যানেলে ডেটা রেডি থাকলে ইভেন্ট-ড্রিভেন পদ্ধতিতে প্রসেস করে।"
+  },
+  {
+    "id": "io-18",
+    "difficulty": "medium",
+    "question": "Path.resolve() এবং Path.relativize() মেথডের কাজ কী?",
+    "hint": "resolve() দুটি পাথ কম্বাইন/জয়েন করে; relativize() একটি পাথের সাপেক্ষে অন্য পাথের আপেক্ষিক পথ গণনা করে।"
+  },
+  {
+    "id": "io-19",
+    "difficulty": "hard",
+    "question": "Memory-Mapped Files (MappedByteBuffer) কী এবং এটি কখন ব্যবহৃত হয়?",
+    "hint": "ফাইলের ডিস্ক ব্লককে সরাসরি অ্যাপ্লিকেশনের ভার্চুয়াল মেমোরি অ্যাড্রেস স্পেসে ম্যাপ করে, যা বিশাল ফাইলের ক্ষেত্রে রেন্ডম এক্সেস অতিদ্রুত করে।"
+  },
+  {
+    "id": "io-20",
+    "difficulty": "medium",
+    "question": "Files.deleteIfExists(path) মেথডের বিশেষত্ব কী?",
+    "hint": "ফাইল থাকলে ডিলিট করে true রিটার্ন করে, আর ফাইল না থাকলে NoSuchFileException থ্রো না করে নিরাপদে false রিটার্ন করে।"
+  }
+]

@@ -1,0 +1,124 @@
+[
+  {
+    "id": "ls-1",
+    "difficulty": "easy",
+    "question": "Functional Interface বলতে কী বোঝায় এবং এতে কয়টি অ্যাবস্ট্রাক্ট মেথড থাকতে পারে?",
+    "hint": "এতে ঠিক একটি মাত্র অ্যাবস্ট্রাক্ট মেথড (SAM - Single Abstract Method) থাকতে পারে, তবে একাধিক ডিফল্ট ও স্ট্যাটিক মেথড থাকতে পারে।"
+  },
+  {
+    "id": "ls-2",
+    "difficulty": "easy",
+    "question": "Predicate<T> এবং Function<T, R> এর মেথড সিগনেচার ও রিটার্ন টাইপের পার্থক্য কী?",
+    "hint": "Predicate এর মেথড test(T) রিটার্ন করে boolean; Function এর মেথড apply(T) রিটার্ন করে R টাইপের অবজেক্ট।"
+  },
+  {
+    "id": "ls-3",
+    "difficulty": "medium",
+    "question": "Consumer<T> এবং Supplier<T> এর বাস্তব ব্যবহারের ক্ষেত্রগুলো কী কী?",
+    "hint": "Consumer ইনপুট গ্রহণ করে কোনো ভ্যালু রিটার্ন করে না (যেমন logging); Supplier কোনো আর্গুমেন্ট ছাড়া নতুন ভ্যালু উৎপাদন করে (যেমন factory)।"
+  },
+  {
+    "id": "ls-4",
+    "difficulty": "medium",
+    "question": "জাভাতে Method Reference কয় ধরনের হতে পারে? উদাহরণসহ ব্যাখ্যা করুন।",
+    "hint": "চার ধরনের: স্ট্যাটিক মেথড (Class::staticMethod), পার্টিকুলার অবজেক্ট ইনস্ট্যান্স মেথড (obj::instanceMethod), আরবিট্রারি অবজেক্ট ইনস্ট্যান্স মেথড (String::toLowerCase), এবং কনস্ট্রাক্টর রেফারেন্স (Class::new)।"
+  },
+  {
+    "id": "ls-5",
+    "difficulty": "easy",
+    "question": "Stream এর Intermediate Operation এবং Terminal Operation-এর মূল পার্থক্য কী?",
+    "hint": "Intermediate অপারেশনগুলো Lazy এবং আরেকটি Stream রিটার্ন করে; Terminal অপারেশন পাইপলাইন এক্সিকিউট করে নন-স্ট্রিম রেজাল্ট তৈরি করে।"
+  },
+  {
+    "id": "ls-6",
+    "difficulty": "medium",
+    "question": "Stream-এ Lazy Evaluation এর সুবিধা কী এবং টার্মিনাল অপারেশন কল না হওয়া পর্যন্ত কী ঘটে?",
+    "hint": "টার্মিনাল অপারেশন কল না হওয়া পর্যন্ত কোনো প্রসেসিংই রান হয় না; ফলে অপ্রয়োজনীয় কম্পিউটেশন বেঁচে যায়।"
+  },
+  {
+    "id": "ls-7",
+    "difficulty": "medium",
+    "question": "Stream এর map() এবং flatMap() মেথডের মধ্যে পার্থক্য কী?",
+    "hint": "map() ওয়ান-টু-ওয়ান রূপান্তর করে (Stream<T> থেকে Stream<R>); flatMap() ওয়ান-টু-মেনি রূপান্তর করে এবং নেস্টেড স্ট্রিমগুলোকে ফ্ল্যাটেন করে একটি সিঙ্গেল স্ট্রিমে আনে।"
+  },
+  {
+    "id": "ls-8",
+    "difficulty": "hard",
+    "code": "List<String> names = List.of(\"a\", \"bb\", \"ccc\");\nStream<String> stream = names.stream();\nstream.forEach(System.out::println);\nstream.forEach(System.out::println);",
+    "question": "উপরের কোডটি রান করলে দ্বিতীয় forEach লাইনে কী ঘটবে এবং কেন?",
+    "hint": "IllegalStateException ছুড়ে মারবে, কারণ একটি Stream একবার টার্মিনাল অপারেশন দিয়ে কনজিউম বা ক্লোজ হয়ে গেলে তাকে পুনরায় ব্যবহার করা যায় না।"
+  },
+  {
+    "id": "ls-9",
+    "difficulty": "medium",
+    "question": "Stream API তে Short-Circuiting অপারেশন বলতে কী বোঝায়? দুটি উদাহরণ দিন।",
+    "hint": "যে অপারেশনগুলো পুরো স্ট্রিম প্রসেস না করে কাঙ্ক্ষিত উপাদান পেলেই সাথে সাথে পাইপলাইন থামিয়ে দেয় (যেমন: findFirst, anyMatch, limit)।"
+  },
+  {
+    "id": "ls-10",
+    "difficulty": "medium",
+    "question": "Collectors.groupingBy() কীভাবে SQL এর GROUP BY এর মতো কাজ করে? একটি ব্যবহারিক উদাহরণ দিন।",
+    "hint": "এটি এলিমেন্টগুলোকে একটি ক্লাসিফায়ার ফাংশনের উপর ভিত্তি করে Map<K, List<V>> স্ট্রাকচারে গ্রুপ করে।"
+  },
+  {
+    "id": "ls-11",
+    "difficulty": "hard",
+    "question": "Collectors.toMap() ব্যবহারের সময় কী-কনফ্লিক্ট (Duplicate Key) হলে কী এক্সেপশন দেয় এবং এটি কীভাবে সমাধান করা যায়?",
+    "hint": "ডিফল্টভাবে IllegalStateException দেয়; সমাধান করতে mergeFunction বাইনারি অপারেটর প্যারামিটার পাস করতে হয়।"
+  },
+  {
+    "id": "ls-12",
+    "difficulty": "medium",
+    "question": "Stream.reduce() মেথডের তিনটি প্যারামিটার (Identity, Accumulator, Combiner) এর ভূমিকা কী?",
+    "hint": "Identity হলো ইনিশিয়াল ভ্যালু, Accumulator প্রতিটি আইটেম যোগ করে, এবং Combiner প্যারালাল স্ট্রিমে বিভিন্ন সাব-রেজাল্ট একত্রিত করে।"
+  },
+  {
+    "id": "ls-13",
+    "difficulty": "easy",
+    "question": "IntStream, LongStream, ও DoubleStream ব্যবহারের মূল পারফরম্যান্স সুবিধা কী?",
+    "hint": "এগুলো প্রিমিটিভ ডেটার সাথে সরাসরি কাজ করে, ফলে ইন্টিজার বা ডাবল অবজেক্টের অটবক্সিং/আনবক্সিং মেমোরি ওভারহেড থাকে না।"
+  },
+  {
+    "id": "ls-14",
+    "difficulty": "hard",
+    "question": "Parallel Stream ব্যাকগ্রাউন্ডে কোন থ্রেড পুল ব্যবহার করে এবং কেন এটি CPU-ইন্টেনসিভ কাজের বাইরে I/O কাজের জন্য ব্যবহার করা ক্ষতিকর?",
+    "hint": "এটি ForkJoinPool.commonPool() ব্যবহার করে, যা পুরো JVM-এর জন্য গ্লোবাল; I/O ব্লকিং টাস্ক দিলে সব কোর ব্লক হয়ে পুরো অ্যাপ্লিকেশন স্লো হয়ে যাবে।"
+  },
+  {
+    "id": "ls-15",
+    "difficulty": "medium",
+    "question": "ল্যাম্বডা এক্সপ্রেশনের ভেতরে বাইরের লোকাল ভেরিয়েবল এক্সেস করতে হলে সেই ভেরিয়েবলটিকে কেন 'effectively final' হতে হয়?",
+    "hint": "ল্যাম্বডা ভেরিয়েবলের কপি ক্যাপচার করে; বাইরের ভেরিয়েবল মিউটেট হলে থ্রেড-সেফটি ও স্ট্যাক ফ্রেম লাইফটাইমে ইনকনসিস্টেন্সি তৈরি হবে।"
+  },
+  {
+    "id": "ls-16",
+    "difficulty": "medium",
+    "question": "Stream এর peek() মেথডটি কেন শুধু ডিবাগিংয়ের জন্য ব্যবহার করা উচিত এবং বিজনেস লজিকের জন্য নয়?",
+    "hint": "peek() একটি নন-ইন্টারফেয়ারিং অ্যাকশন; স্ট্রিমের অপ্টিমাইজেশন অনুযায়ী এটি কখনো স্কিপও হতে পারে, তাই সাইড-ইফেক্ট সৃষ্টি করা অনিরাপদ।"
+  },
+  {
+    "id": "ls-17",
+    "difficulty": "hard",
+    "code": "List<Integer> list = new ArrayList<>();\nIntStream.range(0, 1000).parallel().forEach(list::add);",
+    "question": "উপরের কোডে কী সমস্যা হবে এবং কীভাবে সমাধান করবেন?",
+    "hint": "ArrayList থ্রেড-সেফ নয়; প্যারালাল স্ট্রিমে রেস কন্ডিশন ও ডেটা লস হবে। সমাধান: .boxed().collect(Collectors.toList()) ব্যবহার করা।"
+  },
+  {
+    "id": "ls-18",
+    "difficulty": "medium",
+    "question": "Stream.ofNullable() মেথডের ব্যবহারিক উপকারিতা কী?",
+    "hint": "জাভা ৯ এ যুক্ত হওয়া এই মেথডে null পাস করলে একটি empty stream রিটার্ন করে, ফলে ম্যানুয়াল null চেক ছাড়াই স্ট্রিমে পাইপ করা যায়।"
+  },
+  {
+    "id": "ls-19",
+    "difficulty": "easy",
+    "question": "findFirst() এবং findAny() এর মধ্যে পার্থক্য কী?",
+    "hint": "findFirst() সর্বদা প্রথম উপাদানটি নিশ্চিত করে যা অর্ডারের ওপর নির্ভরশীল; আর findAny() প্যারালাল স্ট্রিমে দ্রুততম যেকোনো একটি উপাদান রিটার্ন করে।"
+  },
+  {
+    "id": "ls-20",
+    "difficulty": "hard",
+    "question": "Spliterator ইন্টারফেসের কাজ কী এবং এটি সাধারণ Iterator থেকে কীভাবে আলাদা?",
+    "hint": "Spliterator ডেটা ট্রাভার্স করার পাশাপাশি trySplit() মেথড দিয়ে ডেটাসেটকে দুই ভাগে বিভক্ত করে প্যারালাল প্রসেসিংয়ের সুবিধা দেয়।"
+  }
+]
