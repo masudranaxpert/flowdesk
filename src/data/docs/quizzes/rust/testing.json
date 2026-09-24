@@ -1,0 +1,134 @@
+[
+  {
+    "id": "testing-1",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "Unit test গুলো Rust convention অনুযায়ী কোথাযে থাকে?",
+    "options": [
+      "tests/ ফোল্ডারের আলাদা ফাইলে",
+      "doc comment (///)-এর ভেতরে",
+      "src/-র ভেতরে #[cfg(test)] mod tests ব্লকে — private function-ও test করা যায়",
+      "benches/ ফোল্ডারে, criterion দিয়ে"
+    ],
+    "answer": 2,
+    "explanation": "unit test থাকে src/-র ভেতরে #[cfg(test)] mod tests-এ, আর use super::* দিয়ে parent module-এর সব (private সহ) আনা হয়। #[cfg(test)] থাকায় module-টা শুধু test build-এ compile হয় — production binary-তে যায় না। integration test রেখে যাওয়া হয় tests/ ফোল্ডারে — ওরা শুধু public API দেখতে পায়।"
+  },
+  {
+    "id": "testing-2",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "কী print হবে?",
+    "code": "fn main() {\n    let a = 2 + 2;\n    assert_eq!(a, 4);\n    println!(\"after assert\");\n    assert_ne!(a, 5);\n    println!(\"done\");\n}",
+    "options": [
+      "after assert — এরপর assert_ne panic করে",
+      "after assert\ndone",
+      "কিছুই না — assertion pass হলে println চাপা পড়ে যায়",
+      "panic: assertion failed — প্রথম assert_eq-তেই"
+    ],
+    "answer": 1,
+    "explanation": "assert_eq!(a, 4)-তে 4 == 4 সত্য — expansion-এ (l, r) if *l == *r => {} arm-এ কিছুই হয় না। assert_ne!(a, 5)-ও পাস, কারণ 4 != 5। দুটো assertion-ই নীরবে পাস করে বলে দুটো println-ই চলে। assertion fail হলেই শুধু panic হয়।"
+  },
+  {
+    "id": "testing-3",
+    "difficulty": "medium",
+    "type": "output",
+    "prompt": "stdout-এ কী print হবে? (panic message-টা যায় stderr-এ)",
+    "code": "use std::panic;\n\nfn main() {\n    let result = panic::catch_unwind(|| {\n        println!(\"before\");\n        let v = vec![1, 2, 3];\n        v[99]\n    });\n    println!(\"caught: {}\", result.is_err());\n}",
+    "options": [
+      "before\ncaught: true",
+      "before\ncaught: false",
+      "caught: true — আগের println আটকে যায় unwind-এ",
+      "কিছুই না — panic পুরো process-টাকে মেরে ফেলে"
+    ],
+    "answer": 0,
+    "explanation": "catch_unwind panic-টা ধরে ফেলে — process বাঁচে আর Err পাওয়া যায়; println!(\"before\") আগেই হয়ে গেছে। test harness-ও ঠিক এভাবেই প্রতিটা test চালায় — এজন্যই panic করলে test fail হয় কিন্তু harness বাকি test চালাতে পারে। এখানে v[99] index out of bounds panic দেয় বলে is_err() সত্য।"
+  },
+  {
+    "id": "testing-4",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "libtest harness-এর চোখে একটা test কখন fail হয়, আর সেটা কীভাবে ধরা হয়?",
+    "options": [
+      "test function false return করলে fail — assert! ম্যাক্রো bool ফেরত চায়",
+      "println!-এর output-এ error থাকলে fail হয় — harness সব output যাচাই করে",
+      "compile warning থাকলেই test fail হয়",
+      "test function panic করলেই fail — harness প্রতিটা test-কে catch_unwind-এ wrap করে চালায়, আর assert*! ম্যাক্রোগুলো fail করার একমাত্র উপায় panic!"
+    ],
+    "answer": 3,
+    "explanation": "cargo test চাইলে তোমার crate আলাদা test binary হয়ে compile হয় — নিজস্ব main() registered সব test চালায়। প্রতিটা test আসলে সাধারণ function: catch_unwind দিয়ে চালিয়ে Ok এলে ok, Err এলে FAILED। assert_eq!/assert! ইত্যাদি fail করার উপায় শুধু panic! — নিয়ম এটাই একটাই।"
+  },
+  {
+    "id": "testing-5",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "cargo test defaultভাবে test গুলো কীভাবে চালায়?",
+    "options": [
+      "একটার পর একটা sequentially — test কখনো parallel চলে না",
+      "worker thread তুলে (সংখ্যা = logical core) প্রতিটা test নিজের আলাদা thread-এ parallel চালায় — এজন্য পরস্পর-নির্ভর বা shared file/DB ছোঁয়া test বিপজ্জনক",
+      "প্রতিটা test-এর জন্য আলাদা process fork করে",
+      "সব test একটাই thread-এ চালায়, শুধু println output আলাদা করে capture হয়"
+    ],
+    "answer": 1,
+    "explanation": "harness default-এ worker thread তোলে এবং প্রতিটা test আলাদা thread-এ চলে। তাই test-এর মধ্যে dependency বা shared state রাখা বিপজ্জনক। sequential চাইলে cargo test -- --test-threads=1। আর প্রতিটা test-এর println output capture হয় — pass হলে বাদ; লাইভ দেখতে -- --nocapture।"
+  },
+  {
+    "id": "testing-6",
+    "difficulty": "medium",
+    "type": "code",
+    "prompt": "Result return করা test-এ error propagate করতে blank-এ কী বসাতে হবে?",
+    "code": "use std::num::ParseIntError;\n\nfn parse_and_double(s: &str) -> Result<i32, ParseIntError> {\n    let n: i32 = s.parse()?;\n    Ok(n * 2)\n}\n\n#[test]\nfn test_parse_success() -> Result<(), ParseIntError> {\n    let result = parse_and_double(\"21\")____;\n    assert_eq!(result, 42);\n    Ok(())\n}",
+    "accept": ["?"],
+    "explanation": "test function Result return করলে ? operator ব্যবহার করা যায়। ভেতরে জাদু কিছু নেই — harness-এর হাতে Err(e) এলে সে panic! করে দেয়, মানে fail হওয়ার প্রক্রিয়া একই, ? শুধু লেখাটা ছোট করে। unwrap-এর চেয়ে পরিষ্কার।"
+  },
+  {
+    "id": "testing-7",
+    "difficulty": "medium",
+    "type": "code",
+    "prompt": "নির্দিষ্ট panic message match করতে blank-এ কোন key বসবে?",
+    "code": "pub fn index_element(v: &[i32], i: usize) -> i32 {\n    v[i]\n}\n\n#[test]\n#[should_panic(____ = \"index out of bounds\")]\nfn test_out_of_bounds() {\n    index_element(&[1, 2, 3], 99);\n}",
+    "accept": ["expected"],
+    "explanation": "#[should_panic(expected = \"...\")] দিলে harness panic message-এর সাথে substring match দেখে — ভুল panic হলেও test fail। expected ছাড়া খালি #[should_panic] হলে যেকোনো panic-ই pass করে, তাই expected দেওয়াই নিরাপদ।"
+  },
+  {
+    "id": "testing-8",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "#[should_panic] কীভাবে কাজ করে, আর কোন অবস্থায় ভেঙে পড়ে?",
+    "options": [
+      "abort থাকলেও ঠিক কাজ করে — harness abort signal-ও ধরে ফেলে",
+      "compiler panic-এর আগেই test pass করিয়ে দেয় — unwinding লাগেই না",
+      "harness panic-টা catch_unwind-এ ধরে expected message-এর সাথে substring মিলিয়ে দেখে; কিন্তু profile-এ panic = \\\"abort\\\" থাকলে unwinding বন্ধ — #[should_panic] তখন কাজ করে না",
+      "should_panic শুধু message check করে, panic আসলে ঘটেই না — abort নিয়ে ভাবার কিছু নেই"
+    ],
+    "answer": 2,
+    "explanation": "harness test-টাকে catch_unwind-এ wrap করে চালায় — panic হলে ধরে ফেলে (process মরে না), expected = \"...\" থাকলে panic message-এর সাথে substring match দেখে। panic না হলে বা message না মিললে test fail। কিন্তু panic = \"abort\" থাকলে unwinding বন্ধ — তখন এই পুরো ব্যবস্থাই কাজ করে না।"
+  },
+  {
+    "id": "testing-9",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "Doc test আসলে কীভাবে চলে?",
+    "options": [
+      "rustdoc doc comment-এর প্রতিটা code block বের করে তার জন্য আলাদা ছোট crate বানায় — snippet-টা generated main()-এর ভেতরে বসে compile + run হয়",
+      "doc-এর code শুধু syntax-highlight হয়, কখনো compile হয় না",
+      "doc-এর code runtime-এ interpret হয় প্রথম cargo doc call-এ",
+      "doc test চালাতে আলাদা tool install করতে হয় — cargo test-এ চলে না"
+    ],
+    "answer": 0,
+    "explanation": "rustdoc প্রতিটা doc comment-এর code block-এর জন্য আলাদা ছোট crate বানায়, তোমার snippet একটা generated main()-এর ভেতরে বসে, তারপর compile + run করা হয় — cargo test-এ automatic। এজন্য doc test একটু ধীর, কিন্তু documentation পুরনো হলে test fail হয়ে ধরা পড়ে। আর ```no_run compile করে run করে না, ```ignore পুরোপুরি skip করে।"
+  },
+  {
+    "id": "testing-10",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "mockall-এর #[automock] আসলে কী করে?",
+    "options": [
+      "runtime-এ reflection দিয়ে method call intercept করে — Python-এর MagicMock-এর মতো dynamic",
+      "test binary-এর vtable patch করে আসল method-এর জায়গায় mock বসিয়ে দেয়",
+      "যেকোনো call accept করা একটা generic dummy struct বানায়",
+      "একটা proc-macro — compile time-এ trait-টার নকল MockDatabase struct + expectation রাখার impl generate করে; runtime reflection না, তাই type-safe"
+    ],
+    "answer": 3,
+    "explanation": "#[automock] নিজেই একটা proc-macro — compile time-এ তোমার trait-কে দেখে MockDatabase struct আর expectation রাখার field সহ impl লিখে দেয়। mock-এর ভেতরে runtime reflection নেই — generated আসল code, তাই type-safe আর দ্রুত; Python-এর MagicMock-এর dynamic স্বাধীনতা নেই, বিনিময়ে ভুল হলে compile error।"
+  }
+]

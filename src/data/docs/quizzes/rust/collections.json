@@ -1,0 +1,140 @@
+[
+  {
+    "id": "collections-1",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "৩-element-এর Vec-এ `v[100]` আর `v.get(100)` — দুটোর আচরণের পার্থক্য কী?",
+    "options": [
+      "দুটোই panic করে",
+      "`v[100]` panic করে (index out of bounds), `v.get(100)` শান্তভাবে `None` দেয়",
+      "`v[100]` `None` দেয়, `v.get(100)` panic করে",
+      "দুটোই `None` দেয়, panic করে না"
+    ],
+    "answer": 1,
+    "explanation": "দুটোই একই `index < len` comparison চালায় — দুটোই O(1), লুকানো খরচ নেই। পার্থক্য শুধু fail branch-এ: indexing panic করে, `get` `Option<&T>` ফেরত দিয়ে caller-কে সামলানোর সুযোগ দেয় (niche optimization-এর কল্যাণে ওই Option-এর size `&T`-এর সমানই)।"
+  },
+  {
+    "id": "collections-2",
+    "difficulty": "easy",
+    "type": "code",
+    "prompt": "`v.get(1)` ফেরত দেয় `Option<&i32>`। Blank-এ কোন pattern বসালে \"found: 20\" ছাপা হবে?",
+    "code": "fn main() {\n    let v = vec![10, 20, 30];\n    match v.get(1) {\n        ____ => println!(\"found: {}\", val),\n        None => println!(\"missing\"),\n    }\n}",
+    "accept": [
+      "Some(&val)",
+      "Some(val)"
+    ],
+    "explanation": "`get` value-র reference দেয় — `Option<&i32>`। `Some(&val)` pattern-এ `&` দিয়ে reference খুলে মানটা `val: i32` হিসেবে বের হয়; `Some(val)` লিখলেও চলে — তখন `val: &i32`, Display-তে একই ছাপা।"
+  },
+  {
+    "id": "collections-3",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "`Vec::push`-এর complexity নিয়ে কোন বক্তব্য সঠিক?",
+    "options": [
+      "প্রতিটা push O(n) — প্রতিবার পুরনো সব element copy হয়",
+      "push সবসময় O(1) — Vec কখনো resize করে না",
+      "বেশিরভাগ push O(1); buffer ভর্তি হলে নতুন (প্রায় ২× বড়) buffer-এ সব memcpy হয় O(n) — মোট হিসাবে amortized O(1)",
+      "push O(log n) — ভেতরে একটা balanced tree রাখা থাকে"
+    ],
+    "answer": 2,
+    "explanation": "push তিন ধাপে কাজ করে: `len == capacity` check, দরকার হলে capacity প্রায় ২× করে নতুন buffer-এ bitwise copy, শেষ slot-এ লিখে `len += 1`। Resize-এর মুহূর্তগুলো বিরল — ধারাবাহিক push-এর গড় খরচ তাই amortized O(1)।"
+  },
+  {
+    "id": "collections-4",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "n-টা element-এর Vec-এ loop চালিয়ে বারবার `v.insert(0, x)` করলে মোট খরচ কত, আর সঠিক বিকল্প কী?",
+    "options": [
+      "O(n) — insert-ও push-এর মতোই amortized",
+      "O(log n) — ভেতরে binary search হয়",
+      "O(1) — Vec-এর শুরুতে ঢোকানো আলাদাভাবে optimize করা",
+      "O(n²) — প্রতিবার insert-এ পরের সব element এক ঘর ডানে shift করতে হয়, আর শুরুতে ঢোকানোই সবচেয়ে খারাপ; দুই-দিকে ঢোকানোর কাজে `VecDeque` ব্যবহার করো"
+    ],
+    "answer": 3,
+    "explanation": "`insert` যেকোনো position-এ O(n) — ভেতরে memmove-এ বাকি অংশ সরে যায়। Index 0 মানে প্রায় পুরো n element shift, লুপে n বার — O(n²)। শুরুতে-শেষে দুই দিকেই ঢোকাতে হলে `VecDeque` (দুই দিকেই O(1)) সঠিক জিনিস।"
+  },
+  {
+    "id": "collections-5",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "std `HashMap`-এর ভেতরের design আর default hasher নিয়ে কোনটা সঠিক?",
+    "options": [
+      "Linked list-এর bucket — collision-এ linear scan, hasher CRC32",
+      "সুষম binary tree — lookup O(log n), hasher MD5",
+      "SwissTable design (hashbrown crate): প্রতি slot-এর control byte আলাদা array-তে, probing-এ ১৬টা control byte একসাথে SIMD-এ compare হয়, load factor ~৭/৮; আর default hasher SipHash-1-3 — প্রতিটা map নিজস্ব random seed নেয় যাতে hash-flooding DoS না চলতে পারে",
+      "SwissTable, কিন্তু hasher SHA-256 — security-ই এটাকে ধীর করে"
+    ],
+    "answer": 2,
+    "explanation": "std-র HashMap আসলে hashbrown (SwissTable): control byte + SIMD-এ ১৬ slot scan, ৭/৮ load ছাড়ালে resize। Default hasher SipHash-1-3 random seed-সহ — collision attack ঠেকায় কিন্তু ধীর; নিজের data বিশ্বস্ত হলে `ahash`/`FxHashMap` জাতীয় faster hasher বসানো যায়।"
+  },
+  {
+    "id": "collections-6",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "`map.entry(key).or_insert(0)` লেখাটা `contains_key` check + আলাদা `insert`-এর জোড়ার চেয়ে ভালো কেন?",
+    "options": [
+      "`entry`-তে hash করতেই হয় না — key সরাসরি index হয়ে যায়",
+      "`or_insert`-এ value আগেই allocate করা থাকে",
+      "`entry` thread-safe, `contains_key` thread-unsafe",
+      "`entry()`-র ভেতরে একবারই hash + probe হয় — Occupied/Vacant enum মান নিয়ে slot-এর খবর ধরে রাখে; আলাদা `contains_key` + `insert` করলে একই কাজে hash + probe দুবার লাগতো"
+    ],
+    "answer": 3,
+    "explanation": "`entry()` এক lookup-এই বলে দেয় key আছে নাকি নেই — `Entry::Occupied` slot-এর location মনে রাখে, `Vacant` ঢোকানোর জায়গা। `or_insert` শুধু Vacant হলে ঢোকায়। Python-এর `dict.setdefault()`-এর মতোই, কিন্তু এক lookup-এ।"
+  },
+  {
+    "id": "collections-7",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "প্রোগ্রামটা কী প্রিন্ট করবে?",
+    "code": "fn main() {\n    let mut v = vec![1, 2, 3];\n    v.push(4);\n    v.insert(0, 0);\n    println!(\"{:?}\", v);\n}",
+    "options": [
+      "[0, 1, 2, 3, 4]",
+      "[1, 2, 3, 4, 0]",
+      "[4, 0, 1, 2, 3]",
+      "[0, 4, 1, 2, 3]"
+    ],
+    "answer": 0,
+    "explanation": "`push` শেষে জোড়ে → [1, 2, 3, 4]; `insert(0, 0)` index 0-তে বসিয়ে বাকি সবাইকে ডানে এক ঘর সরায় → [0, 1, 2, 3, 4]।"
+  },
+  {
+    "id": "collections-8",
+    "difficulty": "medium",
+    "type": "output",
+    "prompt": "প্রোগ্রামটা কী প্রিন্ট করবে?",
+    "code": "fn main() {\n    let mut v = vec![1, 2, 1, 1, 3, 3];\n    v.dedup();\n    println!(\"{:?}\", v);\n}",
+    "options": [
+      "[1, 2, 3]",
+      "[1, 2, 1, 3]",
+      "[1, 1, 3]",
+      "[1, 2, 1, 1, 3, 3]"
+    ],
+    "answer": 1,
+    "explanation": "`dedup()` শুধু **পাশাপাশি (adjacent)** duplicate মুছে — [1, 2, 1, 1, 3, 3]-এ পাশাপাশি 1,1 আর 3,3 পড়ে, কিন্তু 2-এর আগে-পরের 1-রা পাশাপাশি না। পুরো থেকে দূরের duplicate বাদ দিতে চাইলে আগে `sort()` করে `dedup()`, নাহলে `HashSet`-এ collect করো (order হারাবে)।"
+  },
+  {
+    "id": "collections-9",
+    "difficulty": "hard",
+    "type": "output",
+    "prompt": "প্রোগ্রামটা কী প্রিন্ট করবে?",
+    "code": "fn main() {\n    let mut v = vec![1, 2, 3];\n    let a = v.pop();\n    let b = v.pop();\n    let c = v.pop();\n    let d = v.pop();\n    println!(\"{:?} {:?} {:?} {:?}\", a, b, c, d);\n}",
+    "options": [
+      "3 2 1 0",
+      "Some(3) Some(2) Some(1) None",
+      "Some(3) Some(2) Some(1) Some(0)",
+      "Compile error — খালি Vec-এ pop করা যায় না"
+    ],
+    "answer": 1,
+    "explanation": "`pop()` শেষ element-টা `Option<T>`-এ মুড়ে দেয় — খালি Vec-তে panic না করে `None`। তাই 3, 2, 1-এর পর চতুর্থটা None। খালি হওয়াটা এখানে বৈধ case — enum chapter-এর `Option`-ই সেটা type-এ ধরে রাখে।"
+  },
+  {
+    "id": "collections-10",
+    "difficulty": "medium",
+    "type": "code",
+    "prompt": "Blank-এ কী বসালে প্রিন্ট হবে 100? (Karim আগে থেকেই map-এ আছে; key না থাকলে 0 থেকে শুরু হওয়ার কথা)",
+    "code": "use std::collections::HashMap;\n\nfn main() {\n    let mut scores: HashMap<String, i32> = HashMap::new();\n    scores.insert(String::from(\"Karim\"), 95);\n    let s = scores.entry(String::from(\"Karim\")).____;\n    *s += 5;\n    println!(\"{}\", scores[\"Karim\"]);  // 100\n}",
+    "accept": [
+      "or_insert(0)"
+    ],
+    "explanation": "`or_insert(0)` — key আছে, তাই existing value-র mutable reference ফেরত আসে, `*s += 5` তাতেই 95 → 100। খালি `insert` ব্যবহার করলে আগের মান মুছে নতুন মান বসতো। এই \"insert if absent\" pattern-এর জন্যই `entry().or_insert()`।"
+  }
+]

@@ -31,6 +31,38 @@ panic!("Error: {} not found", filename);
 > [!danger]
 > `unwrap()` আর `expect()` সবসময় panic করতে পারে। Production code এ এগুলো avoid করো — proper error handling করো। শুধু prototype বা script এ ব্যবহার করো।
 
+> [!note]
+> **`unwrap()` এর ভেতরে কী হয়?** কোনো magic নেই — ঠিক এই match টাই চলে:
+> ```rust
+> // simplified — std এর আসল কোডের ধাঁচ
+> pub fn unwrap(self) -> T {
+>     match self {
+>         Ok(v) => v,
+>         Err(e) => panic!("called `unwrap()` on an `Err` value: {:?}", e),
+>     }
+> }
+> ```
+> মানে `unwrap` নিজে কোনো crash করে না — ভেতরে `match`, আর `Err` হলে `panic!` (নিচের unwinding চালু হয়)। `expect("msg")` একই জিনিস, শুধু panic message এর শুরুতে তোমার দেওয়া `msg` বসে। `Ok` হলে খরচ প্রায় শূন্য — একটা branch মাত্র।
+
+### Panic এর ভেতরে — Stack Unwinding
+
+`panic!` মানেই instant crash না। ভেতরে দুই ধাপ চলে — **মেসেজ প্রিন্ট**, তারপর **unwind**:
+
+```text
+panic!("crash and burn")
+  ১. Panic handler — stderr এ message + file:line print করে
+  ২. Unwinding শুরু — call stack উল্টো দিকে (caller দিকে) walk করে:
+       প্রতিটা frame এ:
+         - ওই frame এর local variable গুলোর Drop::drop চালায়
+           (open file close হয়, Mutex unlock হয়, heap memory free হয়)
+         - তারপর এক frame উপরে যায়
+  ৩. main পেরিয়ে গেলে process শেষ — exit code 101
+```
+
+মানে panic হলে যাত্রাপথের **প্রতিটা scope পরিষ্কার** হয়ে যায় — RAII ভাঙে না। C++ এর exception ঠিক এই unwind mechanics ই ব্যবহার করে; পার্থক্য হলো Rust এ এটা সাধারণত catch করার উপায় নেই (`std::panic::catch_unwind` আছে, কিন্তু সেটা FFI আর test harness এর জন্য)।
+
+`Cargo.toml` এ `[profile.release]` এ `panic = "abort"` দিলে unwind বন্ধ — panic হলে সরাসরি OS এ abort (exit code 134, কোনো drop চলে না, খোলা file গুলো OS বন্ধ করে দেয়)। Binary ছোট আর একটু দ্রুত হয়, তাই অনেক release build এ এটা চালু করা হয়।
+
 ## Result Type
 
 ```rust
@@ -41,6 +73,9 @@ enum Result<T, E> {
 ```
 
 `Result` হলো Rust এর error handling এর মূল। এটা একটা enum — `Ok` হলো success, `Err` হলো error। দুটোই data বহন করে।
+
+> [!note]
+> **মেমরিতে `Result` কেমন?** মোটামুটি একটা tagged union — একটা tag (Ok না Err) + দুই variant এর মধ্যে বড়টার সমান জায়গা। কিন্তু compiler চালাক: কোনো type এ "কখনো বৈধ হতে পারে না" এমন bit pattern (niche) থাকলে tag রাখারই দরকার পড়ে না। যেমন `&T` pointer কখনো null হয় না, তাই `Option<&i32>` আসলে ঠিক ৮ byte — pointer এর null মানেই None। একই কাজ `Result` এও হয় যখন variant গুলোর type এ niche থাকে। একে বলে **niche optimization** — তাই Rust এ error সাথে করে বয়ে বেড়ানোর আলাদা জায়গা খরচ হয় না।
 
 ### ব্যবহার
 
@@ -84,6 +119,9 @@ fn open_file(filename: &str) -> File {
 > [!example]
 > এখানে file not found হলে নতুন file create করা হচ্ছে, অন্য error হলে panic। এটা recovery logic — Python এ `try/except FileNotFoundError` এর মতো, কিন্তু Rust এ compiler নিশ্চিত করে সব case handle হয়েছে।
 
+> [!note]
+> প্রসঙ্গত `File::open` এর ভেতরে কী হয়? তোমার কোডে কিছুই চলে না — সরাসরি OS এর `open` syscall (Linux) যায়। OS ফাইল খুঁজে না পেলে error code ফেরত দেয়, std সেটাকে `io::Error` এ মুড়ে সেই error code থেকে `ErrorKind::NotFound` এর মতো kind বসিয়ে দেয় — এজন্যই `error.kind()` match করা চলে।
+
 ## `?` Operator — সবচেয়ে দারুণ Feature
 
 `?` operator error propagation কে একদম সহজ করে দেয়:
@@ -91,9 +129,6 @@ fn open_file(filename: &str) -> File {
 ```rust
 // ছাড়া ? — verbose
 fn read_username() -> Result<String, std::io::Error> {
-    let file = File::open("username.txt")?;
-    // ... এখনো অনেক কোড লাগবে
-
     let mut file = match File::open("username.txt") {
         Ok(f) => f,
         Err(e) => return Err(e),   // error propagate
@@ -118,6 +153,26 @@ fn read_username_short() -> Result<String, std::io::Error> {
 > [!tip]
 > `?` operator হলো Rust এর magic wand। এটা `Result` থেকে value বের করে — যদি `Ok` হয় value দেয়, যদি `Err` হয় function থেকে early return করে error propagate করে। Python এর কোনো সমতুল্য নেই — এটা Rust এর নিজস্ব innovation।
 
+### `?` এর ভেতরে — Desugaring
+
+`?` কোনো runtime feature না — compiler compile time এ প্রতিটা `expr?` কে expand করে:
+
+```rust
+// file.read_to_string(&mut username)?;  →  ভেতরে ঠিক এটাই হয় (simplified):
+match file.read_to_string(&mut username) {
+    Ok(val) => val,                          // Ok — value বের করে এগিয়ে যাওয়া
+    Err(err) => return Err(From::from(err)), // Err — convert করে function থেকে বের
+}
+```
+
+দুটো গুরুত্বপূর্ণ খুঁটিনাটি:
+
+১. **`From::from(err)`** — automatic error conversion এখানেই ঘটে। তোমার type এ `impl From<io::Error> for AppError` থাকলে `?` নিজেই `io::Error` কে `AppError` বানিয়ে দেয় (নিচের Custom Error Type section দেখো)। `Box<dyn Error>` এ প্রায় সব error type এর জন্য `From` impl থাকে, তাই ওখানেও `?` চলে।
+
+২. **Zero-cost** — পুরো জিনিসটা একটা branch + return: কোনো exception throw, allocation, stack trace নেই। Compiler `Err` path কে "cold" হিসেবে mark করে, ফলে CPU branch predictor `Ok` path ধরে রাখে — happy path কার্যত খরচহীন। Python এর exception throw/catch (stack trace বানানো, handler খোঁজা) এর সাথে তুলনাই হয় না।
+
+`Option` এর সাথে `?` একই desugar — শুধু `Err(e) => return Err(From::from(e))` এর জায়গায় `None => return None`। আর `.parse()` নিজে কী করে? ভেতরে `FromStr` trait এর `from_str` call করে আর `Result` return করে — তাই `?` তার সাথেও বসে যায়।
+
 ### `?` Chain
 
 ```rust
@@ -134,6 +189,9 @@ fn read_config() -> Result<i32, Box<dyn std::error::Error>> {
 
 > [!note]
 > `Box<dyn std::error::Error>` হলো generic error type — যেকোনো error accept করে। এটা quick আর easy, কিন্তু পরে আরো typed error ব্যবহার করা ভালো।
+
+> [!note]
+> এই type-টার গোড়ার গল্প দুটো জিনিসের জোড়ায়। **`dyn Error`** মানে "যেকোনো type যেটা `Error` trait implement করে" (io::Error, ParseIntError — সবাই) — একে trait object বলে। আর **`Box<...>`** হলো heap-এ রাখার smart pointer — trait object-এর size compile time-এ জানা নেই বলে Box-এ মুড়িয়ে রাখতে হয়। মনে রাখার সংক্ষেপ: **"যেকোনো error, boxed"** — quick script-এর জন্য দারুণ, typed error (`AppError`) পরেই আসছে। `Box`-এর পূর্ণ গল্প smart-pointers chapter-এ, `dyn Trait`-এর traits chapter-এ।
 
 ## `Option` ও `?`
 
@@ -311,6 +369,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 > [!note]
 > যদি `main` থেকে `Err` return হয়, Rust automatically error print করে আর exit code 1 দেয়। এটা খুব clean — কোনো manual error printing লাগে না।
+
+> [!note]
+> ভেতরের mechanics: `main` এর return type হতে হয় `Termination` trait implement করা কিছু। `Result<(), E>` থেকে `Err(e)` পেলে runtime `e` এর `Debug` format stderr এ ছাপে আর exit code দেয় `1`; `Ok` বা plain `()` হলে `0`। মানে "automatic error print" টা আসলে `Termination` impl এর কাজ — shell এ `echo $?` করলে সেই code টা দেখবে।
 
 ## তুলনা — Python vs Rust Error Handling
 

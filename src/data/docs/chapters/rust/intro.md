@@ -14,6 +14,9 @@ fn main() {
 
 Python এর মতোই সোজা। কিন্তু ভেতরে Rust C++ এর সমান fast। কোনো garbage collector নেই, কোনো runtime overhead নেই।
 
+> [!note]
+> **`println!` আসলে function না — macro।** নামের শেষের `!` চিহ্নটাই সেটা বোঝায়। Compile করার সময় rustc এই লাইনটাকে ভেতরে expand করে: format string parse হয়, argument গুলোর type check হয়, তারপর plain stdout-write কোড generate হয়। তাই runtime এ কোনো format parser চলে না — C এর `printf` যেখানে format string runtime এ parse হয়, Python এ ভুল format ধরা পড়ে runtime exception এ — Rust এ দুটোই compile error।
+
 > [!tip]
 > তুমি যদি Python জানো — Rust শেখা তোমার জন্য ভালো সিদ্ধান্ত। Python দ্রুত কোড লেখা যায়, কিন্তু Rust দ্রুত চলে। দুটোই জানলে তুমি সব জায়গায় survive করতে পারবে।
 
@@ -140,6 +143,19 @@ Rahim
 > [!tip]
 > Python এ এই কাজটা এক লাইনে হতো (`input()`)। Rust এ একটু বেশি কোড লাগে, কিন্তু এর কারণ হলো Rust সব কিছু explicit রাখে — কোনো hidden magic নেই।
 
+### এই Program এ ভেতরে কী ঘটছে?
+
+ছোট দেখলেও এই কোডে পাঁচটা জিনিস কাজ করছে — প্রতিটার ভেতরে যা চলে:
+
+- **`use std::io;`** — তোমার প্রথম `use` দেখা। মানে: "standard library-র `io` module টা এই ফাইলে এনে নাও, যাতে সংক্ষেপে `io::stdin()` লিখতে পারি।" `std` হলো Rust-এর সাথেই আসা বিশাল library — `String`, `Vec`, file, network সব ওখানে। মনে রেখো: Rust-এর আসল keyword মাত্র ~৩৫টা; `String`, `Some` এগুলো "ভাষার জাদু" না, library-র সাধারণ type (বিস্তারিত পরের chapter-এর "Builtins কোথা থেকে আসে" section-এ)।
+- **`String::new()`** — এই মুহূর্তে কোনো heap allocation হয় না। শুধু একটা খালি `String` header তৈরি হয়: `len = 0`, `capacity = 0`। Memory লাগবে যখন প্রথম byte ঢুকবে, তখন।
+- **`io::stdin().read_line(&mut name)`** — terminal থেকে newline পর্যন্ত byte গুলো পড়ে সরাসরি `name` এর buffer এ লেখে (buffer ছোট হলে বড় করে নেয়), শেষে `Ok(কত byte পড়লাম)` অথবা `Err` return করে। তাই return type হলো `io::Result<usize>` — এই error handle না করলে compiler ছাড়বে না।
+- **`.expect("...")`** — `Result` এর উপর চলা একটা check: `Ok(v)` হলে ভেতরের value বের করে দেয়, `Err` হলে তোমার message দিয়ে সাথে সাথে panic — মানে program বন্ধ। Magic কিছু না, check + early exit।
+- **`.trim()`** — নতুন String বানায় না, copy ও হয় না। শুধু একটা `&str` slice return করে — শুরু-শেষের whitespace বাদ দিয়ে pointer আর length একটু সরিয়ে। O(1), zero allocation।
+
+> [!tip]
+> খেয়াল করো — `trim()` এর মতো অনেক std method আসলে নতুন data বানায় না, পুরনো data দেখার "জানালা" (slice) বানায়। Rust এর performance এর একটা বড় সোর্স এটাই।
+
 ## কেন Rust সবার থেকে আলাদা?
 
 Rust এর মূল innovation হলো **Ownership system**। এই কনসেপ্টের কারণে:
@@ -148,6 +164,26 @@ Rust এর মূল innovation হলো **Ownership system**। এই কন
 2. **Data race হতে পারে না** — concurrent code automatically safe
 3. **Null pointer exception নেই** — `Option<T>` দিয়ে null safety
 4. **Performance আর safety একসাথে** — trade-off করতে হয় না
+
+### Compile Pipeline — তোমার কোড machine code হওয়ার পথ
+
+Rust ahead-of-time compiled — `cargo run` দিলে ভেতরে এই pipeline চলে:
+
+```text
+main.rs
+  │  rustc: parse → type check → borrow check (ownership/borrowing rule গুলো এখানে verify হয়)
+  ▼
+ভেতরের intermediate form (MIR) → LLVM IR
+  │  LLVM optimizer: অপ্রয়োজনীয় কোড বাদ, function inline, loop unroll
+  ▼
+machine code (binary) — এরপর চলন্ত program এর সাথে আর কোনো runtime নেই
+```
+
+Python এ interpreter প্রতি লাইন runtime এ চলে, Java এ JIT পরে optimize করে। Rust এ পুরো ব্যাপারটা build এর সময়েই শেষ। এখান থেকেই "builtin গুলো zero-cost কেন" বোঝা যায়:
+
+- `println!`, `vec!` এর মতো macro compile time এ expand হয়ে সরাসরি সাধারণ Rust কোড হয়ে যায় — runtime এ macro engine বলে কিছু নেই।
+- `String`, `Vec` এর method গুলো সাধারণ Rust-লেভেল কোড — LLVM সেগুলো তোমার কোডে inline করে দেয়, ফলে hand-written C এর সমান (মাঝে মাঝে তার চেয়েও ভালো) machine code বেরোয়।
+- Ownership/borrow এর সব check compile time এই শেষ — চলন্ত program এ GC বা reference counting কিছুই চলে না। Safety এর "বিল" build time এই পরিশোধ হয়।
 
 পরের chapter গুলোতে আমরা এক এক করে সব শিখবো। মনে রাখবে — Rust শুরুতে একটু কঠিন মনে হবে (especially ownership আর borrowing), কিন্তু একবার concept পরিষ্কার হলে এর চেয়ে দারুণ language আর নেই।
 

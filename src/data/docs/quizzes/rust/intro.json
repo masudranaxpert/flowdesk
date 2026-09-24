@@ -1,0 +1,124 @@
+[
+  {
+    "id": "intro-1",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "Rust-এর মূল প্রতিশ্রুতিটা কোনটা — যেটার উপরে পুরো ownership system-এর ভিত্তি?",
+    "options": [
+      "Garbage collector ছাড়াই memory safety — সব check compile time-এ শেষ",
+      "Garbage collector দিয়ে নিশ্চিত memory safety",
+      "JIT compilation-এর মাধ্যমে ধীর কিন্তু নিরাপদ execution",
+      "Runtime-এ interpreter সব error ধরে ফেলে"
+    ],
+    "answer": 0,
+    "explanation": "Chapter-এ বলা হয়েছে — Rust-এর মূল innovation হলো ownership system: GC লাগে না, memory compile time-এ manage হয়, চলন্ত program-এ কোনো runtime overhead নেই। Python/Java-র মতো GC-নির্ভর safety Rust-এর পথ না।"
+  },
+  {
+    "id": "intro-2",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "`cargo`-কে এই docs-এ কী বলে পরিচয় করানো হয়েছে?",
+    "options": [
+      "শুধু একটা package manager — pip-এর মতো",
+      "Package manager + build tool + test runner একসাথে (pip + venv + pytest)",
+      "Rust compiler-এর আরেকটা নাম",
+      "Rust toolchain ইনস্টল করার টুল — rustup-এর মতো"
+    ],
+    "answer": 1,
+    "explanation": "cargo একই সাথে package manager, build tool আর test runner। ভুল করো না — toolchain ইনস্টল করে rustup, আর compile করে rustc; cargo হলো দৈনন্দিন কাজের ভিতরের টুল।"
+  },
+  {
+    "id": "intro-3",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "User terminal-এ `Rahim` লিখে Enter দিলো — শেষ `println!` লাইনটা ঠিক কী ছাপবে?",
+    "code": "use std::io;\n\nfn main() {\n    println!(\"তোমার নাম কী?\");\n\n    let mut name = String::new();\n    io::stdin()\n        .read_line(&mut name)\n        .expect(\"Failed to read line\");\n\n    println!(\"হ্যালো, {}! Rust শেখায় স্বাগতম।\", name.trim());\n}",
+    "options": [
+      "হ্যালো, Rahim-এর পরেই লাইন ভেঙে যাবে — read_line-এর newline থেকে যায়",
+      "compile error — read_line-এর পরে name ব্যবহার করা যায় না",
+      "কিছুই ছাপবে না — expect panic করবে",
+      "হ্যালো, Rahim! Rust শেখায় স্বাগতম।"
+    ],
+    "answer": 3,
+    "explanation": "read_line newline পর্যন্ত পড়ে buffer-এ `Rahim\\n` রাখে। `name.trim()` শুরু-শেষের whitespace (newline সহ) বাদ দিয়ে একটা &str slice দেয় — তাই ঠিক `হ্যালো, Rahim! ...` ছাপা হয়। read_line সফল হলে expect panic করে না।"
+  },
+  {
+    "id": "intro-4",
+    "difficulty": "medium",
+    "type": "output",
+    "prompt": "এই program-টা `cargo run` করলে কী হবে?",
+    "code": "fn main() {\n    let lang = \"Rust\";\n    println!(\"আমি {} শিখছি\", lang, lang);\n}",
+    "options": [
+      "ছাপবে: আমি Rust শিখছি — extra argument নীরবে ignore হবে",
+      "ছাপবে: আমি Rust Rust শিখছি",
+      "compile error — format string-এর `{}` আর argument-এর সংখ্যা মিলছে না, rustc-ই ধরবে",
+      "runtime-এ format exception"
+    ],
+    "answer": 2,
+    "explanation": "println! আসলে macro — compile-এর সময় expand হয়ে format string parse ও argument check হয়। ব্যবহার হয়নি এমন argument থাকলে compile error। C-তে printf-এ এটা runtime garbage output, Python-এ runtime exception — Rust-এ দুটোই compile error, run করার আগেই ধরা পড়ে।"
+  },
+  {
+    "id": "intro-5",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "`let mut name = String::new();` লাইনটা চলার মুহূর্তে ভেতরে কী ঘটে?",
+    "options": [
+      "সাথে সাথে heap-এ বড় একটা buffer allocate হয়",
+      "কোনো heap allocation হয় না — শুধু খালি String header তৈরি হয় (len = 0, capacity = 0); memory লাগবে প্রথম byte ঢোকার সময়",
+      "string-টা binary-র read-only section-এ বসে যায়",
+      "stack-এ \"hello\" copy করা হয়"
+    ],
+    "answer": 1,
+    "explanation": "Chapter-এর ব্যাখ্যা — String::new() এই মুহূর্তে heap ছোঁয় না; শুধু len = 0, capacity = 0 এর একটা header। read_line প্রথম byte লিখতে গেলে buffer বড় করে নেয়। Read-only section-এ বসে string literal — নতুন String না।"
+  },
+  {
+    "id": "intro-6",
+    "difficulty": "medium",
+    "type": "code",
+    "prompt": "Blank-এ কী লিখতে হবে যাতে read_line user-এর লেখা সরাসরি `name`-এর buffer-এ পড়ে?",
+    "code": "use std::io;\n\nfn main() {\n    println!(\"তোমার নাম কী?\");\n\n    let mut name = String::new();\n    io::stdin()\n        .read_line(____)\n        .expect(\"Failed to read line\");\n\n    println!(\"হ্যালো, {}! Rust শেখায় স্বাগতম।\", name.trim());\n}",
+    "accept": [
+      "&mut name"
+    ],
+    "explanation": "`.read_line` নিজে ownership নেয় না — buffer-এর reference চায়। `&mut name` দিলে নতুন ব্যবহারের জায়গায় `String` modify হয়, তাই reference-টা mutable হওয়া জরুরি।"
+  },
+  {
+    "id": "intro-7",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "`cargo run` দিলে ভেতরে pipeline চলে: parse → type check → borrow check, তারপর MIR → LLVM IR → machine code। Ownership/borrowing-এর rule গুলো verify হয় কোথায়?",
+    "options": [
+      "LLVM optimizer-এর ধাপে — optimization চলার সময়",
+      "rustc-এর compile ধাপেই (MIR-এ), binary তৈরির আগে",
+      "Program চালানোর শুরুতে একবার runtime startup check",
+      "cargo-র config file-এ"
+    ],
+    "answer": 1,
+    "explanation": "Pipeline অনুযায়ী rustc-ই parse, type check আর borrow check করে — ভেতরের form MIR-এ নেমে। LLVM আসে তার পরে, শুধু optimize করতে। চলন্ত program-এ ownership-এর কোনো runtime check নেই — safety-র বিল build time-এই পরিশোধ হয়।"
+  },
+  {
+    "id": "intro-8",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "`.expect(\"Failed to read line\")` আসলে কী করে?",
+    "options": [
+      "Err হলে নীরবে চলতে থাকে, শুধু লগ করে",
+      "Err হলে আবার চেষ্টা করে — একটা retry loop",
+      "read_line-এর return হলো `io::Result<usize>` — expect করা `Ok` হলে ভেতরের value বের করে দেয়, `Err` হলে তোমার message দিয়ে সাথে সাথে panic করে",
+      "Err-কে `None`-এ বদলে দেয়"
+    ],
+    "answer": 2,
+    "explanation": "read_line `Ok(কত byte পড়লাম)` অথবা `Err` return করে — এই error handle না করলে compiler ছাড়ে না। expect হলো check + early exit: Ok হলে value, Err হলে message দিয়ে program বন্ধ (panic)। Magic কিছু না।"
+  },
+  {
+    "id": "intro-9",
+    "difficulty": "hard",
+    "type": "code",
+    "prompt": "User-এর টাইপা নাম ছাপতে হবে, কিন্তু Enter চাপার newline যেন ছাপা না হয়। Blank-এ কী লিখবে?",
+    "code": "use std::io;\n\nfn main() {\n    let mut name = String::new();\n    io::stdin()\n        .read_line(&mut name)\n        .expect(\"Failed to read line\");\n\n    println!(\"হ্যালো, {}!\", ____);\n}",
+    "accept": [
+      "name.trim()"
+    ],
+    "explanation": "read_line newline-সহ পড়ে। `.trim()` সেই নতুনলাইন বাদ দিয়ে heartbeat slice ফেরত দেয় — ছাপার জন্য আরও clean।"
+  }
+]

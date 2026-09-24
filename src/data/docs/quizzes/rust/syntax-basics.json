@@ -1,0 +1,142 @@
+[
+  {
+    "id": "syntax-basics-1",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "এই program-টা চালালে কী হবে?",
+    "code": "fn main() {\n    let x = 5;\n    x = 6;\n    println!(\"x = {}\", x);\n}",
+    "options": [
+      "x = 6 ছাপবে",
+      "compile error — E0384: cannot assign twice to immutable variable; `let mut x` লাগত",
+      "runtime panic — immutability violation",
+      "x = 5 ছাপবে — assign নীরবে ignore হয়"
+    ],
+    "answer": 1,
+    "explanation": "Rust-এ variable ডিফল্টভাবে immutable। `mut` ছাড়া ঘোষিত binding-এ পরে assignment দিলে compiler type check-এর সময়ই E0384 দেখায় — binary তৈরিই হবে না। Check-টা পুরোটা compile time-এ, runtime খরচ শূন্য।"
+  },
+  {
+    "id": "syntax-basics-2",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "কোডটা trace করো — কী ছাপা হবে?",
+    "code": "fn main() {\n    let x = 5;\n    let x = x + 1;\n    let x = x * 2;\n    println!(\"{}\", x);\n}",
+    "options": [
+      "12",
+      "10",
+      "6",
+      "compile error — একই নামে একাধিক let হয় না"
+    ],
+    "answer": 0,
+    "explanation": "প্রতিটা `let x` একটা নতুন binding (shadowing): 5 → 6 → 12। Shadowing বৈধ, এমনকি টাইপ বদলানোও যায়। \"একই নামে দুইবার let\" error — সেটা Python মনের ভুল ধারণা; Rust-এ এটা নতুন variable তৈরির বৈধ উপায়।"
+  },
+  {
+    "id": "syntax-basics-3",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "কোডটা trace করো — `y`-এর value কত ছাপা হবে?",
+    "code": "fn main() {\n    let y = {\n        let z = 3;\n        z + 1\n    };\n    println!(\"{}\", y);\n}",
+    "options": [
+      "3",
+      "()",
+      "4",
+      "compile error — block-এর ভেতরে let দেওয়া যায় না"
+    ],
+    "answer": 2,
+    "explanation": "Block-এর শেষ expression (semicolon ছাড়া) সেটার value — এখানে `z + 1` = 4। এটাই Rust-এর expression vs statement নিয়ম: semicolon দিলে statement হয়ে value হারায়।"
+  },
+  {
+    "id": "syntax-basics-4",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "`String::from(\"hello\")` আর `s.len()` — `::` আর `.` দিয়ে ডাকার পার্থক্যটা কী?",
+    "options": [
+      "`::` type-এর namespace-এর associated function ডাকে (নতুন value বানায়), `.` কোনো value-র উপর method চালায়",
+      "`::` value-র উপর method চালায়, `.` নতুন value বানায়",
+      "দুটো একই জিনিস — শুধু লেখার style-এর পার্থক্য",
+      "`::` শুধু macro-তে ব্যবহার হয়, method-এ না"
+    ],
+    "answer": 0,
+    "explanation": "`String::from` হলো type-এর নাম ধরে ডাকা associated function — কোনো value-র উপর চলে না, নতুন value বানিয়ে দেয় (একে constructor-ও বলে)। `s.len()` বর্তমান value-র উপর method। আর macro চেনায় নামের শেষে `!` — যেমন `println!`।"
+  },
+  {
+    "id": "syntax-basics-5",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "`let x: Option<i32> = Some(42);` — কোনো `use` লেখা নেই, তাহলে `Some` নামটা কোথা থেকে এলো?",
+    "options": [
+      "`Some` ভাষার keyword — compiler-এর ভেতরে বানানো",
+      "std-র prelude থেকে auto-import হয় — প্রতিটা ফাইলে অদৃশ্য `use std::prelude::v1::*;` ঢুকে থাকে",
+      "`Some` আসলে একটা macro — compile time-এ code generate করে",
+      "প্রতিটা ফাইলে হাতে `use std::Some;` লিখতে হয়, নাহলে error"
+    ],
+    "answer": 1,
+    "explanation": "Rust-এর আসল keyword মাত্র ~৩৫টা; String, Vec, Option, Some — কোনোটাই keyword না, সব std-র সাধারণ type/enum variant। বেশি দরকারি নামগুলো prelude তালিকায় রাখা হয়, compiler নিজে থেকেই ঢুকিয়ে দেয়। `Some(42)` মানে 42 ঢুকিয়ে একটা Some variant বানানো — data-বহনকারী variant নিজেই ছোট function।"
+  },
+  {
+    "id": "syntax-basics-6",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "`let a = \"hello\";` আর `let b = String::from(\"hello\");` — ভেতরের সত্যিকারের পার্থক্য কোনটা?",
+    "options": [
+      "দুটো একই — শুধু লেখার ধরন আলাদা",
+      "`a` runtime-এ heap-এ allocate হয় এবং বড় হতে পারে; `b` compile-এ stack-এ বসে",
+      "`a` binary-র read-only section-এ বসা literal (&str) — বদলানো/বাড়ানো যায় না; `String::from` heap-ে নতুন বাড়ানো-যোগ্য buffer বানিয়ে bytes copy করে",
+      "`a` প্রতিবার ব্যবহারে নতুন copy বানায়, `b` একবারই তৈরি হয়"
+    ],
+    "answer": 2,
+    "explanation": "Literal compile-এ binary-র read-only section-এ বসে যায় — বদলানো যায় না। `String::from` runtime-এ heap-এ নিয়ন্ত্রণের একটা বাড়ানো-যোগ্য copy বানায়। নিয়ম: শুধু পড়বে → literal/&str যথেষ্ট; modify করবে বা own করবে → String।"
+  },
+  {
+    "id": "syntax-basics-7",
+    "difficulty": "medium",
+    "type": "code",
+    "prompt": "১০টা 0-এর i32 array এক লাইনে বানাতে blank-এ কী লিখবে?",
+    "code": "fn main() {\n    // ১০টা 0-এর i32 array\n    let zeros: [i32; 10] = ____;\n    println!(\"{:?}\", zeros);\n}",
+    "accept": [
+      "[0; 10]",
+      "[0;10]"
+    ],
+    "explanation": "একটা array-কে এক মানে ভরতে `[value; count]` syntax — `[0; 10]` মানে ১০টা 0। এটি যেকোনো Copy type-এর সাথে চলে, আর compile time-এ count জানা থাকায় ব্যয়বহুল নয়।"
+  },
+  {
+    "id": "syntax-basics-8",
+    "difficulty": "medium",
+    "type": "output",
+    "prompt": "এই program-টা চালালে কী হবে?",
+    "code": "fn main() {\n    let numbers = [1, 2, 3];\n    println!(\"{}\", numbers[3]);\n}",
+    "options": [
+      "3 ছাপবে — শেষ element",
+      "compile error — ভুল index compile-এই ধরা পড়ে",
+      "C/C++-এর মতো undefined behavior — memory-তে যা আছে তাই ছাপবে",
+      "run করলে panic হবে: index out of bounds: the len is 3 but the index is 3"
+    ],
+    "answer": 3,
+    "explanation": "Rust প্রতিটা array access-এ bounds check করে — `index >= len` হলে panic। C/C++-এর মতো undefined behavior হবে না। আর খরচও নগণ্য: LLVM যদি প্রমাণ করতে পারে index সবসময় valid (যেমন `for i in 0..5` loop-এ), check-টা মুছেই দেয়।"
+  },
+  {
+    "id": "syntax-basics-9",
+    "difficulty": "hard",
+    "type": "code",
+    "prompt": "`text`-এর ভেতরের \"42\"-কে u32 বানিয়ে `guess`-এ রাখতে blank-এ কী লিখবে? (Type annotation দেওয়াই আছে)",
+    "code": "fn main() {\n    let text = \"42\";\n    let guess: u32 = ____.expect(\"Not a number!\");\n    println!(\"{}\", guess + 1);\n}",
+    "accept": [
+      "text.parse()"
+    ],
+    "explanation": "`.parse()` string-কে number বানায়; ফলে `Result` আসে, তাই `.expect()` দিয়ে check করছি। Type annotation (`let guess: u32`) parse-কে বলে দেয় কোন number type বানাতে হবে।"
+  },
+  {
+    "id": "syntax-basics-10",
+    "difficulty": "hard",
+    "type": "output",
+    "prompt": "কোডটা trace করো — কোন দুটো লাইন কী ক্রমে ছাপা হবে?",
+    "code": "fn main() {\n    let x = 5;\n    {\n        let x = \"inner\";\n        println!(\"{}\", x);\n    }\n    println!(\"{}\", x);\n}",
+    "options": [
+      "প্রথমে inner, তারপর 5",
+      "প্রথমে inner, তারপর compile error — বাইরের x shadow হয়ে মরে গেছে",
+      "প্রথমে 5, তারপর 5",
+      "compile error — একই নামে nested block-এ let নেই"
+    ],
+    "answer": 0,
+    "explanation": "ভেতরের block-এ নতুন `let x` শুধু ওই block-এর ভেতরে বাইরের x-কে shadow করে — সেটাও type বদলে &str। Block শেষ হলে ভেতরের binding drop হয়, নাম `x` আবার বাইরের binding-এ ফেরে — পুরনো binding জীবিতই ছিল। Shadowing নতুন variable বানায়, পুরনোটা নষ্ট করে না।"
+  }
+]

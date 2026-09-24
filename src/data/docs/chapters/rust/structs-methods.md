@@ -29,6 +29,21 @@ fn main() {
 > [!note]
 > Python এর class এর instance variable আর Rust এর struct field প্রায় একই। তবে Rust এর struct **immutable by default** — field modify করতে হলে পুরো struct টাকে `mut` করতে হবে। শুধু একটা field `mut` করা যায় না।
 
+### Memory তে Struct কেমন দাঁড়ায়?
+
+উপরের `user1` stack এ থাকে — field গুলো পাশাপাশি সাজানো (64-bit এ):
+
+```text
+User — মোট ৫৬ byte:
+offset 0   username: String  → ২৪ byte (ptr 8 + cap 8 + len 8)
+offset 24  email:    String  → ২৪ byte
+offset 48  age:      u32     → ৪ byte
+offset 52  active:   bool    → ১ byte
+offset 53  padding           → ৩ byte ফাঁকা (মোট সাইজ ৮ এর multiple করতে)
+```
+
+`String` নিজেই ২৪ byte এর struct — ওই ২৪ byte stack এ থাকে, আসল character গুলো heap এ (pointer দিয়ে খোঁজে)। ছোট field গুলোর alignment মেলাতে শেষে **padding** ফাঁকা রাখা হয় — `std::mem::size_of::<User>()` দিয়ে নিজেই মেপে দেখতে পারো। Field order বদলালে padding কম-বেশি হতে পারে; তবে চিন্তা নেই — `repr(Rust)` layout এ compiler নিজেই field reorder করে padding minimize করে নেয়।
+
 ### Mutable Struct
 
 ```rust
@@ -143,6 +158,23 @@ fn main() {
 > [!example]
 > খেয়াল করো — method এ `&self` (immutable reference), আর associated function এ `self` নেই। Python এ সব method এ `self` parameter বাধ্য, কিন্তু Rust এ `self` optional। Associated function ডাকা হয় `::` দিয়ে (`Rectangle::square`), method ডাকা হয় `.` দিয়ে (`rect1.area()`)।
 
+### Method Call এর ভেতরে আসলে কী হয়?
+
+`rect1.area()` কোনো magic না — compiler এটাকে সাধারণ function call এ নামিয়ে দেয়:
+
+```rust
+// rect1.area() ভেতরে যা হয়:
+Rectangle::area(&rect1)
+
+// মানে "method" = সাধারণ function, যার প্রথম parameter টা self। ব্যস।
+```
+
+- `self`, `&self`, `&mut self` — এরা বাকি parameter গুলোর মতোই প্রথম parameter মাত্র। `&self` লিখলে compiler call site এ **auto-ref** করে (`&rect1` পাঠায়); `self` লিখলে value move হয়ে যায়।
+- Dispatch টা **static** — কোন function ডাকা হবে compile time এই ঠিক হয়ে যায়; runtime এ কোনো lookup/vtable নেই, তাই compiler সহজে inline করে দেয়। Python এ `rect.area()` মানে runtime এ attribute dictionary খোঁজা + bound method তৈরি — Rust এ সেই খরচ শূন্য।
+- Field আর method এর একই নাম থাকতে পারে (`rect.width` field, `rect.width()` method) — dot এর পরে `(` আছে কিনা দেখে compiler বুঝে নেয়।
+- `fn square(size: f64) -> Rectangle` এ `self` নেই — এটা **associated function**: পুরোদস্তু সাধারণ function, শুধু namespace টা `Rectangle::` — তাই `::` দিয়ে ডাকা হয়। Constructor (`new`) সাধারণত এভাবেই লেখা হয়।
+- `impl` block এ `Self` মানে একটা **type alias** — "এই impl যে type এর জন্য, সেটাই"। `fn new(...) -> Self` মানে `-> Rectangle`; type এর নাম বদলালে `Self` নিজেই ফলো করে।
+
 ### `self`, `&self`, `&mut self` — কখন কোনটা?
 
 ```rust
@@ -191,6 +223,22 @@ fn main() {
 
 > [!tip]
 > Python এ সব কিছু print করা যায়। Rust এ না — struct এর জন্য `Debug` trait লাগে। `#[derive(Debug)]` দিলে compiler automatically এই trait implement করে দেয়। ডিবাগ করার সময় এটা খুব কাজে দেয়।
+
+`#[derive(Debug)]` এর পেছনে compiler compile time এ এমন code লিখে দেয় (simplified):
+
+```rust
+// derive macro generate করা code — ধারণামূলক
+impl fmt::Debug for Rectangle {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Rectangle")
+            .field("width", &self.width)
+            .field("height", &self.height)
+            .finish()
+    }
+}
+```
+
+মানে derive কোনো runtime magic না — **compile time এর সাধারণ `impl` codegen**। `Clone` derive করলে প্রতিটা field clone করে নতুন struct বানানো code তৈরি হয়, `PartialEq` হলে field-by-field `==` চালানো code। তাই derived impl তোমার হাতে লেখা impl এর মতোই — extra কোনো খরচ নেই।
 
 ## আরও Derive Macro
 

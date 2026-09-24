@@ -1,0 +1,134 @@
+[
+  {
+    "id": "traits-generics-1",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "Rust-এ একটা struct-এর জন্য একাধিক trait-এর behavior কোথায়, কীভাবে লাগানো হয়?",
+    "options": [
+      "প্রতিটা trait-এর জন্য আলাদা `impl Trait for Struct` block-এ — data (struct) আর behavior (impl) আলাদা জায়গায়",
+      "Struct definition-এর ভেতরেই method গুলো লিখতে হয়, একটার বেশি block নেই",
+      "Inheritance দিয়ে — `impl Tweet: Summary` লিখলে সব এসে যায়",
+      "একটা struct একটামাত্র trait implement করতে পারে"
+    ],
+    "answer": 0,
+    "explanation": "Rust-এ data (struct) আর behavior (trait impl) সম্পূর্ণ আলাদা — একই struct-এর জন্য যত খুশি trait, প্রতিটা নিজের `impl` block-এ। Rust-এ class inheritance-ই নেই; composition + trait-ই পথ।"
+  },
+  {
+    "id": "traits-generics-2",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "এই কোডের output কী?",
+    "code": "trait Summary {\n    fn summarize(&self) -> String;\n}\n\nstruct Tweet {\n    username: String,\n    text: String,\n}\n\nimpl Summary for Tweet {\n    fn summarize(&self) -> String {\n        format!(\"@{}: {}\", self.username, self.text)\n    }\n}\n\nfn main() {\n    let t = Tweet {\n        username: String::from(\"bot\"),\n        text: String::from(\"hello\"),\n    };\n    println!(\"{}\", t.summarize());\n}",
+    "options": [
+      "@bot: hello",
+      "Tweet { username: \"bot\", text: \"hello\" }",
+      "bot: hello",
+      "Compile error — trait import না করে summarize call করা যায় না"
+    ],
+    "answer": 0,
+    "explanation": "`impl Summary for Tweet`-এ দেওয়া format: `\"@{}: {}\"` — username-এর আগে @ বসে, তাই `@bot: hello`। Struct-এর মতো Debug ছাপ দিতে হলে `{:?}` আর `#[derive(Debug)]` লাগত — এখানে সেটা নেই।"
+  },
+  {
+    "id": "traits-generics-3",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "`fn largest<T: PartialOrd>(list: &[T]) -> &T` — এটাকে `largest(&[1, 2, 3])` (i32) আর `largest(&[1.0, 2.0])` (f64) দিয়ে call করলে compiler কী করে (monomorphization)?",
+    "options": [
+      "প্রতিটা concrete type-এর জন্য আলাদা function (ধরো largest_i32, largest_f64) বানায় — runtime overhead নেই, দাম দিতে হয় compile time আর binary size-এ",
+      "একটাই function বানায় আর runtime-এ type চেক করে ঠিক compare বেছে নেয়",
+      "vtable বানিয়ে dynamic dispatch করে — তাই-ই তো generic",
+      "Generic function-এর নিজস্ব একটাই machine code থাকে, সব type সেটা share করে"
+    ],
+    "answer": 0,
+    "explanation": "Monomorphization-এ generic function-এর নিজস্ব machine code থাকে না — concrete type দিয়ে call হলেই সেই version compile হয়, optimizer সেগুলো inline-ও করতে পারে। দাম: যত type-এ call, তত copy — compile time আর binary size বাড়ে (C++ template bloat-এর মতো)।"
+  },
+  {
+    "id": "traits-generics-4",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "`fn create() -> impl Summary` দিয়ে কী করা যায় না?",
+    "options": [
+      "Runtime-এ ভিন্ন ভিন্ন type return করা (যেমন কখনো Article, কখনো Tweet) — এর জন্য `Box<dyn Summary>` লাগবে",
+      "একটা নির্দিষ্ট concrete type return করা, শুধু তার নাম caller-এর কাছে লুকিয়ে রাখা",
+      "Static dispatch হওয়া — call site-এ সরাসরি function address বসে যাওয়া",
+      "Compiler-এ anonymous generic parameter-এ expand হওয়া"
+    ],
+    "answer": 0,
+    "explanation": "`-> impl Trait` মানে ভেতরে একটাই concrete type — runtime-এ বদলানো যায় না। একাধিক type return করতে হলে trait object (`Box<dyn Trait>`) দরকার, যেখানে vtable দিয়ে dynamic dispatch হয়।"
+  },
+  {
+    "id": "traits-generics-5",
+    "difficulty": "medium",
+    "type": "output",
+    "prompt": "এই কোডের output কী?",
+    "code": "fn largest<T: PartialOrd>(list: &[T]) -> &T {\n    let mut largest = &list[0];\n    for item in &list[1..] {\n        if item > largest {\n            largest = item;\n        }\n    }\n    largest\n}\n\nfn main() {\n    let numbers = vec![34, 50, 25, 100, 65];\n    let chars = vec!['y', 'm', 'a', 'q'];\n    println!(\"{} {}\", largest(&numbers), largest(&chars));\n}",
+    "options": [
+      "100 y",
+      "100 q",
+      "34 y",
+      "Compile error — একই generic function দুই রকম type-এ call করা যায় না"
+    ],
+    "answer": 0,
+    "explanation": "সংখ্যার মধ্যে সবচেয়ে বড় 100। char compare হয় code point অনুযায়ী — 'y' (121) সবচেয়ে বড়, 'q' (113) না। Monomorphization-এর কারণে দুই call-এর জন্য দুইটা আলাদা version compile হয়, কোনো conflict নেই।"
+  },
+  {
+    "id": "traits-generics-6",
+    "difficulty": "medium",
+    "type": "code",
+    "prompt": "`a > b` compare করতে পারার জন্য blank-এ কোন trait bound বসবে? (`>` operator আসলে trait method-এর sugar)",
+    "code": "fn longest<T: ____>(a: T, b: T) -> T {\n    if a > b { a } else { b }\n}",
+    "accept": ["PartialOrd"],
+    "explanation": "Rust-এ `==`, `<`, `>`, `+` সব operator আসলে trait method-এর sugar — `a > b` মানে PartialOrd-র compare method call। তাই bound `T: PartialOrd` দিতে হয়, নাহলে compiler জানবেই না কোন method call করবে। দুই parameter same type হতে হলে trait bound syntax-ই ব্যবহার করো।"
+  },
+  {
+    "id": "traits-generics-7",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "একটা type `#[derive(Clone, Copy)]` দিয়ে `Copy` হতে পারবে না কোন শর্তে?",
+    "options": [
+      "কোনো field নিজে `Copy` না হলে (যেমন field-এ `String`/`Vec` থাকলে), অথবা type-টা `Drop` implement করলে — দুটোই `Copy`-কে আটকায়",
+      "শুধু তখনই যখন type-টা enum হয়",
+      "শুধু তখনই যখন struct-এর ৪টার বেশি field থাকে",
+      "কোনো শর্ত নেই — যেকোনো struct-এ Copy derive করা যায়"
+    ],
+    "answer": 0,
+    "explanation": "`Copy`-র শর্ত: সব field নিজে `Copy` হতে হবে। Heap-owning type (`String`, `Vec`) কখনো `Copy` হতে পারে না — নাহলে দুই owner একই heap block free করত (double free)। আর custom cleanup (`Drop` impl) থাকলেও `Copy` দেওয়া যায় না — compiler সেই conflict-ই আটকে দেয়।"
+  },
+  {
+    "id": "traits-generics-8",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "`&dyn Summary` (trait object) মেমরিতে কেমন, আর `item.summarize()` call কীভাবে চলে?",
+    "options": [
+      "দুই word-এর fat pointer — data pointer + vtable pointer; call-এ vtable থেকে function pointer load করে indirect call হয়, সাধারণত inline করা যায় না",
+      "এক word-এর সাধারণ pointer — call site-এ সরাসরি function address বসে থাকে",
+      "দুই word-এর fat pointer, কিন্তু vtable প্রতি call-এ runtime-এ নতুন করে তৈরি হয়",
+      "Trait object-এর size compile time-এই জানা থাকে, তাই সরাসরি stack-এ বসে"
+    ],
+    "answer": 0,
+    "explanation": "`dyn Trait` হলো DST — পেছনে যেকোনো type থাকতে পারে (Article বা Tweet-এর size ভিন্ন), তাই pointer-এর পেছনে থাকে। `&dyn` আসলে fat pointer: প্রথম word data-র ঠিকানা, দ্বিতীয় word ওই type-এর vtable-এর ঠিকানা। Vtable compile time-এ তৈরি static read-only table; call হয় indirect — এই এক indirection-ই dynamic dispatch-এর \"slightly slower\"।"
+  },
+  {
+    "id": "traits-generics-9",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "`impl From<i32> for UserId` লেখা হলো। `let id: UserId = 42i32.into();` কেন compile হয় — `Into` তো আলাদা implement করিনি?",
+    "options": [
+      "std-এ আছে blanket impl: `impl<T, U> Into<U> for T where U: From<T>` — `From` লিখলেই `Into` free, সব compile time-এ resolve, runtime cost শূন্য",
+      "`Into` বাধ্যতামূলকভাবে প্রতিটা type-এ auto-derive হয়",
+      "`.into()` আসলে runtime reflection দিয়ে type বুঝে নেয়",
+      "এটা কাজ করে না — `Into` আলাদা করে implement করতেই হতো"
+    ],
+    "answer": 0,
+    "explanation": "`.into()` ভেতরে মাত্র একটা call: `From::from(42i32)`। std-এর blanket impl-এর কারণে `From` লিখলেই `Into` পেয়ে যাও। Error handling-এর `?`-ও এই `From::from` দিয়েই error convert করে — ওটাই এই জোড়ার সবচেয়ে বড় ব্যবহার।"
+  },
+  {
+    "id": "traits-generics-10",
+    "difficulty": "hard",
+    "type": "code",
+    "prompt": "একই Vec-এ Article আর Tweet — দুই রকম type রাখতে চাই। Blank-এ কী বসবে?",
+    "code": "trait Summary {\n    fn summarize(&self) -> String;\n}\n\nstruct Article {\n    title: String,\n    author: String,\n    content: String,\n}\n\nstruct Tweet {\n    username: String,\n    text: String,\n}\n\nimpl Summary for Article {\n    fn summarize(&self) -> String {\n        format!(\"{} by {}\", self.title, self.author)\n    }\n}\n\nimpl Summary for Tweet {\n    fn summarize(&self) -> String {\n        format!(\"@{}: {}\", self.username, self.text)\n    }\n}\n\nfn main() {\n    let items: Vec<____> = vec![\n        Box::new(Article {\n            title: String::from(\"News\"),\n            author: String::from(\"AP\"),\n            content: String::from(\"...\"),\n        }),\n        Box::new(Tweet {\n            username: String::from(\"user\"),\n            text: String::from(\"Hello\"),\n        }),\n    ];\n    for item in &items {\n        println!(\"{}\", item.summarize());\n    }\n}",
+    "accept": ["Box<dyn Summary>"],
+    "explanation": "মিশ্র type-এর collection-এ লাগে trait object: `Box<dyn Summary>`। `dyn Summary`-র size compile time-এ জানা নেই (DST), তাই Box-এ মুড়ে heap-এ রাখতে হয়; method call যায় vtable দিয়ে (dynamic dispatch)। সব আইটেম একই type হলে `Vec<T>` + generic-ই যেত — static dispatch, দ্রুত।"
+  }
+]

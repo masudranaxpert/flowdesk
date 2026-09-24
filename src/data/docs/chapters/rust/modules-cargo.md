@@ -76,7 +76,7 @@ lto = true
 ```
 
 > [!tip]
-// `Cargo.toml` হলো Python এর `pyproject.toml` বা Node এর `package.json`। এখানে dependency, version, build setting সব থাকে। `Cargo.lock` হলো exact version lock — `package-lock.json` এর মতো।
+> // `Cargo.toml` হলো Python এর `pyproject.toml` বা Node এর `package.json`। এখানে dependency, version, build setting সব থাকে। `Cargo.lock` হলো exact version lock — `package-lock.json` এর মতো।
 
 ### Common Commands
 
@@ -95,6 +95,27 @@ cargo add serde           # Dependency add
 cargo update              # Dependency update
 cargo tree                # Dependency tree দেখাও
 ```
+
+### cargo build এর ভেতরে কী হয়
+
+`cargo build` চললে ভেতরে চারটা ধাপ চলে:
+
+```text
+১. Resolve   — Cargo.toml পড়ে dependency graph বানায়, প্রতিটার version
+               semver মেনে ঠিক করে Cargo.lock এ লক করে
+২. Order     — graph থেকে topological ক্রম: যে crate এর উপর কেউ নির্ভর করে না সে আগে
+৩. Compile   — প্রতিটা crate একটা আলাদা compile unit; rustc প্রতিটার জন্য দেয়:
+               .rmeta (type/signature metadata) + .rlib (compiled code)
+               তোমার crate এর type check চলে dependency দের .rmeta দেখেই
+৪. Link      — শেষে linker সব rlib জুড়ে এক executable বানায় → target/debug/
+```
+
+কিছু জরুরি খুঁটিনাটি:
+
+- **Incremental build** — প্রতিটা compile unit এর fingerprint `target/` এ জমে; অপরিবর্তিত crate আর compile হয় না। এজন্যই প্রথম build ধীর, দ্বিতীয়টা প্রায় তাৎক্ষণিক।
+- **`cargo check` কেন দ্রুত?** একই ১-৩ নম্বর ধাপের type/borrow check পর্যন্ত চলে, কিন্তু codegen আর link (৪) বাদ — check এ binary দরকারই নেই।
+- **`--release`** — `[profile.release]` এর setting apply হয়: opt-level 3, আর `lto = true` দিলে link ধাপে crate এর সীমানা ভেঙে cross-crate inlining পর্যন্ত হয় — এজন্য release build ধীর কিন্তু binary দ্রুত।
+- Dependency প্রথমবার crates.io থেকে download হয়ে `~/.cargo` cache এ জমে — পরের project এ আর download হয় না (Python এর venv এর মতো per-project copy নেই)।
 
 ## Module System
 
@@ -118,6 +139,9 @@ mod math_utils {
     }
 }
 ```
+
+> [!note]
+> **`mod` এর ভেতরে কী হয়?** `mod` runtime এর কোনো জিনিস না — এটা compile time এ একটা **module tree** বানায়, আর crate ঠিক ওই tree ভেদ করে compile হয়। Crate root (`main.rs`/`lib.rs`) হলো গোড়া; প্রতিটা `mod x { ... }` তার নিচে একটা node জোড়া দেয়, inline block টা ওখানেই splice হয়। `mod math_utils;` (semicolon সহ) লিখলে compiler ডিস্কে `math_utils.rs` (বা `math_utils/mod.rs`) খুঁজে, ফাইলটা parse করে একই জায়গায় বসায় — নিচে File-Based Module দেখো। Visibility check টাও ওই tree এর path ধরে হয়: `pub` ছাড়া item tree এর অন্য শাখা থেকে দেখা যায় না। ফাইল সিস্টেমের ফোল্ডার স্ট্রাকচারের মিরর — এই ধারণাটাই মনে রাখো। Python এর `import` এর মতো এখানে কোনো runtime file search বা module execute নেই — সব ঠিক এক compile unit এ জোড়া লেগে যায়।
 
 ### `pub` — Visibility
 
@@ -159,7 +183,7 @@ use std::{fs::File, io::Read, path::Path};
 ```
 
 > [!note]
-// Python এর `from x import y` আর Rust এর `use x::y;` প্রায় একই। তবে Rust এ `use` শুধু path কে short করে — কোনো code execute করে না (Python এর মতো module side-effect নেই)।
+> // Python এর `from x import y` আর Rust এর `use x::y;` প্রায় একই। তবে Rust এ `use` শুধু path কে short করে — কোনো code execute করে না (Python এর মতো module side-effect নেই)।
 
 ### File-Based Module
 
@@ -185,11 +209,11 @@ mod math_utils {
 ```
 
 > [!tip]
-// Rust 2018 edition থেকে দুটো way আছে module file organize করার:
-// 1. `math_utils.rs` — flat file
-// 2. `math_utils/mod.rs` — folder structure
-//
-// Flat file (`math_utils.rs`) prefer করো — আরো পরিষ্কার।
+> // Rust 2018 edition থেকে দুটো way আছে module file organize করার:
+> // 1. `math_utils.rs` — flat file
+> // 2. `math_utils/mod.rs` — folder structure
+> //
+> // Flat file (`math_utils.rs`) prefer করো — আরো পরিষ্কার।
 
 ### External Crate
 
@@ -219,7 +243,10 @@ pub use internal::helper;  // external user দেখবে শুধু helper(
 ```
 
 > [!example]
-// `pub use` হলো Python এর `__all__` বা `from x import y as y` এর মতো। Library এর internal structure hide করে clean public API বানাতে ব্যবহার হয়।
+> // `pub use` হলো Python এর `__all__` বা `from x import y as y` এর মতো। Library এর internal structure hide করে clean public API বানাতে ব্যবহার হয়।
+
+> [!note]
+> **`pub use` এর ভেতরে কী হয়?** Re-export — item টা একবারই define থাকে, কিন্তু module tree তে তার **দ্বিতীয় একটা public path** খুলে দেয়: `math_lib::helper` আর `math_lib::internal::helper` দুটোই একই function নির্দেশ করে। `use` (বিনা `pub`) শুধু তোমার ফাইলের ভেতরের shortcut; `pub use` বাইরের user এর জন্য নতুন পথ খোলে। দুটোই compile-time path aliasing — binary তে কোনো খরচ নেই।
 
 ## Workspace — Multi-Crate Project
 
@@ -256,7 +283,7 @@ shared = { path = "../shared" }
 ```
 
 > [!note]
-// Workspace দিয়ে একাধিক crate একসাথে build, test, share `target/` directory। বড় project এ এটা essential — যেমন monorepo structure।
+> // Workspace দিয়ে একাধিক crate একসাথে build, test, share `target/` directory। বড় project এ এটা essential — যেমন monorepo structure।
 
 ## Attribute — Compiler Instruction
 
@@ -280,6 +307,13 @@ struct Point { x: i32, y: i32 }
 #[inline]
 fn fast_add(a: i32, b: i32) -> i32 { a + b }
 ```
+
+> [!note]
+> **Attribute গুলো ভেতরে কী করে?**
+> - `#[cfg(...)]` — compile এর খুব আগেই condition মিলছে না এমন code AST থেকেই **কেটে ফেলে**; binary তে কোনো trace থাকে না, runtime cost শূন্য।
+> - `#[derive(Debug, Clone)]` — procedural macro: তোমার struct parse করে প্রতিটা field এর জন্য হাতে-লেখার মতো `impl` block **generate** করে।
+> - `#[inline]` — LLVM কে hint: "এই function call site এ copy করে ফেলো" — hint মাত্র, আদেশ না।
+> - `#[cfg(test)]` + `#[test]` — `cargo test` চালালে তবেই ওই module compile হয়; compiler সব `#[test]` function জড়ো করে একটা আলাদা test harness binary বানায়, thread প্রতি চালিয়ে result জোগাড় করে।
 
 ## বাস্তব উদাহরণ — Library Structure
 
@@ -368,8 +402,8 @@ fn test_mean() {
 }
 ```
 
-> [example]
-// খেয়াল করো — `lib.rs` এ `pub use` দিয়ে re-export করা হয়েছে। ব্যবহারকারী শুধু `use math_lib::add` লিখবে, পুরো path `math_lib::arithmetic::add` লিখতে হবে না। এটাই clean API design।
+> [!example]
+> // খেয়াল করো — `lib.rs` এ `pub use` দিয়ে re-export করা হয়েছে। ব্যবহারকারী শুধু `use math_lib::add` লিখবে, পুরো path `math_lib::arithmetic::add` লিখতে হবে না। এটাই clean API design।
 
 ## Python vs Rust — Module তুলনা
 
@@ -387,7 +421,7 @@ fn test_mean() {
 | Docs | sphinx | cargo doc |
 
 > [!tip]
-// Rust এর সবচেয়ে বড় সুবিধা — সব tool একসাথে আসে! Python এ pip, venv, pytest, black, ruff আলাদা আলাদা install করতে হয়। Rust এ `cargo` একটাই টুল সব handle করে।
+> // Rust এর সবচেয়ে বড় সুবিধা — সব tool একসাথে আসে! Python এ pip, venv, pytest, black, ruff আলাদা আলাদা install করতে হয়। Rust এ `cargo` একটাই টুল সব handle করে।
 
 ## Summary
 

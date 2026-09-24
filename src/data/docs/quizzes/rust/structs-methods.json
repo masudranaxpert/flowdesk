@@ -1,0 +1,142 @@
+[
+  {
+    "id": "structs-methods-1",
+    "difficulty": "easy",
+    "type": "code",
+    "prompt": "Field init shorthand ব্যবহার করে blank-এ `username` field-টা সেট করো (`username: username` না লিখে)।",
+    "code": "struct User {\n    username: String,\n    email: String,\n    age: u32,\n    active: bool,\n}\n\nfn build_user(username: String, email: String) -> User {\n    User {\n        ____,\n        email,\n        age: 0,\n        active: true,\n    }\n}",
+    "accept": [
+      "username",
+      "username: username"
+    ],
+    "explanation": "Variable আর field-এর নাম একই হলে `username: username`-এর জায়গায় শুধু `username` লিখলেই চলে — এটাই field init shorthand।"
+  },
+  {
+    "id": "structs-methods-2",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "`rect1.area()` call করলে compiler ভেতরে আসলে কী করে? (`fn area(&self) -> f64` এমন method)",
+    "options": [
+      "Runtime-এ vtable/method table খুঁজে `area` বের করে",
+      "`area(rect1)` — পুরো struct copy করে পাঠায়",
+      "সাধারণ function-এ নামিয়ে দেয়: `Rectangle::area(&rect1)` — `&self` দেখে call site-এ auto-ref করে",
+      "Method name runtime-এ string হিসেবে resolve করে"
+    ],
+    "answer": 2,
+    "explanation": "Method আসলে প্রথম parameter-এ self-ওয়ালা সাধারণ function মাত্র — `rect1.area()` হয়ে যায় `Rectangle::area(&rect1)`। `&self` লেখা থাকলে compiler call site-এ auto-ref করে; dispatch static, runtime lookup নেই — তাই inline-ও সহজ।"
+  },
+  {
+    "id": "structs-methods-3",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "64-bit এ `std::mem::size_of::<User>()` কত?",
+    "code": "struct User {\n    username: String,\n    email: String,\n    age: u32,\n    active: bool,\n}",
+    "options": [
+      "53 byte — শুধু field গুলোর যোগফল",
+      "56 byte — যোগফল ৫৩-এর উপরে alignment-এর জন্য ৩ byte padding",
+      "48 byte — String-এর data তো heap-এ থাকে",
+      "64 byte — প্রতিটা field কমপক্ষে ৮ byte নেয়"
+    ],
+    "answer": 1,
+    "explanation": "username (String = ২৪ byte) + email (২৪) + age (৪) + active (১) = ৫৩। মোট size টা alignment-এর multiple করতে হয়, তাই শেষে ৩ byte padding বসে — ৫৬। String নিজে ২৪ byte stack-এই থাকে, আসল character গুলো heap-এ।"
+  },
+  {
+    "id": "structs-methods-4",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "নিচের struct update syntax ব্যবহারের পর `user1`-এর কী হয়? (User-এ String field আছে)",
+    "code": "let user2 = User {\n    email: String::from(\"new@example.com\"),\n    ..user1\n};",
+    "options": [
+      "বাকি field গুলো user1 থেকে move হয়ে যায় — String (non-Copy) থাকায় user1 আর ব্যবহার করা যায় না",
+      "সব field deep copy হয় — user1 অটুট থাকে",
+      "user1 আর user2 একই heap data share করে",
+      "Compile error — update syntax শুধু সব field Copy type হলে চলে"
+    ],
+    "answer": 0,
+    "explanation": "`..user1` বাকি field-গুলোর ownership নিয়ে নেয় (move)। সব field copy type হলে (যেমন সব `i32`) user1 আরও valid থাকত; কিন্তু এখানে String move হয়ে গেছে, তাই user1-এর জীবন শেষ।"
+  },
+  {
+    "id": "structs-methods-5",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "`#[derive(Debug)]`-এর ম্যাজিকটা আসলে কোথায় ঘটে?",
+    "options": [
+      "Runtime-এ reflection দিয়ে field গুলো পড়ে বের করে",
+      "Debug build-এ কাজ করে, release build-ে বাদ পড়ে",
+      "Struct-এ একটা extra type-tag যোগ হয়, তাই প্রিন্ট সম্ভব হয়",
+      "Compile time-এ compiler নিজেই একটা সাধারণ `impl fmt::Debug` code লিখে দেয় — হাতে লেখার সমান, extra runtime খরচ নেই"
+    ],
+    "answer": 3,
+    "explanation": "Derive হলো compile-time codegen: Debug হলে field-by-field প্রিন্ট, `Clone` হলে প্রতিটা field clone, `PartialEq` হলে field-by-field `==` — সবই সাধারণ impl code। Derived impl আর হাতে লেখা impl-এর কোনো পার্থক্য নেই।"
+  },
+  {
+    "id": "structs-methods-6",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "`rect1.area()`-র dispatch নিয়ে কোন বক্তব্যটি সঠিক?",
+    "options": [
+      "Static dispatch — কোন function ডাকা হবে compile time-এই ঠিক হয়ে যায়; runtime lookup বা vtable নেই",
+      "Dynamic dispatch — vtable-এর ভেতর দিয়ে যায়, তাই একটু ধীর",
+      "Python-এর মতো runtime-ে attribute dictionary খুঁজে বের করা হয়",
+      "Dispatch-এর ধরন নির্ভর করে rect1 mutable কিনা তার উপর"
+    ],
+    "answer": 0,
+    "explanation": "Rust-এর method dispatch static — compile time-এই ঠিক, runtime খরচ শূন্য, compiler সহজে inline করে দিতে পারে। Python-এ `rect.area()` মানে runtime-এ attribute dictionary খোঁজা + bound method তৈরি — Rust-এ সেই খরচ নেই।"
+  },
+  {
+    "id": "structs-methods-7",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "প্রোগ্রামটা কী প্রিন্ট করবে?",
+    "code": "#[derive(Debug)]\nstruct Point {\n    x: i32,\n    y: i32,\n}\n\nfn main() {\n    let p = Point { x: 3, y: 4 };\n    println!(\"{:?}\", p);\n}",
+    "options": [
+      "Point { x: 3, y: 4 }",
+      "Point(3, 4)",
+      "Compile error — struct সরাসরি প্রিন্ট করা যায় না",
+      "{x: 3, y: 4}"
+    ],
+    "answer": 0,
+    "explanation": "`{:?}` Debug format ব্যবহার করে, আর `#[derive(Debug)]` থাকায় compiler সেই implementation লিখে দিয়েছে — named-field struct এভাবেই ছাপা হয়। Tuple struct হলে `Point(3, 4)` আকারে আসত।"
+  },
+  {
+    "id": "structs-methods-8",
+    "difficulty": "medium",
+    "type": "output",
+    "prompt": "প্রোগ্রামটা কী প্রিন্ট করবে?",
+    "code": "struct Rectangle {\n    width: f64,\n    height: f64,\n}\n\nimpl Rectangle {\n    fn square(size: f64) -> Rectangle {\n        Rectangle { width: size, height: size }\n    }\n\n    fn area(&self) -> f64 {\n        self.width * self.height\n    }\n}\n\nfn main() {\n    let s = Rectangle::square(25.0);\n    println!(\"{}\", s.area());\n}",
+    "options": [
+      "Compile error — `square`-কে `.` দিয়ে ডাকতে হয়",
+      "50",
+      "625",
+      "625.0"
+    ],
+    "answer": 2,
+    "explanation": "`square` associated function (`self` parameter নেই) — তাই `Rectangle::square(25.0)` এভাবে `::` দিয়ে ডাকা হয়েছে। দুই বাহুই 25.0, area = 625.0; আর `f64`-এর Display এটাকে `625`-ই ছাপায়, `.0` বসায় না।"
+  },
+  {
+    "id": "structs-methods-9",
+    "difficulty": "hard",
+    "type": "output",
+    "prompt": "64-bit এ কী প্রিন্ট হবে? (ধরো struct-এ কোনো `#[repr]` attribute নেই)",
+    "code": "struct S {\n    a: u8,\n    b: u64,\n    c: u8,\n}\n\nfn main() {\n    println!(\"{}\", std::mem::size_of::<S>());\n}",
+    "options": [
+      "10",
+      "16",
+      "24",
+      "26"
+    ],
+    "answer": 1,
+    "explanation": "ঘোষণার ক্রমেই রাখলে হতো u8 + 7 padding + u64 + u8 + 7 padding = 24। কিন্তু `repr(Rust)` layout-এ compiler নিজেই field reorder করে padding minimize করে: u64 (৮) + a (১) + c (১) + ৬ padding = 16। Field order নিয়ে চিন্তা কমিয়ে দেওয়ার কারণ এটাই।"
+  },
+  {
+    "id": "structs-methods-10",
+    "difficulty": "medium",
+    "type": "code",
+    "prompt": "`scale` method-টা struct-এর field দুটো modify করে। Blank-এ বাকি signature-টা (method-এর নামসহ parameter list) কী লাগবে?",
+    "code": "struct Rectangle {\n    width: f64,\n    height: f64,\n}\n\nimpl Rectangle {\n    fn ____ {\n        self.width *= factor;\n        self.height *= factor;\n    }\n}",
+    "accept": [
+      "scale(&mut self, factor: f64)"
+    ],
+    "explanation": "Field modify করতে চাইলে `&mut self` লাগবেই — শুধু পড়লে `&self`, ownership পুরোটা নিতে `self`। `self.width *= factor` লেখা মানেই mutable borrow দরকার।"
+  }
+]

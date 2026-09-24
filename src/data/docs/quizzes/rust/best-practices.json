@@ -1,0 +1,134 @@
+[
+  {
+    "id": "best-practices-1",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "fn greet(name: &str) — String-এর বদলে &str parameter কেন idiomatic?",
+    "options": [
+      "&str সবসময় stack-এ থাকে, String কখনো stack-এ থাকে না",
+      "&str-এর নিজস্ব কোনো allocation নেই, আর caller String পাঠালে deref coercion automatic &str বানিয়ে দেয় — ownership বা clone দিতে হয় না",
+      "&str mutable, তাই function-এর ভেতর থেকে বদলানো যায়",
+      "String parameter নিলে borrow checker compile error দেয়"
+    ],
+    "answer": 1,
+    "explanation": "String = heap-allocated struct (pointer + len + capacity, ২৪ byte) + আলাদা heap buffer; &str = শুধু fat pointer (data pointer + length, ১৬ byte)। greet(name: String) লিখলে caller-কে ownership দিতে হয় নয়তো clone() — মানে malloc + O(n) memcpy। &str-এ দুটোই বাদ, আর &String পাঠালে deref coercion automatic &str বানায়। &[T] vs &Vec<T> হুবহু একই গল্প।"
+  },
+  {
+    "id": "best-practices-2",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "কী print হবে?",
+    "code": "use std::borrow::Cow;\n\nfn clean(input: &str) -> Cow<str> {\n    if input.contains(\"bad\") {\n        Cow::Owned(input.replace(\"bad\", \"good\"))\n    } else {\n        Cow::Borrowed(input)\n    }\n}\n\nfn main() {\n    let a = clean(\"this is fine\");\n    let b = clean(\"bad day\");\n    println!(\"{}\", a);\n    println!(\"{}\", b);\n}",
+    "options": [
+      "this is fine\nbad day",
+      "Cow::Borrowed(\\\"this is fine\\\")\nCow::Owned(\\\"good day\\\")",
+      "this is fine\ngood day",
+      "compile error — একই function দুই রকম variant return করতে পারে না"
+    ],
+    "answer": 2,
+    "explanation": "Cow একটা enum — Borrowed(&str) বা Owned(String)। \"this is fine\"-এ \"bad\" নেই, তাই Borrowed (কোনো allocation নেই); \"bad day\"-তে আছে, তাই Owned — replace করে নতুন String allocate হয়: \"good day\"। println! দেখায় শুধু ভেতরের str, variant নয়। নামটাই তো clone on write — খরচ conditional।"
+  },
+  {
+    "id": "best-practices-3",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "কী print হবে?",
+    "code": "#[derive(Default)]\nstruct Config {\n    host: String,\n    port: u16,\n}\n\nimpl Config {\n    fn new() -> Self {\n        Self::default()\n    }\n\n    fn host(mut self, host: &str) -> Self {\n        self.host = host.to_string();\n        self\n    }\n\n    fn port(mut self, port: u16) -> Self {\n        self.port = port;\n        self\n    }\n}\n\nfn main() {\n    let config = Config::new().host(\"localhost\").port(8080);\n    println!(\"{}:{}\", config.host, config.port);\n}",
+    "options": [
+      "localhost:8080",
+      ":0",
+      "localhost:0",
+      "compile error — builder method গুলো chain করা যায় না"
+    ],
+    "answer": 0,
+    "explanation": "Config::new() default দিয়ে শুরু (খালি host, port 0), তারপর প্রতিটা builder method self by-value নিয়ে মান বসিয়ে self ফেরত দেয় — chain-টা ownership-এর হাতবদল মাত্র। তাই host-এ localhost, port-এ 8080 বসে যায়।"
+  },
+  {
+    "id": "best-practices-4",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "Vec<String>-এর উপর .clone() call করলে আসলে কী খরচ হয়?",
+    "options": [
+      "শুধু reference count বাড়ে — O(1)",
+      "শুধু ২৪ byte header copy হয়, data share করা থাকে যায়",
+      "কিছুই হয় না — compiler lazy evaluation-এ clone বাদ দিয়ে দেয়",
+      "নতুন heap allocation + পুরো data memcpy (O(n)) — ভেতরের প্রতিটা String-এর জন্য আলাদা allocation"
+    ],
+    "answer": 3,
+    "explanation": "String/Vec clone মানে নতুন heap allocation + পুরো data memcpy — O(n); Vec<String> হলে প্রতিটা string-এর জন্য আলাদা allocation। borrow (&T) = zero খরচ, মাত্র ৮-১৬ byte pointer pass। তাই ownership দরকার না হলে clone কোরো না — নিয়মটা অলংকার না, flamegraph-এ সোজা দেখা যায়।"
+  },
+  {
+    "id": "best-practices-5",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "struct UserId(u64); newtype wrapper-এর runtime খরচ কত?",
+    "options": [
+      "প্রতি value-তে ৮ byte extra tag যোগ হয়",
+      "শূন্য — memory layout ভেতরের u64-এর মতোই (৮ byte), কোনো indirection নেই; সব check compile-time-এ",
+      "প্রতিবার access-এ মান heap থেকে আনতে হয়",
+      "প্রতি type-এ একটা vtable entry যোগ হয়"
+    ],
+    "answer": 1,
+    "explanation": "এক-field struct-এর layout মূলত ভেতরের type-টারই সমান — UserId(u64) ঠিক u64-এর মতো ৮ byte, register-এ চলে, indirection নেই। user ID আর product ID আলাদা type হওয়ায় accidental mix-up compile error। Bonus: এই wrapper দিয়ে orphan rule-এর ফাঁকি দিয়ে foreign type-এ foreign trait implement করা যায়।"
+  },
+  {
+    "id": "best-practices-6",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "builder pattern-এর method গুলো fn host(mut self, host: &str) -> Self — &mut self-এর বদলে self by-value কেন?",
+    "options": [
+      "Rust-এ &mut self method থেকে কোনো কিছু return করা নিষেধ",
+      "&mut self হলে compiler method গুলো কখনো inline করতে পারে না",
+      "পুরো struct move হয়ে modified self return করে — কোনো clone বা allocation ছাড়াই chaining হয়, এটা শুধু ownership-এর হাতবদল",
+      "self by-value হলে borrow checker একই variable-এ দ্বিতীয় call আটকায় না — &mut self হলে আটকায়"
+    ],
+    "answer": 2,
+    "explanation": "প্রতিটা method self-কে by-value নিয়ে self return করে — পুরোটা move, কোনো clone বা allocation নেই; chain-টা ownership-এর হাতবদল মাত্র। Rust-এ named/optional argument নেই, builder-ই সেই ফাঁক পূরণ করে। derive_builder crate এই method গুলো proc-macro দিয়ে generate করে দেয়।"
+  },
+  {
+    "id": "best-practices-7",
+    "difficulty": "medium",
+    "type": "code",
+    "prompt": "দুই ধরনের call — String-এর reference আর str literal — দুটোই কাজ করাতে blank-এ কী বসবে?",
+    "code": "fn greet(name: ____) -> String {\n    format!(\"Hello, {}!\", name)\n}\n\nfn main() {\n    let owned = String::from(\"Karim\");\n    println!(\"{}\", greet(&owned));\n    println!(\"{}\", greet(\"Sadia\"));\n}",
+    "accept": ["&str"],
+    "explanation": "&str parameter দুটোই নেয়: \"Sadia\" হলো &str, আর &owned (&String) deref coercion-এ automatic &str হয়ে যায়। name: String হলে greet(\"Sadia\") compile-ই হতো না (borrow-কে ownership দেওয়া যায় না), &String হলে greet(\"Sadia\") আটকে যেত — তাই &str-ই idiomatic।"
+  },
+  {
+    "id": "best-practices-8",
+    "difficulty": "medium",
+    "type": "code",
+    "prompt": "১০০০টা push-এ বারবার reallocation এড়াতে blank-এ কী বসবে?",
+    "code": "fn main() {\n    let mut v: Vec<i32> = Vec::____(1000);\n    for i in 0..1000 {\n        v.push(i);\n    }\n    println!(\"{}\", v.len());\n}",
+    "accept": ["with_capacity"],
+    "explanation": "Vec::with_capacity(1000) একবারেই ১০০০ জায়গার buffer নেয় — বাকি push গুলো শুধু slot-এ লেখা, amortized O(1), কোনো copy নেই। সাধারণ push-এ capacity শেষ হলে বারবার নতুন বড় buffer allocate + পুরনো সব copy হয় (growth মোটামুটি ২×)। String::with_capacity হুবহু একই জিনিস।"
+  },
+  {
+    "id": "best-practices-9",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "? operator-এর expansion-এ Err(e) => return Err(From::from(e)) — এই From::from-এর কাজ কী?",
+    "options": [
+      "error-টাকে function-এর error type-এ automatic রূপান্তর করে (যেমন io::Error থেকে নিজের ConfigError-এ), তারপর early return করে",
+      "error-টাকে string-এ রূপান্তর করে panic! করে দেয়",
+      "error message-এ context string জুড়ে দেয় — .context()-এর কাজই এটা",
+      "error type-এর stack trace capture করে রাখে"
+    ],
+    "answer": 0,
+    "explanation": "? শুধু shorthand না — Err-এর পথে From::from conversion চালিয়ে error-টাকে তোমার function-এর return type-এর error-এ রূপান্তর করে, তারপর early return। ভেতরে branch ছাড়া কিছু নেই — zero-cost। আর মনে রেখো, .context(\"...\") হলো anyhow-এর আলাদা সুবিধা — ওটা ?-এর expansion-এর অংশ না।"
+  },
+  {
+    "id": "best-practices-10",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "Box কোন কোন ক্ষেত্রে সত্যিই দরকার?",
+    "options": [
+      "যত দ্রুত code চাই সেখানে — Box সবসময় fast path",
+      "multithread-এ data share করার জন্য — Box atomic ভাবে share করে",
+      "borrow checker-এর lifetime error এড়াতে — Box করলে lifetime থাকেই না",
+      "recursive type (size অসীম হয়ে যেত), trait object (dyn Trait), বা বড় value move করার সময় stack copy এড়াতে"
+    ],
+    "answer": 3,
+    "explanation": "Box-এর খরচ: একটা heap allocation + পরে সব access pointer-এর পিছনে (cache miss হতে পারে) — ছোট value-তে শুধু অপচয়, let x = 5; stack-এই থাকুক। সত্যিই লাগে recursive type (size অসীম হয়ে যেত), trait object (dyn Trait), বা বড় value move-এর stack copy এড়াতে। আর multithread-এ share করার জিনিস Arc — Box না।"
+  }
+]

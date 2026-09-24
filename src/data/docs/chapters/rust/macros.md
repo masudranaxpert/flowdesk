@@ -22,7 +22,10 @@ println!("Hello, {}!", "world");
 | Recursion | Runtime | Compile-time (token expansion) |
 
 > [!note]
-// Function fixed argument count চায়। কিন্তু `println!("{} {}", a, b)` এ variable argument! Macro দিয়েই এটা সম্ভব। Macro compile হওয়ার আগেই expand হয়ে code generate করে — runtime এ কোনো overhead নেই।
+> // Function fixed argument count চায়। কিন্তু `println!("{} {}", a, b)` এ variable argument! Macro দিয়েই এটা সম্ভব। Macro compile হওয়ার আগেই expand হয়ে code generate করে — runtime এ কোনো overhead নেই।
+
+> [!note]
+> **Macro কম্পাইলের কোন ধাপে চলে?** Pipeline মোটামুটি এমন: **tokenize → macro expand → name resolution → type check → codegen**। `macro_rules!` খুব আগে, parsing এর মাঝপথে expand হয় — generated code পরের ধাপে (type check সহ) হাতে-লেখা code এর মতোই ঢোকে। Side effect: macro এর ভেতরের **type error ধরা পড়ে expansion এর পরে**, call site এ — তাই macro error এর message অনেক সময় দূরের জায়গা দেখায়। আর runtime overhead **শূন্য**: expansion এর পরে macro-generated code আর নিজে লেখা সেই code এর মধ্যে কোনো পার্থক্য নেই।
 
 ## Declarative Macro — `macro_rules!`
 
@@ -68,6 +71,9 @@ fn main() {
     greet!("হাই", "Sadia");      // হাই, Sadia!
 }
 ```
+
+> [!note]
+> **`macro_rules!` এর ভেতরে**: তোমার source আগে **token tree** এ ভাগ হয় (AST না — শুধু bracket-এ গুছানো token গাছ)। Invocation এলে token tree টা pattern গুলোর সাথে **উপর থেকে নিচে** মেলানো হয় — প্রথম যেটা match করে সেটাই expand, **backtracking নেই**। তাই pattern এর order গুরুত্বপূর্ণ: specific টা আগে, সাধারণ পরে। আর `$x:expr` জাতীয় fragment এ সামান্য parse হয়, তাই তার পরে শুধু কিছু নির্দিষ্ট token (`=>`, `,`, `;` ইত্যাদি) আসতে পারে — ambiguity আটকাতে এই নিয়ম।
 
 ### Fragment Specifier
 
@@ -116,7 +122,10 @@ fn main() {
 ```
 
 > [!tip]
-// `$(...)*` হলো "zero or more" repetition, `$(...)+` হলো "one or more"। এগুলো দিয়ে variable argument macro বানানো যায় — `vec![]`, `println!`, `format!` সব এই দিয়ে বানানো।
+> // `$(...)*` হলো "zero or more" repetition, `$(...)+` হলো "one or more"। এগুলো দিয়ে variable argument macro বানানো যায় — `vec![]`, `println!`, `format!` সব এই দিয়ে বানানো।
+
+> [!note]
+> **`$(...)*` expand কীভাবে হয়?** এটা **compile-time loop unrolling** — `sum!(1, 2, 3)` হলে generated code এ সোজা `total += 1; total += 2; total += 3;` বসে যায়। Runtime এ কোনো loop নেই। Macro এর "recursion" ও একই — macro নিজের আরেকটা invocation generate করে, সেটাও compile time এই খোলে; খুব গভীর হলে expansion limit ধরে কম্পাইলার থামিয়ে দেয়।
 
 ### vec! Macro — Real Example
 
@@ -147,7 +156,10 @@ fn main() {
 ```
 
 > [!example]
-// এটা `vec!` macro এর simplified version। খেয়াল করো — তিন pattern: empty, `[value; count]`, আর `[a, b, c, ...]`। Pattern matching দিয়ে যেটা match করে সেটাই expand হয়।
+> // এটা `vec!` macro এর simplified version। খেয়াল করো — তিন pattern: empty, `[value; count]`, আর `[a, b, c, ...]`। Pattern matching দিয়ে যেটা match করে সেটাই expand হয়।
+
+> [!note]
+> **আসল `vec!` আরো চালাক**: `vec![1, 2, 3]` এ আলাদা আলাদা `push` করে capacity বাড়ায় না — সব element একবারে এক টুকরো buffer এ বসিয়ে সরাসরি `Vec` বানায়, মোটে **একটাই allocation**। `vec![0u8; 1_000_000]` জাতীয় zero-filled ক্ষেত্রে allocator এর `alloc_zeroed` fast path কাজে লাগে — OS এ zero page ready-made, তাই প্রায় বিনামূল্যে। `my_vec!` এর `push` লুপ ঠিকই চলে, কিন্তু capacity 0 থেকে বাড়তে বাড়তে কয়েকবার realloc হয়।
 
 ## Common Built-in Macros
 
@@ -189,7 +201,32 @@ matches!(value, pattern);     // true/false if matches
 ```
 
 > [!note]
-// `dbg!()` হলো Rust এর সবচেয়ে useful debug macro — এটা value print করে সাথে file:line information। `println!` এর চেয়ে debugging এ অনেক বেশি useful।
+> // `dbg!()` হলো Rust এর সবচেয়ে useful debug macro — এটা value print করে সাথে file:line information। `println!` এর চেয়ে debugging এ অনেক বেশি useful।
+
+**`println!` এর ভেতরে কী হয়?** Expansion মোটামুটি এমন (simplified):
+
+```rust
+// println!("hi {}", name) আসলে হয়
+{
+    std::io::_print(format_args!("hi {0}\n", name));
+}
+```
+
+`_print` এ `stdout()` এর **lock** নেওয়া হয় (দুই thread একসাথে print করলে যাতে অক্ষর মিশে না যায়), তারপর formatted output টা `LineWriter` এ যায় — stdout line-buffered, newline দেখলেই flush। মানে প্রতিটা `println!` = lock + write + unlock; hot loop এ নিজে একবার lock ধরে `writeln!` করলে দ্রুত হয়।
+
+`assert_eq!(a, b)` এর expansion ও মজার (simplified):
+
+```rust
+match (&a, &b) {
+    (l, r) if *l == *r => {}   // সমান: কিছুই না
+    _ => panic!(
+        "assertion `left == right` failed\n  left: {:?}\n right: {:?}",
+        l, r
+    ),  // সাথে file!() আর line!() থেকে location
+}
+```
+
+এজন্যই দুই type এ `PartialEq` + `Debug` দুটোই দরকার — failure এ দুই পাশের মান debug format এ ছাপা হয় (testing chapter এ আরো বিস্তারিত আছে)। আর `env!`/`include_str!`/`concat!` জাতীয় compile-time macro গুলো value টা **binary তে বসিয়ে দেয়** — runtime এ কোনো খোঁজাখুঁজি নেই।
 
 ## Procedural Macro
 
@@ -256,7 +293,10 @@ fn main() {
 ```
 
 > [!danger]
-// Procedural macro complex! `syn` (parse Rust code), `quote` (generate Rust code), `proc-macro2` — তিনটা crate লাগে। কিন্তু `#[derive(Debug)]` এর মতো derive macro ব্যবহার করা সহজ — বানানোই কঠিন।
+> // Procedural macro complex! `syn` (parse Rust code), `quote` (generate Rust code), `proc-macro2` — তিনটা crate লাগে। কিন্তু `#[derive(Debug)]` এর মতো derive macro ব্যবহার করা সহজ — বানানোই কঠিন।
+
+> [!note]
+> **Derive আসলে proc-macro — "code লেখার code"**। Compile time এ compiler তোমার struct এর tokens (`TokenStream`) proc-macro crate কে দেয় — এই crate টা আলাদা binary হিসেবে **compiler নিজেই চালায়**। ওই code `syn` দিয়ে parse করে, `quote!` দিয়ে নতুন tokens লেখে, generated tokens (যেমন `impl Debug for Point { … }`) তোমার crate এ ঢুকে type check হয়। তাই `#[derive(Debug)]` এর সব খরচ compile time এ — binary তে কোনো reflection বা runtime metadata নেই, Python এর metaclass এর মতো runtime overhead কিছুই নেই।
 
 ### 2. Attribute Macro
 
@@ -292,7 +332,7 @@ let sql = sql! {
 | `actix` | `#[get("/api")]` — web framework route |
 
 > [!tip]
-// তোমার প্রায়ই procedural macro বানাতে হবে না — common গুলো crate আকারে available। শুধু `#[derive(...)]` দিয়ে use করো। বানানো advanced topic — `serde` এর macro গুলো দেখে inspire হও।
+> // তোমার প্রায়ই procedural macro বানাতে হবে না — common গুলো crate আকারে available। শুধু `#[derive(...)]` দিয়ে use করো। বানানো advanced topic — `serde` এর macro গুলো দেখে inspire হও।
 
 ## Macro Hygiene
 
@@ -316,7 +356,7 @@ fn main() {
 ```
 
 > [!note]
-// C এর macro এ identifier conflict হয় (unhygienic)। Rust এ এটা safe — macro এর ভেতরের `x` আর caller এর `x` আলাদা। এটাই macro hygiene।
+> // C এর macro এ identifier conflict হয় (unhygienic)। Rust এ এটা safe — macro এর ভেতরের `x` আর caller এর `x` আলাদা। এটাই macro hygiene।
 
 ## বাস্তব উদাহরণ — Custom Logger Macro
 
@@ -350,7 +390,7 @@ fn main() {
 ```
 
 > [!example]
-// এখানে `info!`, `error!`, `debug!` macro বানানো হয়েছে — সব `log!` macro call করে। `debug!` শুধু debug build এ print করে (`#[cfg(debug_assertions)]`)। Release build এ এই code থাকবেই না — zero overhead!
+> // এখানে `info!`, `error!`, `debug!` macro বানানো হয়েছে — সব `log!` macro call করে। `debug!` শুধু debug build এ print করে (`#[cfg(debug_assertions)]`)। Release build এ এই code থাকবেই না — zero overhead!
 
 ## Python vs Rust — Metaprogramming
 
@@ -363,7 +403,7 @@ fn main() {
 | Risk | Runtime error | Compile-time safe |
 
 > [!tip]
-// Rust এর macro Python এর decorator এর চেয়ে অনেক বেশি powerful। Code generate করা যায় compile-time এ। কিন্তু সাথে complexity — macro গুলো পড়তে কঠিন। সাবধানে ব্যবহার করো।
+> // Rust এর macro Python এর decorator এর চেয়ে অনেক বেশি powerful। Code generate করা যায় compile-time এ। কিন্তু সাথে complexity — macro গুলো পড়তে কঠিন। সাবধানে ব্যবহার করো।
 
 ## Summary
 

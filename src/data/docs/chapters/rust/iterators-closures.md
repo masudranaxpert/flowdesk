@@ -49,12 +49,25 @@ for val in v2.iter_mut() {
 ```
 
 > [!tip]
-// তিন রকম iteration:
-// - `.iter()` — `&T` (immutable borrow, v valid থাকে)
-// - `.into_iter()` — ownership (v consume হয়)
-// - `.iter_mut()` — `&mut T` (mutable borrow)
-//
-// Python এ সব `for x in v` দিয়ে হয়, কিন্তু Rust এ ownership type সচেতনভাবে choose করতে হয়।
+> // তিন রকম iteration:
+> // - `.iter()` — `&T` (immutable borrow, v valid থাকে)
+> // - `.into_iter()` — ownership (v consume হয়)
+> // - `.iter_mut()` — `&mut T` (mutable borrow)
+> //
+> // Python এ সব `for x in v` দিয়ে হয়, কিন্তু Rust এ ownership type সচেতনভাবে choose করতে হয়।
+
+> [!note]
+> **`for` লুপের ভেতরে কী হয়?** Compiler লুপটাকে expand করে:
+> ```rust
+> // simplified desugar
+> {
+>     let mut iter = IntoIterator::into_iter(v.iter());  // iterator object তৈরি
+>     while let Some(val) = iter.next() {                // বারবার next() টানা
+>         println!("{}", val);
+>     }
+> }
+> ```
+> মানে `for` নিজে কিছুই জানে না — শুধু `next()` কে `None` পাওয়া পর্যন্ত টানে। আর `v.iter()` এর iterator আসলে দুটা field এর ছোট্ট struct: ভেতরের raw pointer আর বাকি element count। প্রতিটা `next()` = pointer এক ঘর এগোনো + count এক কমা — O(1), কোনো allocation নেই। পুরো iteration এর অবস্থা (state) মাত্র এই দুটা field — এটাই state machine।
 
 ## Iterator Adapter — Chain Operations
 
@@ -87,7 +100,44 @@ let result: Vec<i32> = (1..=10)
 ```
 
 > [!example]
-// এটা Python এর list comprehension `[x*x for x in range(1,11) if x%2==0]` এর মতো, কিন্তু Rust এ প্রতিটা step explicit। আর compiler এটাকে একটাই optimized loop এ compile করে — কোনো intermediate allocation ছাড়াই! (zero-cost abstraction)
+> // এটা Python এর list comprehension `[x*x for x in range(1,11) if x%2==0]` এর মতো, কিন্তু Rust এ প্রতিটা step explicit। আর compiler এটাকে একটাই optimized loop এ compile করে — কোনো intermediate allocation ছাড়াই! (zero-cost abstraction)
+
+### Chain এর ভেতরে — Lazy Adapter
+
+প্রথম চমক: `.filter(...)`, `.map(...)` call করার মুহূর্তে **কোনো computation হয় না**। প্রতিটা adapter শুধু একটা ছোট struct return করে যেটা ভেতরের iterator আর closure টা ধরে রাখে — chain মানে একটার ভেতরে আরেকটা wrapper, পেঁয়াজের খোসার মতো:
+
+```rust
+// Simplified — std এর আসল কোডের ধাঁচ
+struct Map<I, F> { iter: I, f: F }       // ভেতরের iterator + closure — এই তো
+
+impl<I: Iterator, B, F: FnMut(I::Item) -> B> Iterator for Map<I, F> {
+    type Item = B;
+    fn next(&mut self) -> Option<B> {
+        self.iter.next().map(&mut self.f)     // এক টানে এক item, সাথে transform
+    }
+}
+
+struct Filter<I, P> { iter: I, predicate: P }
+
+impl<I: Iterator, P: FnMut(&I::Item) -> bool> Iterator for Filter<I, P> {
+    type Item = I::Item;
+    fn next(&mut self) -> Option<I::Item> {
+        loop {
+            match self.iter.next() {
+                Some(x) if (self.predicate)(&x) => return Some(x),  // মিললেই বের
+                Some(_) => continue,          // মিলেনি — ভেতরের থেকে আরেকটা টানো
+                None => return None,
+            }
+        }
+    }
+}
+```
+
+আসল খেলা শুরু হয় **consumer** এ — `collect`, `sum`, `for` লুপ। ওরা `next()` টানতে থাকে, আর প্রতিটা টান ভেতর থেকে পুরো chain ভেদ করে উৎস পর্যন্ত যায়, পথে প্রতিটা স্তর নিজের কাজটা করে। তাই element গুলো এক স্রোতে বয়ে যায় — একটা item filter→map→filter একসাথে পার হয়, মাঝপথে কোনো intermediate `Vec` তৈরি হয় না।
+
+**Zero-cost কোথায়?** প্রতিটা adapter আলাদা concrete type, তাই monomorphization + inlining এর পর compiler পুরো chain কে **একটাই plain `for` লুপ** বানিয়ে দেয় — হাতে লেখা লুপের সমান machine code, একটা function call পর্যন্ত বাকি থাকে না।
+
+আর `collect` নিজেও চালাক: শুরুতেই উৎসের `size_hint()` দেখে (কমপক্ষে/সর্বোচ্চ কত element আসবে) একবারে ঠিক capacity দিয়ে `Vec` allocate করে — তাই fill করার সময় বারবার grow হয় না।
 
 ## Closures — Anonymous Function
 
@@ -156,7 +206,37 @@ println!("{}", area(5.0));
 | `FnOnce` | `T` (ownership) | Consume environment |
 
 > [!note]
-// Rust compiler automatically সবচেয়ে কম restrictive trait choose করে। তোমাকে explicit করতে হয় না। শুধু `move` keyword দরকার হয় যখন closure এর ownership নিতে হবে (যেমন thread spawn)।
+> // Rust compiler automatically সবচেয়ে কম restrictive trait choose করে। তোমাকে explicit করতে হয় না। শুধু `move` keyword দরকার হয় যখন closure এর ownership নিতে হবে (যেমন thread spawn)।
+
+### Closure আসলে একটা Anonymous Struct
+
+Closure দেখতে magic, ভেতরে সাদামাটা — compiler প্রতিটা closure এর জন্য একটা নাম-হীন struct বানায়, আর **captured variable গুলো হলো তার field**। `Fn`/`FnMut`/`FnOnce` আসলে ওই struct এ তিন রকম call method:
+
+```rust
+let mut count = 0;
+let mut increment = || { count += 1; };
+
+// Compiler ভেতরে মোটামুটি এমন কিছু generate করে (simplified):
+struct Closure1<'a> {
+    count: &'a mut i32,      // captured variable = struct field (এখানে mutable borrow)
+}
+
+impl<'a> FnMut<()> for Closure1<'a> {
+    fn call_mut(&mut self) {
+        *self.count += 1;    // field এর মধ্য দিয়েই environment access
+    }
+}
+```
+
+তিন trait এর পার্থক্য পুরোপুরি এটাই — **capture কীভাবে field এ ঢোকে**:
+
+| Trait | Field এ কী থাকে | call এ self |
+|-------|------------------|-------------|
+| `FnOnce` | value নিজেই (`T`, ownership) | `self` consume — তাই একবারই |
+| `FnMut` | `&mut T` | `&mut self` — বারবার, বদলানো যায় |
+| `Fn` | `&T` | `&self` — বারবার, শুধু পড়া |
+
+Compiler closure এর body দেখে ঠিক করে: শুধু পড়ছে → `Fn`, লিখছে → `FnMut`, value টাই move করছে (যেমন `move` closure) → `FnOnce`। সবচেয়ে কম restrictive টা জিতে নেয়। `move` keyword মানে capture করার মুহূর্তেই field এ value move হবে — borrow না। আর যেহেতু প্রতিটা closure একটা আলাদা type, trait parameter (`impl Fn`) এ ঢুকলে monomorphization এ closure call ও inline হয়ে যায় — iterator chain zero-cost হওয়ার আরেকটা কারণ এটাই।
 
 ## `move` Closure
 
@@ -175,7 +255,7 @@ print_owned();
 ```
 
 > [!tip]
-// `move` closure বিশেষ করে দরকার হয় thread spawn এ — কারণ thread এর lifetime parent function এর চেয়ে বেশি হতে পারে। Ownership move করলে safe।
+> // `move` closure বিশেষ করে দরকার হয় thread spawn এ — কারণ thread এর lifetime parent function এর চেয়ে বেশি হতে পারে। Ownership move করলে safe।
 
 ## Powerful Iterator Methods
 
@@ -201,6 +281,9 @@ let concat: String = vec!["a", "b", "c"].iter().fold(
 // "abc"
 ```
 
+> [!note]
+> **`fold` এর ভেতরে?** একদম plain লুপ — `acc = init` রেখে প্রতিটা `next()` এর item এ `acc = f(acc, x)`; O(n), zero allocation। `sum()` আর `product()` ভেতরে fold কেই call করে (`sum` ≈ `fold(0, |a, x| a + x)`)।
+
 ### `enumerate` — Index সহ
 
 ```rust
@@ -220,6 +303,9 @@ for (name, score) in names.iter().zip(scores.iter()) {
 }
 ```
 
+> [!note]
+> **`zip` এর ভেতরে?** দুটো iterator ধরে রাখা আরেকটা adapter struct — প্রতিটা `next()` এ দুই পাশ থেকে একটা করে টেনে জোড়া বানায়, কোনো এক পাশ `None` দিলেই থেমে যায়। `enumerate` আরও সহজ: ভেতরের iterator + একটা counter, প্রতিটা item এর সাথে `i += 1` জুড়ে দেয়।
+
 ### `take` আর `skip`
 
 ```rust
@@ -232,6 +318,9 @@ let skip_three: Vec<i32> = v.iter().skip(3).cloned().collect();
 // [4, 5, 6, 7, 8, 9, 10]
 ```
 
+> [!note]
+> দুটোই আবার adapter struct — ভেতরে একটা counter ছাড়া কিছু না। `take(n)` প্রতিটা `next()` এ count বাড়ায়, n পার হলে `None` দেয়; `skip(n)` প্রথম `next()` call এই n টা item খেয়ে ফেলে, তারপর সরাসরি ভেতরেরটা টানে। কেউই আগে থেকে কিছু compute করে না — সব lazy।
+
 ### `find` আর `position`
 
 ```rust
@@ -240,6 +329,9 @@ let v = vec![1, 2, 3, 4, 5];
 let first_even = v.iter().find(|x| *x % 2 == 0);  // Some(&2)
 let pos = v.iter().position(|x| *x == 3);          // Some(2)
 ```
+
+> [!note]
+> **Short-circuit family** — `find`, `position`, `any`, `all` সবাই একই খেলা খেলে: পরপর `next()` টেনে predicate চালায়, শর্ত মিললেই **থেমে যায়** — বাকি element দেখেও না। ভেতরের রেসিপি এক: `position` ≈ `enumerate` + `find`, `any` = `find` এর bool version, `all` = উল্টো শর্ত। `count()` আর `max()`/`min()` ভেতরে সাধারণ `fold` চালায় — ওদের থামার কোনো কারণ নেই।
 
 ### `any`, `all`, `count`
 
@@ -261,7 +353,7 @@ let flat: Vec<&i32> = nested.iter().flat_map(|v| v.iter()).collect();
 // [1, 2, 3, 4, 5]
 ```
 
-### `group_by` (unstable)
+### `chunk_by` — Consecutive Equal Groups
 
 ```rust
 let v = vec![1, 1, 2, 2, 2, 3, 1];
@@ -309,7 +401,7 @@ fn main() {
 ```
 
 > [!example]
-// শুধু `next()` implement করলেই সব iterator method (map, filter, collect, sum...) free পেয়ে যাও! এটাই Rust এর trait system এর শক্তি।
+> // শুধু `next()` implement করলেই সব iterator method (map, filter, collect, sum...) free পেয়ে যাও! এটাই Rust এর trait system এর শক্তি।
 
 ## Python vs Rust — Iterator তুলনা
 
@@ -348,7 +440,7 @@ for s in squares(10) {
 ```
 
 > [!note]
-// দুটোই lazy evaluation। কিন্তু Rust এর iterator zero-cost — কোনো runtime overhead নেই। Python এর generator এ protocol overhead আছে। এবং Rust compiler lazy chain কে optimize করে single loop এ পরিণত করে।
+> // দুটোই lazy evaluation। কিন্তু Rust এর iterator zero-cost — কোনো runtime overhead নেই। Python এর generator এ protocol overhead আছে। এবং Rust compiler lazy chain কে optimize করে single loop এ পরিণত করে।
 
 ## বাস্তব উদাহরণ — Data Pipeline
 
@@ -368,16 +460,18 @@ fn main() {
     ];
 
     // Passed students, sorted by grade (descending), names only
-    let top_students: Vec<String> = students
+    let mut passed: Vec<&Student> = students
         .iter()
         .filter(|s| s.grade >= 60.0)
         .inspect(|s| println!("  passing: {} ({})", s.name, s.grade))
-        .collect::<Vec<_>>()
-        .iter()
-        .collect::<Vec<_>>()
-        .iter()
-        .max_by(|a, b| a.grade.partial_cmp(&b.grade).unwrap())
-        .map(|s| s.name.clone());
+        .collect();
+    passed.sort_by(|a, b| b.grade.partial_cmp(&a.grade).unwrap());
+
+    let top_students: Vec<String> = passed
+        .into_iter()
+        .map(|s| s.name.clone())
+        .collect();
+    println!("Passed: {:?}", top_students);
 
     // Simpler approach
     let best = students
@@ -395,7 +489,7 @@ fn main() {
 ```
 
 > [!tip]
-// খেয়াল করো — data pipeline এ এক লাইনে filter → map → sum সব হয়ে যাচ্ছে। এটাই functional programming এর শক্তি। প্রতিটা step পড়লেই বোঝা যায় কী হচ্ছে — ঠিক Python এর pandas pipeline এর মতো।
+> // খেয়াল করো — data pipeline এ এক লাইনে filter → map → sum সব হয়ে যাচ্ছে। এটাই functional programming এর শক্তি। প্রতিটা step পড়লেই বোঝা যায় কী হচ্ছে — ঠিক Python এর pandas pipeline এর মতো।
 
 ## Summary
 

@@ -153,6 +153,8 @@ function transformUnicodeMath(markdown: string): string {
     if (index % 2 === 1) return part;
     return part.replace(/`([^`\n]+)`/g, (match, content: string) => {
       if (!mathSymbolTest.test(content)) return match;
+      // Bare '&' (e.g. `&String → &str`) is a KaTeX parse error — leave it as code.
+      if (content.includes('&')) return match;
       return `$${toLatex(content)}$`;
     });
   }).join('');

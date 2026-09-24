@@ -796,6 +796,22 @@ pre {
   line-height: 1;
 }
 
+/* Light mode: primary amber is tuned for dark surfaces — amber text on white
+   fails contrast (~2:1), so text usages fall back to the dark brand brown. */
+html:not(.dark) .doc-content :not(pre) > code {
+  color: var(--color-primary-foreground);
+  background: color-mix(in oklch, var(--color-primary) 14%, transparent);
+  border-color: color-mix(in oklch, var(--color-primary) 35%, transparent);
+}
+
+html:not(.dark) .doc-content a {
+  color: var(--color-primary-foreground);
+}
+
+html:not(.dark) .doc-content .katex {
+  color: var(--color-primary-foreground);
+}
+
 .doc-content .katex {
   font-size: 1.08em;
   color: var(--color-primary);

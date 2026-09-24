@@ -1,0 +1,140 @@
+[
+  {
+    "id": "lifetimes-1",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "Compiled program-এর runtime-এ lifetime-এর (`'a` ইত্যাদি) কী দশা?",
+    "options": [
+      "Compiler প্রতিটা reference-এর জন্য validity check চালিয়ে রাখে",
+      "কিছুই না — lifetime পুরোপুরি compile-time ব্যাপার, binary তৈরির আগেই মুছে যায়; runtime-এ `&i32` আর `*const i32` একই ৮ byte pointer",
+      "প্রতিটা reference একটা reference count বহন করে",
+      "Memory-তে প্রতিটা reference-এর সাথে একটা expiry timestamp থাকে"
+    ],
+    "answer": 1,
+    "explanation": "`'a` কোনো value, counter বা timestamp না — type system-এর একটা label, compiler নিজের হিসাবে ব্যবহার করে binary তৈরির আগেই মুছে দেয়। নিরাপত্তা আসে borrow checker-এর compile-time analysis থেকে (C++ `shared_ptr`-এর মতো runtime counting না), তাই cost শূন্য।"
+  },
+  {
+    "id": "lifetimes-2",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "`let s: &'static str = \"I live forever\";` — এখানে `'static`-এর মানে কী?",
+    "options": [
+      "Variable-টা কখনো free হবে না — এটা memory leak",
+      "Reference শুধু main function-এর ভেতরে valid",
+      "Reference টা পুরো program জুড়ে valid — string literal binary-এর read-only section-এ stored থাকে",
+      "এটা global mutable state বোঝায়"
+    ],
+    "answer": 2,
+    "explanation": "`'static` হলো সবচেয়ে বড় lifetime — পুরো program জুড়ে valid। সব string literal `'static` পায়, কারণ এরা binary-এর read-only section-এ থাকে। তবে মনে রাখো: lifetime error সামলাতে গিয়ে `'static` বসিয়ে দেওয়া সমাধান না — data সত্যিই program-জুড়ে লাগলেই এটা ব্যবহার করো।"
+  },
+  {
+    "id": "lifetimes-3",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "নিচের function-টা annotation ছাড়া compile হয় না। Elision rule গুলো ক্রমান্বয়ে apply করলে সমস্যাটা ঠিক কোথায়?",
+    "code": "fn longest(x: &str, y: &str) -> &str {\n    if x.len() > y.len() {\n        x\n    } else {\n        y\n    }\n}",
+    "options": [
+      "তিনটা rule শেষ করেও output-এর lifetime কোন input-এর সাথে যুক্ত হবে সেটা পাওয়া যায় না — দুটো input reference, আর `&self`-ও নেই",
+      "Compiler দুটো string-এর মধ্যে কোনটা বড় সেটা compile time-এ বের করতে পারে না",
+      "`if`-এর ভিতরে reference compare করা নিষিদ্ধ",
+      "দুটি `&str` parameter নিলে Rust-এ function define করাই যায় না"
+    ],
+    "answer": 0,
+    "explanation": "Rule ১ দুটো parameter-কে দুটো আলাদা lifetime দেয়; Rule ২ লাগে শুধু একটাই input reference থাকলে; Rule ৩ লাগে `&self` থাকলে — কোনোটাই এখানে output-এর lifetime দিতে পারে না। তখনই সম্পর্কটা হাতে বলতে হয়: `fn longest<'a>(x: &'a str, y: &'a str) -> &'a str`।"
+  },
+  {
+    "id": "lifetimes-4",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "Struct-এ reference field থাকলে কী করতে হয়?",
+    "options": [
+      "কিছু করা লাগে না — compiler struct-এর জন্য নিজেই সব infer করে নেয়",
+      "Reference field-টা `Box`-এ wrap করতে হয়",
+      "Struct-টা অবশ্যই `'static` বানাতে হয়",
+      "Lifetime annotation বাধ্যতামূলক — `struct Excerpt<'a> { part: &'a str }`; struct যতক্ষণ alive, মূল data-ও ততক্ষণ alive থাকতে হবে"
+    ],
+    "answer": 3,
+    "explanation": "`part: &'a str` মানে `Excerpt` যতক্ষণ ব্যবহৃত হবে, মূল string-ও ততক্ষণ valid থাকতে হবে — নাহলে dangling reference। Function-এর elision rule struct field-এ চলে না, তাই struct-এ reference থাকলে annotation লেখা বাধ্য।"
+  },
+  {
+    "id": "lifetimes-5",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "`fn display(&self, x: &str) -> &str` — lifetime elision অনুযায়ী return করা `&str` কার lifetime পাবে?",
+    "options": [
+      "x-এর",
+      "self-এর",
+      "x আর self — দুটোর মধ্যে যেটা ছোট",
+      "কারও না — annotation ছাড়া এটা কখনোই compile হবে না"
+    ],
+    "answer": 1,
+    "explanation": "এটাই Rule ৩: `&self` বা `&mut self` থাকলে output-এর lifetime হয় self-এর। এ কারণেই chapter-এর `Config::display(&self) -> &str` annotation ছাড়াই compile করে — `self.name` struct-এর নিজের ভেতরের data, সম্পর্কটা unambiguous।"
+  },
+  {
+    "id": "lifetimes-6",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "NLL (non-lexical lifetimes) অনুযায়ী একটা borrow-এর lifetime আসলে কোথায় গিয়ে শেষ হয়?",
+    "options": [
+      "Block-এর closing brace `}` পর্যন্ত — scope-এর একেবারে শেষে",
+      "Program শেষ না হওয়া পর্যন্ত",
+      "নির্দিষ্ট করা যায় না — প্রতি run-এ বদলে যায়",
+      "Reference-টা যেখানে শেষ বার ব্যবহৃত হলো, সেই জায়গা পর্যন্ত"
+    ],
+    "answer": 3,
+    "explanation": "Borrow checker প্রতিটা function-এর control-flow graph ধরে দেখে reference শেষ বার কোথায় ব্যবহৃত হলো — lifetime scope-এর শেষে না, শেষ ব্যবহারেই শেষ হয়। এটাই NLL; এজন্য একটা borrow আগে শেষ হয়ে গেলে scope শেষ হওয়ার আগেই আবার মিউটেট করা যায়।"
+  },
+  {
+    "id": "lifetimes-7",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "এই code-টা কী প্রিন্ট করবে?",
+    "code": "fn longest<'a>(x: &'a str, y: &'a str) -> &'a str {\n    if x.len() > y.len() {\n        x\n    } else {\n        y\n    }\n}\n\nfn main() {\n    let s1 = String::from(\"hello\");\n    let result;\n    {\n        let s2 = String::from(\"world!\");\n        result = longest(s1.as_str(), s2.as_str());\n        println!(\"{}\", result);\n    }\n}",
+    "options": [
+      "world!",
+      "hello",
+      "Compile error — `result` ভেতরের block-এর বাইরে declare করা",
+      "Runtime panic"
+    ],
+    "answer": 0,
+    "explanation": "\"hello\" ৫ byte, \"world!\" ৬ byte — `5 > 6` মিথ্যা, তাই `y` অর্থাৎ \"world!\" return হয়। আর প্রিন্টটা `s2`-এর block-এর ভেতরেই, তাই `result` এখনো valid। Block-এর বাইরে `result` ব্যবহার করলেই `s2` drop হয়ে যাওয়ায় error আসত।"
+  },
+  {
+    "id": "lifetimes-8",
+    "difficulty": "medium",
+    "type": "output",
+    "prompt": "এই code-এর কী হবে?",
+    "code": "fn main() {\n    let r;\n    {\n        let x = 5;\n        r = &x;\n    }\n    println!(\"{}\", r);\n}",
+    "options": [
+      "5 প্রিন্ট হবে",
+      "Runtime-এ dangling reference ধরা পড়ে crash",
+      "Compile error — `x` block শেষে drop হয়ে গেছে, `r` dangling হয়ে যাবে",
+      "0 প্রিন্ট হবে"
+    ],
+    "answer": 2,
+    "explanation": "`r` reference-টা `x`-কে point করছে, কিন্তু ভেতরের block শেষে `x` drop হয়ে গেছে। Borrow checker compile time-এই ধরে ফেলে — runtime check না, compile-time guarantee। এটাই lifetime-এর মূল কাজ: dangling reference-এর সুযোগই থাকে না।"
+  },
+  {
+    "id": "lifetimes-9",
+    "difficulty": "medium",
+    "type": "code",
+    "prompt": "Blank-এ কী বসালে `display` method-টা compile করবে?",
+    "code": "struct Config<'a> {\n    name: &'a str,\n}\n\nimpl<'a> Config<'a> {\n    fn display(&self) -> ____ {\n        self.name\n    }\n}",
+    "accept": [
+      "&str",
+      "&'a str"
+    ],
+    "explanation": "`&self` থাকায় elision Rule ৩ চালু — output স্বয়ংক্রিয়ভাবে self-এর lifetime পায়, তাই খালি `&str`-ই চলে। চাইলে `&'a str` লিখলেও হয় — `name` field-এর lifetime-ই তো ফেরত যাচ্ছে; দুটোই সঠিক।"
+  },
+  {
+    "id": "lifetimes-10",
+    "difficulty": "hard",
+    "type": "code",
+    "prompt": "`longest` compile করাতে return type-এর blank-এ কী লাগবে?",
+    "code": "fn longest<'a>(x: &'a str, y: &'a str) -> ____ {\n    if x.len() > y.len() {\n        x\n    } else {\n        y\n    }\n}",
+    "accept": [
+      "&'a str"
+    ],
+    "explanation": "দুটো input reference থেকে যেকোনো একটা return হতে পারে — তাই return-এর lifetime দুটোর সাথেই বাঁধতে হয়: `&'a str`। অর্থাৎ x, y আর return — তিনটাই এক `'a`-তে আটকা; এই constraint caller-এর কাছে যায়।"
+  }
+]

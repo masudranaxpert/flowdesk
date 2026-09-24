@@ -1,0 +1,143 @@
+[
+  {
+    "id": "control-flow-1",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "কোডটা trace করো — কী ছাপা হবে?",
+    "code": "fn main() {\n    let score = 75;\n    let grade = if score >= 80 { \"A\" } else { \"B\" };\n    println!(\"{}\", grade);\n}",
+    "options": [
+      "B",
+      "A",
+      "75",
+      "compile error — if থেকে value নেওয়া যায় না"
+    ],
+    "answer": 0,
+    "explanation": "Rust-এ `if` একটা expression — দুই branch-এর একটার value-ই `grade`-এ বসে। score 75 < 80, তাই else branch → \"B\"। Python-এ এর জন্য আলাদা ternary লাগত; Rust-এ if-ই ternary, আলাদা operator নেই।"
+  },
+  {
+    "id": "control-flow-2",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "Loop শেষ হলে কী ছাপা হবে?",
+    "code": "fn main() {\n    let mut total = 0;\n    for i in 1..=5 {\n        total += i;\n    }\n    println!(\"{}\", total);\n}",
+    "options": [
+      "10",
+      "15",
+      "5",
+      "0"
+    ],
+    "answer": 1,
+    "explanation": "`1..=5` inclusive range — 1, 2, 3, 4, 5 সবই আসে, যোগফল 15। যদি `1..5` (exclusive) হতো, 4 পর্যন্তই আসত — যোগফল 10 হতো। এই দুই range-এর পার্থক্যই এই প্রশ্নের মূল ফাঁদ।"
+  },
+  {
+    "id": "control-flow-3",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "এই match থেকে `_` arm-টা বাদ দিলে কী হবে?",
+    "code": "fn main() {\n    let number = 3;\n    match number {\n        1 => println!(\"One\"),\n        2 => println!(\"Two\"),\n        3 => println!(\"Three\"),\n    }\n}",
+    "options": [
+      "চলবেই — 3 তো একটা arm-এ আছে",
+      "compile error — non-exhaustive patterns: i32-এর সব সম্ভাব্য value cover করতে হবে",
+      "runtime-এ match না মিললে panic করত",
+      "শেষ arm-এর ভেতরে নীরবে fallback হয়"
+    ],
+    "answer": 1,
+    "explanation": "match-এ সব case cover করা বাধ্যতামূলক — compiler pattern থেকে decision tree বানিয়ে verify করে। i32-এর সম্ভাব্য value অসীম, তাই `_` wildcard লাগেই; না দিলে compile error। 3-এর জন্য চলুক আর না চলুক — exhaustiveness হলো type-এর সব value-র জন্য guarantee।"
+  },
+  {
+    "id": "control-flow-4",
+    "difficulty": "medium",
+    "type": "output",
+    "prompt": "কোডটা trace করো — কী ছাপা হবে?",
+    "code": "fn main() {\n    let mut counter = 0;\n\n    let result = loop {\n        counter += 1;\n        if counter == 10 {\n            break counter * 2;\n        }\n    };\n\n    println!(\"{}\", result);\n}",
+    "options": [
+      "10",
+      "compile error — loop থেকে value return করা যায় না",
+      "20",
+      "19"
+    ],
+    "answer": 2,
+    "explanation": "`break counter * 2` মানে loop-এর value হলো ওই expression — counter 10 হলে break দেয় 20, তাই result = 20। Python/C++-এ loop থেকে value ফেরানো যায় না বলে বাইরে mut variable লাগে; Rust-এ loop নিজেই expression — break-গুলোর type-ই তার type।"
+  },
+  {
+    "id": "control-flow-5",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "Rust-এ `if 5 { }` লিখলে কী হবে আর কেন?",
+    "options": [
+      "চলবে — Python-এর মতো 5 truthy",
+      "compile error — condition অবশ্যই `bool` হতে হবে, কোনো truthy/falsy coercion নেই",
+      "চলবে — 5 odd সংখ্যা তাই true ধরা হয়",
+      "compile error — if-এর condition-এ parentheses লাগবে"
+    ],
+    "answer": 1,
+    "explanation": "Rust-এ condition সবসময় bool — C/Python-এর মতো truthy/falsy ব্যাপার নেই। Machine level-এ branch-এর জন্য ১-bit উত্তর লাগে, `5` দিয়ে jump decision নেওয়া যায় না। আর parentheses optional — সেটা error এর কারণ না।"
+  },
+  {
+    "id": "control-flow-6",
+    "difficulty": "medium",
+    "type": "output",
+    "prompt": "কোডটা trace করো — কোন ক্রমে কী হবে?",
+    "code": "fn main() {\n    let mut stack = vec![1, 2, 3];\n\n    while let Some(top) = stack.pop() {\n        println!(\"{}\", top);\n    }\n}",
+    "options": [
+      "3, 2, 1 ছাপবে — তারপর None পেয়ে নিজে থেমে যাবে",
+      "1, 2, 3 ছাপবে — তারপর থেমে যাবে",
+      "3, 2, 1 ছাপার পরে panic — খালি stack-এ pop",
+      "compile error — None case handle করা হয়নি"
+    ],
+    "answer": 0,
+    "explanation": "`pop()` শেষ থেকে value দেয়, খালি হলে crash না — `None`। `while let` প্রতি ধাপে match করে: Some পেলে body চালায়, None পেলে loop ভাঙে। Python-এ `list.pop()` খালি হলে IndexError দেয় — Rust-এ Option-এ মোড়ানো বলে এই class-এর bug type system-ই আটকায়।"
+  },
+  {
+    "id": "control-flow-7",
+    "difficulty": "medium",
+    "type": "code",
+    "prompt": "Compile করাতে হলে শেষ arm-এর pattern কী লিখতে হবে — যাতে বাকি সব value-ও cover হয়?",
+    "code": "fn main() {\n    let grade = 85;\n\n    let letter = match grade {\n        90..=100 => \"A\",\n        80..=89 => \"B\",\n        70..=79 => \"C\",\n        ____ => \"F\",\n    };\n\n    println!(\"{}\", letter);\n}",
+    "accept": [
+      "_"
+    ],
+    "explanation": "`match`-কে exhaustive হতে হয় — সব সম্ভাব্য value cover করতে হবে। `_` wildcard বাকি সব ভেলু cover করে, তাই compile হয়।"
+  },
+  {
+    "id": "control-flow-8",
+    "difficulty": "hard",
+    "type": "output",
+    "prompt": "Nested loop-এ label ব্যবহার হয়েছে — trace করো, কী ছাপা হবে?",
+    "code": "fn main() {\n    let mut count = 0;\n\n    'outer: loop {\n        count += 1;\n        let mut remaining = 10;\n\n        loop {\n            if remaining == 9 {\n                break;\n            }\n            if count == 3 {\n                break 'outer;\n            }\n            remaining -= 1;\n        }\n    }\n\n    println!(\"{}\", count);\n}",
+    "options": [
+      "3",
+      "4",
+      "30",
+      "infinite loop — কখনো থামবে না"
+    ],
+    "answer": 0,
+    "explanation": "খালি `break` শুধু ভেতরের loop ভাঙে — বাইরেরটা আবার শুরু হয়। count = 1 ও 2 হলে ভেতরের loop remaining == 9 হওয়ায় ভাঙে, বাইরেরটা চলতে থাকে। তৃতীয় iteration-এ count == 3, তখন `break 'outer` বাইরের loop-ও ভাঙে — count = 3 ছাপা হয়।"
+  },
+  {
+    "id": "control-flow-9",
+    "difficulty": "hard",
+    "type": "code",
+    "prompt": "`result`-এ 20 আসতে হবে — blank-এ কী লিখবে?",
+    "code": "fn main() {\n    let mut counter = 0;\n\n    let result = loop {\n        counter += 1;\n        if counter == 10 {\n            ____;\n        }\n    };\n\n    println!(\"{}\", result);\n}",
+    "accept": [
+      "break counter * 2"
+    ],
+    "explanation": "loop-এর body থেকে value ফেরত দিতে `break expression` — এখানে `break counter * 2` loop থেকে 20 (counter==10-এ) ফেরত দেয়, যা `result`-এ বসে।"
+  },
+  {
+    "id": "control-flow-10",
+    "difficulty": "hard",
+    "type": "output",
+    "prompt": "FizzBuzz-এর মতো tuple match — কী ছাপা হবে?",
+    "code": "fn main() {\n    let n = 15;\n\n    let result = match (n % 3, n % 5) {\n        (0, 0) => \"FizzBuzz\",\n        (0, _) => \"Fizz\",\n        (_, 0) => \"Buzz\",\n        _ => \"Number\",\n    };\n\n    println!(\"{}\", result);\n}",
+    "options": [
+      "Fizz — প্রথম condition-এ শুধু 3 ভাগ করা যায় কিনা দেখা হয়",
+      "Buzz",
+      "FizzBuzz",
+      "Number — শেষ arm আগের সবাইকে override করে"
+    ],
+    "answer": 2,
+    "explanation": "n = 15 হলে (15 % 3, 15 % 5) = (0, 0) — প্রথম arm-ই মেলে, ফলে \"FizzBuzz\"। Match উপর থেকে নিচে যায় আর প্রথম মেলা arm-ই জেতে; শেষ arm কিছু override করে না। আর শেষে `_` থাকায় exhaustiveness-ও পূরণ — tuple-এর চারটা সম্ভাব্য রূপই cover।"
+  }
+]

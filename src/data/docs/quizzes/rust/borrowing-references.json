@@ -1,0 +1,141 @@
+[
+  {
+    "id": "borrowing-references-1",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "Borrowing-এর প্রথম rule — একই সময়ে কোন কম্বিনেশনটা বৈধ?",
+    "options": [
+      "একটা mutable reference অথবা (যত খুশি) অনেকগুলো immutable reference",
+      "একটা mutable আর একসাথে একটা immutable — মোট দুটো",
+      "একাধিক mutable reference, যদি ভিন্ন ভিন্ন জায়গায় ব্যবহার হয়",
+      "একটাই reference থাকতে পারে — immutable-ও না, একাধিকও না"
+    ],
+    "answer": 0,
+    "explanation": "নিয়ম — many readers ঠিক আছে, কিন্তু writer একা থাকবে। লঙ্ঘন করলে E0502 (immutable borrow জীবিত অবস্থায় &mut নেওয়া) বা E0499 (দুটো &mut একসাথে)। এই নিয়মেই compile time-এ data race অসম্ভব হয়ে যায়।"
+  },
+  {
+    "id": "borrowing-references-2",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "কোডটা trace করো — কী ছাপা হবে?",
+    "code": "fn calculate_length(s: &String) -> usize {\n    s.len()\n}\n\nfn main() {\n    let s1 = String::from(\"hello\");\n    let len = calculate_length(&s1);\n\n    println!(\"'{}' এর length {}\", s1, len);\n}",
+    "options": [
+      "'hello' এর length 5",
+      "compile error — s1-এর ownership function-এ চলে গেছে",
+      "'hello' এর length 0",
+      "compile error — s.len() শুধু String-এ চলে, &String-এ না"
+    ],
+    "answer": 0,
+    "explanation": "`&s1` মানে শুধু একটা ৮-byte pointer ধার নেওয়া — ownership যায়নি, তাই function শেষে value drop-ও হয় না এবং s1 পরেও valid। `s.len()`-এ compiler নিজেই pointer deref করে (auto-deref)। আর String-এর len মানে byte count — hello তো ৫ byte।"
+  },
+  {
+    "id": "borrowing-references-3",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "`let s = String::from(\"hello\");` ঘোষণা করা আছে। এখন কেউ `change(&mut s)` করতে চাইলে কী হবে?",
+    "options": [
+      "চলবে — reference-এ `mut` থাকলেই সব হলো",
+      "compile error — `&mut` পেতে হলে original binding-ও `let mut s` হতে হবে",
+      "runtime-এ s নিজে থেকেই mutable হয়ে যাবে",
+      "শুধু unsafe block-এর ভেতরে চলবে"
+    ],
+    "answer": 1,
+    "explanation": "Mutable reference চাইলে মূল value-টাও `mut` ঘোষিত হতে হবে। আর মজার ব্যাপার — `&mut String` runtime-এ সেই একই ৮-byte pointer, কোনো \"mutable badge\" পাহারা দেওয়ার ব্যবস্থা নেই; push_str-এর মতো method-গুলোর signature-ই `&mut self` — type system-ই নিয়ন্ত্রণ করে।"
+  },
+  {
+    "id": "borrowing-references-4",
+    "difficulty": "hard",
+    "type": "output",
+    "prompt": "কোডটা trace করো — কী হবে? (NLL মাথায় রেখো)",
+    "code": "fn main() {\n    let mut s = String::from(\"hello\");\n\n    let r1 = &s;\n    let r2 = &s;\n    println!(\"{} {}\", r1, r2);\n\n    let r3 = &mut s;\n    r3.push_str(\"!\");\n    println!(\"{}\", s);\n}",
+    "options": [
+      "compile error — r1, r2 এখনো জীবিত অবস্থায় &mut s নেওয়া যায় না",
+      "compile error — একই variable-এ কখনোই & আর &mut মেশানো যায় না",
+      "hello hello ছাপার পরে hello — push_str কাজ করবে না",
+      "hello hello, তারপর hello! — compile হবে, চলবে"
+    ],
+    "answer": 3,
+    "explanation": "NLL (Non-Lexical Lifetimes) — reference-এর lifetime curly brace-এর জ্যামিতি না, শেষ ব্যবহার পর্যন্ত region। r1, r2-এর last use উপরের println!-এই; ওখানেই তাদের borrow মরে গেছে, তাই পরে `&mut s` নেওয়া বৈধ। তারপর push_str করে s = hello!। নিয়ম বদলায়নি — \"একই সময়ে\" মাপ বদলেছে, brace থেকে ব্যবহারে।"
+  },
+  {
+    "id": "borrowing-references-5",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "এই function-টা কি compile হবে?",
+    "code": "fn dangle() -> &String {\n    let s = String::from(\"hello\");\n    &s\n}",
+    "options": [
+      "হ্যাঁ — কিন্তু runtime-এ use-after-free হবে",
+      "হ্যাঁ — GC s-কে বাঁচিয়ে রাখবে",
+      "না — Rust-এ dangling reference কখনোই possible না; s তো function শেষে drop হবে, compiler ধরে ফেলবে",
+      "হ্যাঁ — কিন্তে return value হবে null"
+    ],
+    "answer": 2,
+    "explanation": "Borrowing-এর দ্বিতীয় rule — reference সবসময় valid থাকতে হবে। s এই function-এর শেষে drop হবে, তাই ওর reference ফেরানো compiler আটকে দেবে। C/C++-এ এটা runtime crash হতো, Python-এ GC সামলাত — Rust-এ compile error, আগেই ধরা পড়ে।"
+  },
+  {
+    "id": "borrowing-references-6",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "`&str` slice-টা ভেতরে কী দিয়ে তৈরি?",
+    "options": [
+      "পুরো string-এর একটা copy — নিজস্ব আলাদা buffer",
+      "দুটো machine word — শুরুর address আর length; কোনো data copy হয় না",
+      "শুধু একটা pointer — length আলাদা কোথাও রাখা থাকে না",
+      "pointer + reference count"
+    ],
+    "answer": 1,
+    "explanation": "`&str` হলো fat pointer — address + length, মাত্র দুই machine word। `&s[0..5]` করলে boundary check হয় (UTF-8 character যেন না ভাঙে), তারপর `(ptr + 0, 5)` জাতীয় নতুন fat pointer — zero allocation, O(1)। Python-এর `s[0:5]` নতুন string বানায় (copy); Rust-এ slice শুধু একটা জানালা।"
+  },
+  {
+    "id": "borrowing-references-7",
+    "difficulty": "medium",
+    "type": "output",
+    "prompt": "কোডটা trace করো — ঠিক কী ছাপা হবে?",
+    "code": "fn main() {\n    let s = String::from(\"hello world\");\n\n    let hello = &s[0..5];\n    let world = &s[6..11];\n\n    println!(\"{} {}\", hello, world);\n}",
+    "options": [
+      "hello world",
+      "helloworld",
+      "compile error — s-এর অংশ move করা হয়েছে",
+      "world hello"
+    ],
+    "answer": 0,
+    "explanation": "Indices ধরো: 0-4 পর্যন্ত \"hello\", index 5-এ space, 6-10 পর্যন্ত \"world\"। দুটো slice-ই মূল String-এর reference — কোনো copy বা move নেই। println!-এর মাঝের একটা space-সহ ফলাফল দেখতে হুবহু মূল string-এর মতো: `hello world`।"
+  },
+  {
+    "id": "borrowing-references-8",
+    "difficulty": "medium",
+    "type": "code",
+    "prompt": "`greet`-কে String-এর reference আর string literal — দুটোই accept করতে হবে। Parameter-এর type হিসেবে blank-এ কী লিখবে?",
+    "code": "fn greet(name: ____) {\n    println!(\"Hello, {}!\", name);\n}\n\nfn main() {\n    let s = String::from(\"Karim\");\n    greet(&s);\n    greet(\"Rahim\");\n}",
+    "accept": [
+      "&str"
+    ],
+    "explanation": "`&str` String-ও literal-ও দুটোই shared/reference-এ ধরতে পারে — `&String`-কে deref coercion দিয়ে `&str`-এ পরিণত করা যায়, আর literal নিজেই `&str`। তাই সবচেয়ে flexible parameter type।"
+  },
+  {
+    "id": "borrowing-references-9",
+    "difficulty": "hard",
+    "type": "output",
+    "prompt": "কোডটা trace করো — কী হবে?",
+    "code": "fn first_word(s: &String) -> usize {\n    let bytes = s.as_bytes();\n\n    for (i, &byte) in bytes.iter().enumerate() {\n        if byte == b' ' {\n            return i;\n        }\n    }\n    s.len()\n}\n\nfn main() {\n    let mut words = String::from(\"hello beautiful world\");\n\n    let first = first_word(&words);\n    println!(\"First word length: {}\", first);\n\n    words.clear();\n    println!(\"{}\", words.len());\n}",
+    "options": [
+      "compile হবে আর ছাপবে: First word length: 5, তারপর 0",
+      "compile error — words.clear()-এর &mut নেওয়া যাবে না, first-এর borrow এখনো জীবিত",
+      "compile হবে, কিন্তু clear-এর পরে পুরনো/undefined value ছাপবে",
+      "runtime panic — clear-এর পরে পুরনো index অচল"
+    ],
+    "answer": 0,
+    "explanation": "first_word শুধু `&String` নিয়েছে আর ফেরত দিয়েছে usize — একটা plain copy, তাই ফাংশন শেষ হলেই words-এর কোনো borrow বাকি নেই। এরপর `clear()` (যেটার `&mut` লাগে) বৈধ, words খালি হয়ে len 0। কিন্তু ফাংশনটা যদি `&str` slice ফেরাত আর clear-এর পরেও সেই slice ছাপতে — তখনই E0502; compiler নিজেই ordering ঠিক রাখতে বাধ্য করে।"
+  },
+  {
+    "id": "borrowing-references-10",
+    "difficulty": "hard",
+    "type": "code",
+    "prompt": "Call-টা ঠিকভাবে করতে blank-এ কী লিখবে, যাতে change-এর ভেতরে s-এ লেখা যায়? (Output হবে: hello, world)",
+    "code": "fn change(some_string: &mut String) {\n    some_string.push_str(\", world\");\n}\n\nfn main() {\n    let mut s = String::from(\"hello\");\n    change(____);\n    println!(\"{}\", s);\n}",
+    "accept": [
+      "&mut s"
+    ],
+    "explanation": "change-এর ভেতরে লেখা যায় মানে mutable borrow দরকার — তাই `&mut s`। `s`-ও `mut` রাখা হয়েছে যাতে mutable reference valid হয়।"
+  }
+]

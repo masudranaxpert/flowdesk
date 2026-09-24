@@ -85,6 +85,9 @@ fn print_summary(item: &impl Summary) {
 }
 ```
 
+> [!note]
+> **`impl Trait` এর ভেতরে কী হয়?** নতুন কোনো runtime mechanism না — compiler এটাকে anonymous generic parameter (`<T: Summary>` এর মতো) এ expand করে, তারপর monomorphization এ প্রতিটা call site এর concrete type অনুযায়ী আলাদা machine code বানায়। ফলে call টা সরাসরি `Tweet::summarize()` — কোনো pointer, কোনো table lookup নেই। এটাই **static dispatch**। Return position এ (`-> impl Summary`) একই কথা: ভেতরে একটা concrete type ই থাকে, শুধু caller তার নাম দেখতে পায় না।
+
 ### Trait Bound Syntax
 
 ```rust
@@ -207,7 +210,7 @@ impl Point<f64> {
 ```
 
 > [!example]
-// খেয়াল করো — `impl<T> Point<T>` সব type এর জন্য। কিন্তু `impl Point<f64>` শুধু f64 এর জন্য। এটা Rust এর একটা দারুণ feature — specific type এর জন্য extra method দেওয়া যায়।
+> // খেয়াল করো — `impl<T> Point<T>` সব type এর জন্য। কিন্তু `impl Point<f64>` শুধু f64 এর জন্য। এটা Rust এর একটা দারুণ feature — specific type এর জন্য extra method দেওয়া যায়।
 
 ## Monomorphization — Zero-Cost Abstraction
 
@@ -225,7 +228,24 @@ fn largest_f64(list: &[f64]) -> &f64 { ... }
 ```
 
 > [!tip]
-// এটাই "zero-cost abstraction" — generic code লেখো, compiler specific version বানায়। C++ এর template এর মতো, কিন্তু Python এর generic (duck typing) এর চেয়ে অনেক fast কারণ runtime type check নেই।
+> // এটাই "zero-cost abstraction" — generic code লেখো, compiler specific version বানায়। C++ এর template এর মতো, কিন্তু Python এর generic (duck typing) এর চেয়ে অনেক fast কারণ runtime type check নেই।
+
+### Monomorphization এর পেছনে
+
+Monomorphization ঠিক C++ এর template instantiation এর মতোই — পার্থক্য শুধু Rust এ type check আগে হয়ে যায়। ভেতরে যা ঘটে:
+
+```text
+তোমার কোড:              compiler এর machine code:
+largest(&[1, 2, 3])    →  largest_i32:   signed compare দিয়ে লুপ
+largest(&['a', 'b'])   →  largest_char:  byte compare দিয়ে লুপ
+largest(&[1.0, 2.0])   →  largest_f64:   float compare (ucomisd) দিয়ে লুপ
+```
+
+দুটো গুরুত্বপূর্ণ ফল:
+
+১. **Generic function টার নিজের কোনো machine code থাকে না** — body টা তখনই compile হয় যখন কোনো concrete type দিয়ে call হয়। তারপর optimizer concrete version গুলো inline-ও করে দিতে পারে। এখানেই zero-cost এর উৎস।
+
+২. **দামটা compile time আর binary size এ** — যত type দিয়ে call, তত copy। `Vec<i32>` আর `Vec<String>` আসলে দুটো আলাদা compiled type। C++ এর template bloat এখানেও ঘটে — শুধু Rust এ bound check কঠোর বলে ভুল version বানায় না।
 
 ## Trait Object — Dynamic Dispatch
 
@@ -262,7 +282,32 @@ fn main() {
 | Use when | Type known at compile time | Runtime polymorphism needed |
 
 > [!note]
-// সাধারণ নিয়ম — `impl Trait` prefer করো (fast)। শুধু তখনই `dyn Trait` যখন একই collection এ একাধিক type রাখতে হবে। এটা C++ এর virtual function, Python এর duck typing এর সমতুল্য।
+> // সাধারণ নিয়ম — `impl Trait` prefer করো (fast)। শুধু তখনই `dyn Trait` যখন একই collection এ একাধিক type রাখতে হবে। এটা C++ এর virtual function, Python এর duck typing এর মতো।
+
+### vtable আর Fat Pointer — `dyn` এর ভেতরে
+
+প্রথম প্রশ্ন: trait object এর size কেন জানা যায় না? কারণ `dyn Summary` এর পেছনে `Article` আসতে পারে (৩টা String) আবার `Tweet` (২টা String) — ভিন্ন type এর size ভিন্ন, compile time এ একটা সংখ্যা বলা অসম্ভব। এই ধরনের type কে বলে **DST (dynamically sized type)** — তাই trait object সবসময় কোনো pointer এর পেছনে থাকতে হয়: `&dyn`, `Box<dyn>`, `Rc<dyn>`।
+
+তাহলে pointer ধরে সঠিক method খুঁজে পায় কীভাবে? মেমরিতে `&dyn Summary` আসলে **দুইটা word (x86-64 এ ১৬ bytes)** এর একটা জোড়া — fat pointer:
+
+```rust
+// Simplified — ভেতরে যা থাকে
+struct FatPtr {
+    data: *const (),           // ১ম word: আসল object এর ঠিকানা (Article বা Tweet)
+    vtable: &'static VTable,   // ২য় word: ওই type এর method table
+}
+
+struct VTable {
+    drop: fn(*mut ()),                   // destructor
+    size: usize,                         // object এর আসল size
+    align: usize,                        // alignment
+    summarize: fn(*const ()) -> String,  // প্রতিটা trait method একটা slot
+}
+```
+
+- **vtable** হলো compile time এ তৈরি read-only static table — প্রতিটা (type, trait) জোড়ার জন্য binary তে একটাই থাকে। C++ এর virtual table ঠিক এই কাজটাই করে।
+- `article.summarize()` call করলে ঘটে: vtable থেকে `summarize` slot এর function pointer load → পাশের data pointer পাঠিয়ে **indirect call**। একটা indirection বাড়ল, আর compiler সাধারণত এটা inline করতে পারে না — কোন function বসবে সেটা runtime এ ঠিক হয়। এই খরচটাই টেবিলের "slightly slower"।
+- তুলনায় static dispatch এ call site এ সরাসরি `Tweet::summarize` এর address বসে যায় — কোনো lookup নেই।
 
 ## Common Standard Traits
 
@@ -287,6 +332,9 @@ impl fmt::Display for City {
 // #[derive(Debug)] দিলে automatically হয়
 ```
 
+> [!note]
+> `{}` আর `{:?}` ছাপানোর সময় আসলে `Display::fmt` / `Debug::fmt` call হয় — `println!` macro formatter এর `write_str` ধরে ধরে output বসায়। `#[derive(Debug)]` হলো procedural macro: compile time এ তোমার struct parse করে প্রতিটা field এর নাম-মান ছাপানো একটা `impl Debug` generate করে — তুমি হাতে যেটা লিখতে সেটাই, শুধু compiler লিখে দেয়।
+
 ### `Clone` আর `Copy`
 
 ```rust
@@ -301,6 +349,9 @@ let c1 = Color { r: 255, g: 0, b: 0 };
 let c2 = c1;  // copy — c1 এখনো valid
 ```
 
+> [!note]
+> **ভেতরে কী হয়?** `Copy` একটা marker trait — কোনো method নেই। `c2 = c1;` এ compiler এর সাধারণ move টাই bitwise কপি (stack এ কয়েক byte memcpy), শুধু `c1` invalid হয় না। শর্ত: type এর সব field নিজেই Copy হতে হবে — heap-owning type (`String`, `Vec`) কখনো Copy হতে পারে না, নাহলে দুই owner একই heap block free করতো (double free)। `Clone` এর `clone()` অন্য কথা — explicit call: `String::clone` আসলে নতুন buffer allocate করে সব byte copy করে, তাই দামি। `#[derive(Clone)]` compile time এ macro চালিয়ে প্রতিটা field এর `clone()` call করে এমন impl generate করে দেয়।
+
 ### `PartialEq` আর `Eq`
 
 ```rust
@@ -311,6 +362,9 @@ let id1 = UserId(1);
 let id2 = UserId(1);
 println!("{}", id1 == id2);  // true
 ```
+
+> [!note]
+> `id1 == id2` আসলে `PartialEq::eq(&id1, &id2)` method call — Rust এ `==`, `<`, `+` সব operator হলো trait method এর sugar। এজন্যই generic code এ `item > largest` চালাতে `T: PartialOrd` bound লাগে (উপরের `largest` দেখো) — compiler তখন জানে কোন method call করতে হবে।
 
 ### `From` আর `Into`
 
@@ -323,6 +377,9 @@ impl From<i32> for UserId {
 
 let id: UserId = 42i32.into();  // From → Into automatic
 ```
+
+> [!note]
+> **`.into()` এর ভেতরে কী?** কিছুই না — একটা call: `From::from(42i32)`। std তে একটা blanket impl আছে: `impl<T, U> Into<U> for T where U: From<T>` — মানে তুমি শুধু `From` লিখলেই `Into` free পাও। সব compile time এ resolve, runtime cost শূন্য। আরেকটা ব্যবহার দেখেছো error-handling chapter এ — `?` operator ভেতরে `From::from(err)` দিয়েই error convert করে।
 
 ## Trait Object বনাম Generic — সিদ্ধান্ত
 
@@ -343,11 +400,11 @@ fn print_all_dyn(items: &[Box<dyn Summary>]) {
 ```
 
 > [!tip]
-// সিদ্ধান্ত:
-// - একই type এর list → generic (`Vec<T>`)
-// - মিশ্র type এর list → trait object (`Vec<Box<dyn Trait>>`)
-// - Performance-critical → generic
-// - Flexibility-critical → trait object
+> // সিদ্ধান্ত:
+> // - একই type এর list → generic (`Vec<T>`)
+> // - মিশ্র type এর list → trait object (`Vec<Box<dyn Trait>>`)
+> // - Performance-critical → generic
+> // - Flexibility-critical → trait object
 
 ## বাস্তব উদাহরণ — Plugin System
 
@@ -393,7 +450,7 @@ fn main() {
 ```
 
 > [!example]
-// এখানে দুটো ভিন্ন type (UppercasePlugin আর ReversePlugin) একই `Vec` এ store করা হয়েছে — `Box<dyn Plugin>` দিয়ে। এটাই trait object এর শক্তি — runtime polymorphism, C++ এর virtual function এর মতো।
+> // এখানে দুটো ভিন্ন type (UppercasePlugin আর ReversePlugin) একই `Vec` এ store করা হয়েছে — `Box<dyn Plugin>` দিয়ে। এটাই trait object এর শক্তি — runtime polymorphism, C++ এর virtual function এর মতো।
 
 ## Python vs Rust — Abstraction তুলনা
 
@@ -406,7 +463,7 @@ fn main() {
 | Polymorphism | Implicit | `dyn Trait` or generic |
 
 > [!note]
-// Rust এ inheritance নেই! এটা deliberate decision। এর বদলে composition + trait ব্যবহার করো। এটা আরো flexible আর কম confusing।
+> // Rust এ inheritance নেই! এটা deliberate decision। এর বদলে composition + trait ব্যবহার করো। এটা আরো flexible আর কম confusing।
 
 ## Summary
 

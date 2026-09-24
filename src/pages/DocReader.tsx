@@ -20,6 +20,7 @@ import { useDocProgress } from '@/hooks/useDocProgress';
 import { useAuth } from '@/hooks/useAuth';
 import { docIcon, docAccent } from '@/components/docs/docMeta';
 import DocContent from '@/components/docs/DocContent';
+import Quiz from '@/components/docs/Quiz';
 import { cn } from '@/lib/utils';
 
 export default function DocReader() {
@@ -188,6 +189,8 @@ export default function DocReader() {
         </header>
 
         <DocContent body={lang === 'en' && chapter.bodyEn ? chapter.bodyEn : chapter.body} categoryId={category.id} chapterId={chapter.id} showNotes={isAuthed} />
+
+        <Quiz categoryId={category.id} chapterId={chapter.id} />
 
         <footer className="grid gap-3 border-t border-border/60 pt-6 sm:grid-cols-2">
           {prev ? (

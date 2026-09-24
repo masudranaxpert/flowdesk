@@ -1,0 +1,135 @@
+[
+  {
+    "id": "iterators-closures-1",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "Rust-এর `Iterator` trait-এ implement করতেই হয় এমন method কোনটা, আর `map`, `filter`, `sum`-এর মতো বাকি সব method কোথা থেকে আসে?",
+    "options": [
+      "শুধু `next(&mut self) -> Option<Self::Item>` — বাকি সব method trait-এর default implementation হিসেবে free পাওয়া যায়",
+      "`next()` আর `collect()` দুটোই — বাকিগুলো macro",
+      "প্রতিটা method নিজে নিজে implement করতে হয়",
+      "`map()` — এটাই মূল method, বাকিরা এর উপর ভিত্তি করে স্বয়ংক্রিয়ভাবে লেখা হয়ে যায়"
+    ],
+    "answer": 0,
+    "explanation": "`Iterator` trait-এর একমাত্র required method হলো `next()` — যা `Option<Self::Item>` return করে। `map`, `filter`, `fold`, `sum`, `find` সবই trait-এর default method; তাই শুধু `next()` দিলেই পুরো toolbox free (chapter-এর Counter উদাহরণ)।"
+  },
+  {
+    "id": "iterators-closures-2",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "`for val in v.into_iter() { ... }` চালানোর পর `v`-এর দশা কী?",
+    "options": [
+      "`v`-র ownership নেওয়া হয়েছে (consume) — লুপের পরে `v` আর ব্যবহার করা যাবে না",
+      "`v` valid আছে — `into_iter()` শুধু `&T` borrow করে",
+      "`v` valid আছে, কিন্তু শুধু mutable access করা যাবে",
+      "লুপের পর `v` আবার নতুন করে initialize হয়ে যায়"
+    ],
+    "answer": 0,
+    "explanation": "তিন রকম iteration: `.iter()` → `&T` (v বেঁচে থাকে), `.iter_mut()` → `&mut T`, আর `.into_iter()` → ownership নেয়, `v` consume হয়ে যায়। Python-এর মতো এক পথ না — Rust-এ ownership type-সচেতনভাবে বাছতে হয়।"
+  },
+  {
+    "id": "iterators-closures-3",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "এই কোডের output কী?",
+    "code": "fn main() {\n    let v = vec![1, 2, 3, 4, 5];\n    let doubled: Vec<i32> = v.iter().map(|x| x * 2).collect();\n    println!(\"{:?}\", doubled);\n    println!(\"{:?}\", v);\n}",
+    "options": [
+      "[2, 4, 6, 8, 10]\n[1, 2, 3, 4, 5]",
+      "[2, 4, 6, 8, 10]\nCompile error — v move হয়ে গেছে",
+      "[1, 2, 3, 4, 5]\n[1, 2, 3, 4, 5]",
+      "[2, 4, 6, 8, 10]"
+    ],
+    "answer": 0,
+    "explanation": "`v.iter()` শুধু `&T` borrow করে, ownership নেয় না — তাই map/collect-এর পরেও `v` valid, দুই লাইনই ছাপা যায়। Closure পায় `&i32`, `x * 2` চলে যায়; collect বানায় নতুন `[2, 4, 6, 8, 10]`।"
+  },
+  {
+    "id": "iterators-closures-4",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "`let it = v.iter().map(|x| x * 2);` — এই লাইনটা একা execute হলে সত্যিই কতটুকু কাজ হয়?",
+    "options": [
+      "একদম কিছুই না — `Map` নামের ছোট্ট adapter struct তৈরি হয় যেটা ভেতরের iterator আর closure ধরে রাখে শুধু; আসল কাজ শুরু হয় consumer (collect/sum/for লুপ) এ",
+      "নতুন একটা Vec allocate হয়ে সব element double হয়ে যায়",
+      "প্রতিটা element transform হয়ে যায়, কিন্তু Vec allocate হয় না",
+      "Compile error — `map`-এর পরে সাথে সাথেই `collect` চাই"
+    ],
+    "answer": 0,
+    "explanation": "Adapter গুলো lazy: `.map(...)` call করার মুহূর্তে শুধু একটা wrapper struct (`Map { iter, f }`) তৈরি হয় — পেঁয়াজের খোসার মতো একটার ভেতরে আরেকটা। `next()` টানা শুরু করে শুধু consumer; তাই মাঝপথে কোনো intermediate Vec তৈরি হয় না।"
+  },
+  {
+    "id": "iterators-closures-5",
+    "difficulty": "medium",
+    "type": "output",
+    "prompt": "এই কোডের output কী?",
+    "code": "fn main() {\n    let result: Vec<i32> = (1..=10)\n        .filter(|x| x % 2 == 0)\n        .map(|x| x * x)\n        .filter(|x| *x > 20)\n        .collect();\n    println!(\"{:?}\", result);\n}",
+    "options": [
+      "[36, 64, 100]",
+      "[4, 16, 36, 64, 100]",
+      "[2, 4, 6, 8, 10]",
+      "[16, 36, 64, 100]"
+    ],
+    "answer": 0,
+    "explanation": "ধাপে ধাপে: even → 2, 4, 6, 8, 10; square → 4, 16, 36, 64, 100; 20-এর বড় → 36, 64, 100। একটাই item পুরো chain একস্রোতে পার করে — মাঝপথে কোনো intermediate Vec নেই।"
+  },
+  {
+    "id": "iterators-closures-6",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "`let mut count = 0;` নিয়ে `let mut inc = || { count += 1; };` — এই closure-টা কোন trait-এর অধীনে environment capture করছে?",
+    "options": [
+      "`FnMut` — environment-কে `&mut` ধরে ধরে modify করে, তাই closure variable-টাকেও `mut` রাখতে হয়",
+      "`Fn` — শুধু immutable borrow, কিছু বদলায় না",
+      "`FnOnce` — count-এর ownership নিয়ে নেয়, একবারই call করা যায়",
+      "কোনো trait না — closure নিয়ম ছাড়াই capture করে"
+    ],
+    "answer": 0,
+    "explanation": "Compiler closure-এর body দেখে ঠিক করে: শুধু পড়লে `Fn` (&T), লিখলে `FnMut` (&mut T), value move করলে `FnOnce` (T) — সবচেয়ে কম restrictive-টা জেতে। এখানে `count += 1` লিখছে, তাই `FnMut`; ভেতরে closure-টা anonymous struct যার field হিসেবে `count`-এর `&mut` থাকে।"
+  },
+  {
+    "id": "iterators-closures-7",
+    "difficulty": "medium",
+    "type": "code",
+    "prompt": "Blank-এ কোন iterator method বসালে ছাপা হবে 15? (fold ছাড়া সবচেয়ে সংক্ষিপ্ত উপায়)",
+    "code": "fn main() {\n    let v = vec![1, 2, 3, 4, 5];\n    let total: i32 = v.iter().____;\n    println!(\"{}\", total);\n}",
+    "accept": ["sum()", "sum::<i32>()"],
+    "explanation": "`sum()` একটা consumer — ভেতরে `fold(0, |acc, x| acc + x)`-কেই চালায়। Type annotation (`: i32` বা turbofish) বলে দেয় কোন সংখ্যায় জমা হবে। `product()`-ও একই পথে fold ব্যবহার করে।"
+  },
+  {
+    "id": "iterators-closures-8",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "\"Iterator chain zero-cost\" — এর মানে ঠিক কোনটা?",
+    "options": [
+      "প্রতিটা adapter আলাদা concrete type, তাই monomorphization + inlining-এর পর compiler পুরো chain-কে একটাই plain for লুপ বানিয়ে ফেলে — হাতে লেখা লুপের সমান machine code",
+      "Chain গুলো runtime-এ JIT compile হয় বলে দ্রুত হয়",
+      "Element গুলো আসলে কখনো compute-ই হয় না, চিরকাল lazy থেকে যায়",
+      "Rust chain-এ heap allocation ব্যবহার করে না বলেই বিনামূল্যে"
+    ],
+    "answer": 0,
+    "explanation": "প্রতিটা adapter (Map, Filter...) আলাদা concrete type — তাই compiler সব call inline করে পুরো chain-কে একটাই optimized loop-এ নামিয়ে আনে; একটা function call-ও বাকি থাকে না। Lazy মানে কাজ হয় না তা না — consumer-এ ঠিকই হয়, শুধু খরচ ছাড়াই। Closure যে আলাদা type, তাও এর একটা কারণ।"
+  },
+  {
+    "id": "iterators-closures-9",
+    "difficulty": "hard",
+    "type": "code",
+    "prompt": "নিচের `Counter` iterator 1 থেকে 5 পর্যন্ত সংখ্যা দেবে (এরপর None)। Blank-এ কী বসবে?",
+    "code": "struct Counter {\n    count: u32,\n}\n\nimpl Iterator for Counter {\n    type Item = u32;\n\n    fn next(&mut self) -> Option<Self::Item> {\n        if self.count < 5 {\n            self.count += 1;\n            ____\n        } else {\n            None\n        }\n    }\n}\n\nfn main() {\n    let result: Vec<u32> = Counter { count: 0 }\n        .map(|x| x * 2)\n        .filter(|x| x > 4)\n        .collect();\n    println!(\"{:?}\", result); // [6, 8, 10]\n}",
+    "accept": ["Some(self.count)"],
+    "explanation": "count আগেই বাড়ানো হয়েছে, তাই প্রথম call-এ পাওয়া যাবে 1 — ফেরত দিতে হবে `Some(self.count)`। এভাবে 1, 2, 3, 4, 5 এরপর None; `map(|x| x * 2)` → 2, 4, 6, 8, 10; `filter(|x| x > 4)` → [6, 8, 10]। শুধু `next()` লিখলেই এই সব adapter free।"
+  },
+  {
+    "id": "iterators-closures-10",
+    "difficulty": "medium",
+    "type": "output",
+    "prompt": "এই কোডের output কী?",
+    "code": "fn main() {\n    let mut count = 0;\n    let mut increment = || {\n        count += 1;\n    };\n    increment();\n    increment();\n    increment();\n    println!(\"{}\", count);\n}",
+    "options": [
+      "3",
+      "0",
+      "2",
+      "Compile error — closure-এর ভেতরে বাইরের variable বদলানো যায় না"
+    ],
+    "answer": 0,
+    "explanation": "Closure-টা `count`-কে `&mut` ধরে ধরে (FnMut) বাড়ায় — তিনবার call-এ 3। Closure আসলে একটা anonymous struct যার field হিসেবে `count`-এর mutable borrow থাকে, তাই ভেতরের পরিবর্তন বাইরের `count`-তেই দেখা যায়। Rust-এ environment modify করা closure নিষিদ্ধ না — শুধু FnMut হতে হয়।"
+  }
+]

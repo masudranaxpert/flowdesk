@@ -1,0 +1,140 @@
+[
+  {
+    "id": "strings-1",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "`String` ভেতরে আসলে কী?",
+    "options": [
+      "UTF-8 encoded byte-এর growable vector — মূলত `Vec<u8>` wrapper; pointer, capacity, len (64-bit-এ মোট ২৪ byte)",
+      "Character-এর linked list",
+      "UTF-16 code unit array — Python-এর মতো",
+      "Stack-এ রাখা fixed-size byte array"
+    ],
+    "answer": 0,
+    "explanation": "String হলো heap-allocated, growable `Vec<u8>`-ই — শুধু বাধ্য মানে UTF-8 valid। ভেতরে (pointer, capacity, len) — তাই সে ২৪ byte, আসল byte গুলো heap-এ। Mutable buffer হওয়ায় append সস্তা।"
+  },
+  {
+    "id": "strings-2",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "`&str` ভেতরে কী, আর কতটুকু জায়গা নেয় (64-bit)?",
+    "options": [
+      "পুরো string-এর copy — string যত বড়, তত বড়",
+      "Fat pointer: data-র pointer + length — মোট ১৬ byte; data-র ownership নেয় না",
+      "একটা খালি pointer — ৮ byte, length আলাদা কোথাও থাকে",
+      "Reference-counted handle — ২৪ byte"
+    ],
+    "answer": 1,
+    "explanation": "`&str` string slice — (pointer, length) জোড়া, ১৬ byte। Ownership না নিয়ে borrow করে। `&String → &str` রূপান্তরটা deref coercion — শুধু fat pointer তৈরি হয়, data copy হয় না, খাঁটি zero cost।"
+  },
+  {
+    "id": "strings-3",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "Rust-এ `s[0]` দেওয়াই নেই — কেন?",
+    "options": [
+      "String heap-এ থাকে, stack থেকে index করা যায় না",
+      "Index হিসেবে `usize` ব্যবহার করা নিষিদ্ধ",
+      "Ownership না থাকলে index করা যায় না",
+      "UTF-8-এ একটা character একাধিক byte-এর হতে পারে — byte index char-এর মাঝখানে পড়তে পারে; আর i-তম character পেতে শুরু থেকে O(i) হাঁটতে হয়, তাই O(1) random access-এর মিথ্যা সুবিধা না দেওয়াই সৎ"
+    ],
+    "answer": 3,
+    "explanation": "\"বাংলা\"-র প্রতিটা character ৩ byte — byte index দিলে character-এর মাঝে কাট পড়ত। তাই Rust indexing আটকে দিয়েছে; দরকার হলে `chars()` (Unicode scalar) বা `bytes()` দিয়ে iterate করো, slice লাগলে character boundary-তে কাটো।"
+  },
+  {
+    "id": "strings-4",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "এরপর `s1` আর ব্যবহার করা যায় না — কেন?",
+    "code": "let s1 = String::from(\"Hello, \");\nlet s2 = String::from(\"world!\");\nlet s3 = s1 + &s2;",
+    "options": [
+      "`Add<&str> for String`-এর `add` প্রথম operand-টা by value (`self`) নেয় — s1-এর নিজের buffer-এই s2 append হয়, নতুন allocation বাঁচে; দাম হলো s1-এর ownership move হওয়া",
+      "`+` operator সব ক্ষেত্রেই দুটো operand-এর deep copy বানায়",
+      "s2 borrow হওয়ায় s1-ও automatic borrow হয়ে যায়",
+      "Concat-এর পর compiler পুরনো দুটো variable-ই drop করে দেয়"
+    ],
+    "answer": 0,
+    "explanation": "ভেতরে প্রায়: `fn add(mut self, other: &str) { self.push_str(other); self }` — s1-এর buffer-এই লেখা হয় বলে নতুন allocation লাগে না, কিন্তু by value নেওয়ার কারণে s1 move হয়ে যায়। সবাইকে valid রাখতে `format!` ব্যবহার করো — সে নতুন String বানায়, কোনো operand-এর ownership নেয় না।"
+  },
+  {
+    "id": "strings-5",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "`\"straße\".to_uppercase()` কী দেয়, আর allocation-এর গল্পটা কী?",
+    "options": [
+      "\"STRAßE\" — শুধু ASCII অংশ flip হয়, কোনো allocation নেই",
+      "\"STRASSE\" — 'ß' বদলে \"SS\" হয়ে byte দৈর্ঘ্যই বদলে যায়; উত্তরের size আগে থেকে জানা যায় না, তাই নতুন String allocate করতে হয়",
+      "\"STRASSE\", কিন্তু মূল string-এর buffer-এই in-place লেখা হয়",
+      "Compile error — uppercase non-ASCII string-এ চলে না"
+    ],
+    "answer": 1,
+    "explanation": "`to_uppercase()` শুধু ASCII flip না — Unicode case mapping table খোঁজে, আর uppercase করলে byte length বদলাতে পারে ('ß' → \"SS\")। তাই এটা সবসময় নতুন String allocate করে। তুলনায় `trim()` শুধু slice ফেরত দেয় — খাঁটি zero cost।"
+  },
+  {
+    "id": "strings-6",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "প্রোগ্রামটা কী প্রিন্ট করবে?",
+    "code": "fn main() {\n    let mut s = String::from(\"foo\");\n    s.push_str(\"bar\");\n    s.push('!');\n    println!(\"{}\", s);\n}",
+    "options": [
+      "foo",
+      "foobar",
+      "foobar!",
+      "Compile error — `push`-এ String লাগে"
+    ],
+    "answer": 2,
+    "explanation": "`push_str` একটা `&str` append করে, `push` একটা `char`। String mutable buffer — শেষে লেখে: \"foo\" → \"foobar\" → \"foobar!\"।"
+  },
+  {
+    "id": "strings-7",
+    "difficulty": "medium",
+    "type": "output",
+    "prompt": "প্রোগ্রামটা কী প্রিন্ট করবে?",
+    "code": "fn main() {\n    let bangla = String::from(\"বাংলা\");\n    println!(\"{} {}\", bangla.len(), bangla.chars().count());\n}",
+    "options": [
+      "5 5",
+      "5 15",
+      "15 5",
+      "15 15"
+    ],
+    "answer": 2,
+    "explanation": "`len()` বলে byte count — বাংলা প্রতিটা character UTF-8-এ ৩ byte, ৫ char × ৩ byte = ১৫। `chars().count()` পুরো string decode করে আসল character সংখ্যা গোনে — ৫ (ব, া, ং, ল, া)। \"কয়টা character\" কোথাও stored থাকে না — গোনা মানেই পুরো string ঘাঁটা, O(n)।"
+  },
+  {
+    "id": "strings-8",
+    "difficulty": "hard",
+    "type": "output",
+    "prompt": "এই code-এর কী হবে?",
+    "code": "fn main() {\n    let s = String::from(\"নমস্কার\");\n    let slice = &s[0..4];\n    println!(\"{}\", slice);\n}",
+    "options": [
+      "নম",
+      "ন",
+      "Compile error — slice-এ index দেওয়া যায় না",
+      "Runtime panic — index 4 'ম' character-টার মাঝখানে পড়ে, character boundary না"
+    ],
+    "answer": 3,
+    "explanation": "Slice করার আগে দুটো check চলে: `start <= end`, আর দুই index-ই character boundary-তে (lead byte-এ) আছে কিনা। 'ন' byte 0–2, 'ম' byte 3–5 — 4 মাঝখানে, তাই runtime panic। `&s[0..3]` হলে \"ন\" পেতে — সেটাও শুধু zero-cost slice।"
+  },
+  {
+    "id": "strings-9",
+    "difficulty": "easy",
+    "type": "code",
+    "prompt": "Blank-এ কী বসালে String থেকে খরচবিহীন `&str` borrow হবে?",
+    "code": "fn main() {\n    let s = String::from(\"hello\");\n    let borrowed: &str = ____;\n    println!(\"{}\", borrowed);\n}",
+    "accept": [
+      "&s"
+    ],
+    "explanation": "`&s` — `&String` থেকে `&str` হওয়া deref coercion (`String` implement করে `Deref<Target = str>`)। কোনো data copy হয় না, শুধু (pointer, length) fat pointer তৈরি হয় — zero cost borrow।"
+  },
+  {
+    "id": "strings-10",
+    "difficulty": "medium",
+    "type": "code",
+    "prompt": "Blank-এ কোন iterator method বসালে `chars` Vec-এর ownership নিয়ে \"hello\" String বানানো যাবে?",
+    "code": "fn main() {\n    let chars = vec!['h', 'e', 'l', 'l', 'o'];\n    let s: String = chars.____().collect();\n    println!(\"{}\", s);\n}",
+    "accept": [
+      "into_iter"
+    ],
+    "explanation": "`into_iter()` element-এর ownership-সহ iterator দেয় — `chars` এরপর ব্যবহার করা যাবে না, String বানাতেই element গুলো খরচ হয়। `iter()` হলে reference দিত। `collect()` target type annotation (`let s: String`) দেখে বুঝে নেয় কী বানাতে হবে।"
+  }
+]

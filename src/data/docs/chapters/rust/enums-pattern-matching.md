@@ -26,6 +26,9 @@ fn main() {
 }
 ```
 
+> [!note]
+> **ভেতরে কী হচ্ছে?** এই field-less enum টা runtime এ আসলে **একটা ছোট integer** মাত্র — ৪টা variant, তাই `u8` ই যথেষ্ট: `std::mem::size_of::<Direction>()` দেবে `1`। `Direction::Up` মানে ভেতরে `0`, `Down` মানে `1` — এই সংখ্যাটার নাম **discriminant**। আর `match` compile হয় C এর `switch` এর মতো — discriminant পড়ে সরাসরি ঠিক branch এ jump। C++ enum থেকে পার্থক্য: সেখানে ভুল integer ঢুকিয়ে দিলে UB, এখানে `Direction` type ছাড়া অন্য কিছু ঢোকানোই সম্ভব না।
+
 ## Enum এ Data — Rust এর ম্যাজিক
 
 Rust এর enum শুধু label নয় — প্রতিটা variant এ data থাকতে পারে:
@@ -61,6 +64,26 @@ fn process(msg: Message) {
 > [!tip]
 > এটাই Rust এর সবচেয়ে বড় innovation! Python/C++ এ এটা করতে হলে inheritance বা tagged union লাগতো। Rust এ enum একই সাথে type-safe আর data-carrying। C++ এর `std::variant` বা Python এর Union type এর অনেক বেশি powerful।
 
+### Enum ভেতরে Memory তে কীভাবে সাজানো?
+
+Compiler একটা enum রাখে **tag + payload union** আকারে:
+
+```text
+Message এর জন্য:
+
+┌───────────────┬─────────────────────────────────┐
+│ discriminant  │ payload (union)                 │
+│ (কোন variant) │ সব variant একই জায়গা share করে  │
+└───────────────┴─────────────────────────────────┘
+
+Quit          → tag=0, payload ফাঁকা
+Move {x, y}   → tag=1, payload: (i32, i32)
+Write(String) → tag=2, payload: String (২৪ byte)
+```
+
+- একসময়ে একটাই variant থাকে, তাই payload জায়গাটা সব variant **share** করে — union এর মতো। ধারণাটা: size = tag + সবচেয়ে বড় variant (+ alignment padding); উপরের `Message` এ সবচেয়ে বড় variant `Write(String)` (২৪ byte)।
+- তবে বাস্তবে `repr(Rust)` এর exact layout compiler নিজে ঠিক করে — আর সে চালাক: `String`-এর মতো payload-এ niche থাকলে (pointer কখনো null না) **tag আলাদা করে বসায়ই না**, ভেতরের ফাঁকা bit pattern এ encode করে দেয়। তাই `size_of::<Message>()` মাপলে পাবে মাত্র **২৪ byte** — `String`-এর সমান, tag-এর জন্য একটা extra byte-ও নেই। নিচে `Option`-এর niche optimization এই একই ট্রিকের বিশেষ রূপ।
+
 ## `Option<T>` — Null এর সমাধান
 
 Rust এ `null` নেই! এর বদলে `Option<T>` type আছে। Tony Hoare (null এর inventor) নিজেই null কে "billion dollar mistake" বলেছেন। Rust এটা fix করেছে:
@@ -71,6 +94,15 @@ enum Option<T> {
     None,      // value নেই
 }
 ```
+
+
+> [!note]
+> **`Some(42)`-র গোড়ার গল্প:** আগের chapter গুলোতে `Some(42)` ব্যবহার করেছিলাম বলেছিলাম "পূর্ণ গল্প এখানে" — এই নাও। `Some` আর `None` কোনো function বা keyword না — উপরের enum-এর **দুটো variant**, আর prelude-এর কল্যাণে বিনা import-এ পাওয়া যায়। মজার অংশ: data বহন করা variant (`Some(T)`) নিজেই একটা **ছোট function** — `Some(42)` লিখলে ভেতরে ৪২ ঢুকিয়ে tagged value বানিয়ে দেয়, ঠিক function call-এর মতোই (চলবেও `let f = Some; let x = f(42);` — সত্যি!)। আর কেন দরকার: Rust-এ null নেই বলে "মান না-থাকা" একটা **type-এ বাঁধা অবস্থা** — ফাংশন `Option<String>` return করলে caller কে `Some`/`None` দুটোই সামলাতেই হবে, compiler জোর করাবে। Python-এ `None` return করলে ভুলে গেলে পরে কোথাও `AttributeError` — Rust-এ সেই ভুল করার সুযোগই নেই।
+
+এই ছোট enum এর layout টা কিন্তু চমকপ্রদ:
+
+> [!note]
+> **Niche optimization:** `&T` এর জগতে `0` (null address) কখনো valid reference হতে পারে না — Rust সেই ফাঁকা মানটাকে (niche) কাজে লাগায়। `None` বোঝাতে ভেতরের pointer টাকেই `0` লিখে দেয় — তাই **`Option<&T>` এর size `&T` এর সমান** (64-bit এ ৮ byte), আলাদা tag byte লাগে না! `Option<Box<T>>`, `Option<NonZeroU32>` ও একই সুবিধা পায়। বিপরীতে `Option<i32>` — প্রতিটা bit pattern ই valid মান, ফাঁকা কিছু নেই — তাই আলাদা tag লাগে: size হয় ৮ byte, value ৪ byte আর tag বসে বাকি padding এ। মানে `Option` ভারী কিছু না — বেশিরভাগ ক্ষেত্রেই zero-cost abstraction।
 
 ### ব্যবহার
 
@@ -116,6 +148,27 @@ x.and_then(|v| Some(v + 1))  // Some(6)
 x.filter(|v| *v > 3)         // Some(5)
 ```
 
+এই helper গুলোর ভেতরে সবাই একই কাঠামো — variant check + সেই অনুযায়ী কাজ:
+
+```rust
+// ভেতরে মোটামুটি এমন (simplified):
+pub fn unwrap(self) -> T {
+    match self {
+        Some(v) => v,
+        None => panic!("called `Option::unwrap()` on a `None` value"),
+    }
+}
+
+pub fn map<U, F: FnOnce(T) -> U>(self, f: F) -> Option<U> {
+    match self {
+        Some(v) => Some(f(v)),
+        None => None,
+    }
+}
+```
+
+কোনো exception machinery নেই — প্রতিটা method একটা `match`: tag check + payload extract। `and_then` (flatMap), `filter`, `unwrap_or` সব একই ছাঁচে গড়া।
+
 ## `Result<T, E>` — Error Handling
 
 Error handling এর জন্য Rust এ `Result` type:
@@ -150,6 +203,8 @@ fn main() {
 > [!note]
 > Error handling নিয়ে পরের chapter গুলোতে বিস্তারিত আলোচনা হবে। আপাতত জেনে রাখো — `Result` আর `Option` দুটোই enum। Rust এ error আর null দুটোই enum দিয়ে handle হয়।
 
+`Result<T, E>` এর layout ও ঠিক সেই একই ছাঁচের — tag + union। `Result<&T, &E>` ও niche optimization পায়, size থাকে reference এর সমান।
+
 ## Pattern Matching — `match`
 
 `match` হলো Rust এর সবচেয়ে শক্তিশালী tool। এটা C/C++ এর `switch` এর অনেক বেশি:
@@ -174,6 +229,9 @@ fn area(shape: Shape) -> f64 {
     }
 }
 ```
+
+> [!note]
+> **`match` কেন exhaustive check করে, ভেতরে কী হয়?** Compiler এর কাছে একটা **exhaustiveness checker** আছে — এটা গাণিতিক প্রমাণের মতো কাজ করে: তোমার pattern গুলো দিয়ে সব সম্ভাব্য value cover হয় কিনা হিসাব করে, আর কেউ বাদ পড়লে error এ **ঠিক কোন variant miss হলো** নাম ধরে বলে দেয়। এই check শুধু safety না — performance ও দেয়: সব case cover থাকলে compiler জানে কোনো fallback path দরকার নেই, তাই উপরের `Shape` এর মতো match compile হয় সরাসরি **jump table** এ (tag পড়ে index হিসাব, তারপর ওই branch এ লাফ) — `if-else` chain এর চেয়ে অনেক দ্রুত। Guard (`if t < 0.0`) ঢুকলে jump table আর সম্ভব না, তখন হয় সাজানো branch chain।
 
 ### Binding আর Guards
 
@@ -245,6 +303,20 @@ while let Some(top) = stack.pop() {
 
 > [!tip]
 > `if let` ব্যবহার করো যখন শুধু একটা case দরকার। পুরো exhaustive matching দরকার হলে `match` ব্যবহার করো। `match` তোমাকে সব case cover করতে বাধ্য করবে — safety guarantee।
+
+ভেতরের কথা: `if let` আসলে match এরই **syntactic sugar** — compiler দুটোকে একইভাবে compile করে:
+
+```rust
+// সাধারণ রূপ (sugar প্রসারিত হলে):
+if let PATTERN = value { body }
+// হয়ে যায়:
+match value {
+    PATTERN => body,
+    _ => {}
+}
+```
+
+`while let Some(top) = stack.pop()` ও তাই — `pop()` প্রতি ঘূর্ণনে একটা `Option` return করে, loop সেটার tag check করে; `None` এলেই থেমে যায়। খরচ প্রতি iteration এ একটা comparison — ব্যস।
 
 ## Enum এ Method — `impl`
 

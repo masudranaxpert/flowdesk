@@ -1,0 +1,134 @@
+[
+  {
+    "id": "async-await-1",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "async fn fetch_data() -> String-কে fetch_data(); লিখে call করলেই কি তার ভেতরের কাজ শুরু হয়?",
+    "options": [
+      "হ্যাঁ — call করামাত্র background thread-এ চলা শুরু হয়ে যায়",
+      "হ্যাঁ — compiler-এর বানানো state machine সাথে সাথে poll হয়ে যায়",
+      "না — future lazy; .await বা spawn না করা পর্যন্ত কোনো কাজই শুরু হয় না",
+      "শুধু release build-এ চলে যায়, debug-এ .await লাগে"
+    ],
+    "answer": 2,
+    "explanation": "async fn call করা মানে শুধু compiler-এর বানানো state machine enum-টার value হিসেবে পাওয়া — এখনো একবারও poll হয়নি, কোনো কাজ শুরু হয়নি। .await করলে executor future-টাকে poll করে, তখনই execution চলে। এজন্যই future-কে lazy বলে।"
+  },
+  {
+    "id": "async-await-2",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "প্রোগ্রামটা কী print করবে?",
+    "code": "use tokio::select;\nuse tokio::time::{sleep, Duration};\n\n#[tokio::main]\nasync fn main() {\n    let result = select! {\n        _ = sleep(Duration::from_millis(100)) => \"Timeout 1 won\",\n        _ = sleep(Duration::from_millis(50)) => \"Timeout 2 won\",\n    };\n\n    println!(\"{}\", result);\n}",
+    "options": [
+      "Timeout 1 won",
+      "Timeout 2 won",
+      "দুটোই print হয়",
+      "প্রতিবার random ফলাফল — fairness-এ order ঘোরে বলে যেকোনোটা জিততে পারে"
+    ],
+    "answer": 1,
+    "explanation": "select! branch-গুলোর future পালা করে poll করে, যেটা আগে Ready হয় তার arm চলে। ৫০ms-এর timer সবসময় ১০০ms-এর আগে শেষ হবে, তাই Timeout 2 won। fairness-এর জন্য poll-এর শুরুর order প্রতিবার ঘোরে ঠিকই, কিন্তু এখানে deadline-এর তফাত এত বড় যে ফলাফল নির্দিষ্ট।"
+  },
+  {
+    "id": "async-await-3",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "async fn compile হলে compiler আসলে কী বানায়?",
+    "options": [
+      "প্রতিটা async fn-এর জন্য একটা OS thread বরাদ্দ থাকে, sleep-এ ঘুমিয়ে যায়",
+      "সব async fn স্বয়ংক্রিয়ভাবে Box<dyn Future> হয়ে heap-এ চলে যায়",
+      "stackful coroutine — প্রতিটা task-এর নিজস্ব ছোট stack allocate হয়",
+      "পুরো body-একটা enum state machine — প্রতিটা .await একটা suspend point/state, আর future-এর size সবচেয়ে বড় variant-এর সমান করেই compile-এ জানা যায়"
+    ],
+    "answer": 3,
+    "explanation": "chapter-এর FetchData enum-এর মতো: প্রতিটা .await একটা state, সেখানে থামলে যা যা দরকার তা variant-এ জমা থাকে। এটা stack-less coroutine — future-এর size আগে থেকেই জানা, তাই heap allocation লাগে না; শুধু spawn বা Box::pin করলে তবেই heap-এ যায়।"
+  },
+  {
+    "id": "async-await-4",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "কোনো future poll করে Poll::Pending return করলে সে পরে আবার poll হয় কীভাবে?",
+    "options": [
+      "executor নির্দিষ্ট interval-এ সব Pending future বারবার poll করে (busy polling)",
+      "future নিজেই একটা thread spawn করে সেখানে অপেক্ষা করে",
+      "Pending দেওয়ার আগে future নিজের জাগানোর টিকিট — cx.waker()-এর clone — I/O driver বা timer-এর কাছে রেখে দেয়; ঘটনা ঘটলে ওরা wake() করে, task আবার run queue-তে ঢোকে",
+      "Pending হলে task-টা ফেলে দেওয়া হয়, নতুন করে আবার spawn করতে হয়"
+    ],
+    "answer": 2,
+    "explanation": "Waker আসলে একটা ছোট vtable-ভিত্তিক callback object। socket-এ data না এলে future ওই Waker-টা epoll-ভিত্তিক I/O driver-এর কাছে রেখে Pending দেয়; data এলে বা timer-এ সময় হলে wake() হয় এবং task আবার executor-এর queue-তে ঢুকে পরের poll-এর জন্য অপেক্ষা করে। Pending অবস্থায় task কোনো CPU খায় না — busy-waiting নেই।"
+  },
+  {
+    "id": "async-await-5",
+    "difficulty": "medium",
+    "type": "output",
+    "prompt": "কী print হবে?",
+    "code": "use tokio::time::{sleep, Duration};\n\nasync fn task(name: &'static str, ms: u64) -> &'static str {\n    sleep(Duration::from_millis(ms)).await;\n    name\n}\n\n#[tokio::main]\nasync fn main() {\n    let (x, y) = tokio::join!(task(\"fast\", 10), task(\"slow\", 20));\n    println!(\"{} {}\", x, y);\n}",
+    "options": [
+      "fast slow",
+      "slow fast",
+      "অনিশ্চিত — কে আগে শেষ হয় তার উপর নির্ভর করে",
+      "compile error — join! একসাথে দুইটা future await করতে পারে না"
+    ],
+    "answer": 0,
+    "explanation": "join! ফলাফলের tuple দেয় branch-গুলো যে ক্রমে লেখা সেই ক্রমেই — completion order-এ নয়। ভেতরে future দুটোকে পালা করে একই thread-এ poll করা হয় (thread yield হয় না), মোট সময় max(10ms, 20ms) = 20ms। slow পরে শেষ হলেও tuple-এর প্রথম ঘরে fast-এর ফলাফলই বসে।"
+  },
+  {
+    "id": "async-await-6",
+    "difficulty": "medium",
+    "type": "code",
+    "prompt": "user-এর ভেতরে User 1 String-টা পেতে blank-এ কী বসাতে হবে?",
+    "code": "async fn fetch_user(id: u32) -> String {\n    format!(\"User {}\", id)\n}\n\n#[tokio::main]\nasync fn main() {\n    let user = fetch_user(1)____;\n    println!(\"{}\", user);\n}",
+    "accept": [".await"],
+    "explanation": "fetch_user(1) call করলে শুধু future পাওয়া যায় — কাজ শুরুই হয়নি। .await করলে executor সেটাকে poll করে আর user পায় String মান। await ছাড়া user হতো future-ই — println!-এ display করতে গিয়ে compile error আসত।"
+  },
+  {
+    "id": "async-await-7",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "tokio::spawn-এ দেওয়া future কেন Send + 'static হতে হবে?",
+    "options": [
+      "সব tokio worker আলাদা process-এ চলে — process-এর মধ্যে data পাঠানো যায় না",
+      "task-টা heap-এ wrap হয়ে worker-দের queue-তে ঢোকে, আর work-stealing scheduler-এ যেকোনো worker thread-এ সরে যেতে পারে — যেখানে বানানো হয়েছে সেখানেই শেষ হবে এমন guarantee নেই, তাই borrowed data ধরে রাখা চলে না",
+      "Send লাগে heap allocation করার জন্য, 'static লাগে waker register করার জন্য",
+      "future সবসময় main thread-এই শেষ হয় — 'static শুধু একটা formal শর্ত"
+    ],
+    "answer": 1,
+    "explanation": "spawn ভেতরে future-টাকে একটা task struct-এ মোড়ায় (task header + future + result slot) আর heap-এ allocate করে — মাত্র কয়েকশো byte, তাই ১০,০০০ task-ও কয়েক MB। task যেকোনো worker thread-এ poll হতে পারে বলে future-টা thread-এর মধ্যে সরানোর যোগ্য (Send) আর বাইরের stack-এর reference ছাড়া বাঁচতে সক্ষম ('static) হতে হয়।"
+  },
+  {
+    "id": "async-await-8",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "select!-এ একটা branch Ready হয়ে গেলে বাকি branch-এর future-দের কী হয়?",
+    "options": [
+      "background-এ চলতেই থাকে, শুধু ফলাফল discard হয়",
+      "freeze হয়ে memory-তে অপেক্ষা করে — পরের select!-এ সেখান থেকেই resume হয়",
+      "executor ওদের জন্য নতুন task spawn করে দেয়",
+      "বাকি branch-এর future গুলো drop হয়ে যায় — অসম্পূর্ণ কাজ বাতিল"
+    ],
+    "answer": 3,
+    "explanation": "select! সব branch-এর future পালা করে poll করে (fairness-এর জন্য order প্রতিবার ঘোরে); যেটা আগে Ready হয় তার arm চলে আর বাকি future গুলো drop হয়ে যায়। timeout function-টাও আসলে তোমার future + একটা timer future-এর উপর এই select-ই — deadline আগে গেলে Err(Elapsed), কাজ আগে শেষ হলে Ok(value)।"
+  },
+  {
+    "id": "async-await-9",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "tokio::fs::File দিয়ে read করলে আসলে ভেতরে কী চলে?",
+    "options": [
+      "io_uring/epoll দিয়ে সত্যিকারের non-blocking ফাইল read হয়",
+      "executor worker thread-ই blocking read করে ফেলে — একাধিক read-এ scheduler আটকে যায়",
+      "সাধারণ blocking ফাইল syscall-গুলো (open, read, write) আলাদা একটা blocking threadpool-এ পাঠানো হয় — spawn_blocking-এর মতোই; এটা কোনো magic non-blocking file I/O না",
+      "ফাইলটা kernel page cache-তে mmap করা হয়, syscall-ই লাগে না"
+    ],
+    "answer": 2,
+    "explanation": "tokio::fs-এ রহস্য কমই আছে — blocking ফাইল syscall গুলো আলাদা blocking threadpool-এ যায়, আর .await করার সময় তোমার task শুধু Pending হয়ে বসে থাকে, executor thread আটকে থাকে না। অনেক concurrent ফাইল read করলে সেই threadpool-ই bottleneck হবে — এজন্যই টেবিলে File I/O-কে async বা thread দুটোই লেখা।"
+  },
+  {
+    "id": "async-await-10",
+    "difficulty": "hard",
+    "type": "code",
+    "prompt": "consumer loop-এ blank-এ কী বসালে producer-এর পাঠানো ০ থেকে ৪ পর্যন্ত সব message পাওয়া যাবে?",
+    "code": "use tokio::sync::mpsc;\n\n#[tokio::main]\nasync fn main() {\n    let (tx, mut rx) = mpsc::channel(100);\n\n    tokio::spawn(async move {\n        for i in 0..5 {\n            tx.send(i).await.unwrap();\n            println!(\"Sent: {}\", i);\n        }\n    });\n\n    while let Some(msg) = rx.____().await {\n        println!(\"Received: {}\", msg);\n    }\n}",
+    "accept": ["recv"],
+    "explanation": "tokio-র mpsc-তে rx.recv().await — queue খালি হলে Pending হয়ে অপেক্ষা করে, সব sender drop হলে None দেয়, তাই while let Some(msg) loop ঠিকভাবে শেষ হয়। channel(100)-এর ring buffer + permit ব্যবস্থাই backpressure — buffer ভর্তি হলে send().await নিজেই অপেক্ষা করে, memory ফুলে ওঠে না।"
+  }
+]

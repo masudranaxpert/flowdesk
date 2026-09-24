@@ -1,0 +1,134 @@
+[
+  {
+    "id": "error-handling-1",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "নিচের কোন পরিস্থিতিটা recoverable error — মানে `Result` দিয়ে handle করা উচিত?",
+    "options": [
+      "ফাইল খুলতে গিয়ে পাওয়া যায়নি (file not found)",
+      "Array-র বৈধ সীমার বাইরে index access",
+      "Program-এর এমন state যেটা কখনোই হওয়ার কথা না (impossible state)",
+      "Programmer-এর logic mistake"
+    ],
+    "answer": 0,
+    "explanation": "Chapter-এর টেবিল অনুযায়ী recoverable error (expected failure) — file not found, network error, parse error — এগুলো `Result` দিয়ে handle হয়। Array out of bounds বা impossible state হলো programmer mistake — ওগুলোর জায়গা `panic!`।"
+  },
+  {
+    "id": "error-handling-2",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "`unwrap()` আর `expect(\"msg\")` এর মধ্যে আসল পার্থক্য কী?",
+    "options": [
+      "দুটোই Err-তে panic করে, কিন্তু `expect` panic message-এর শুরুতে তোমার দেওয়া msg বসায়",
+      "`expect` কখনো panic করে না, তাই production-safe",
+      "`unwrap` শুধু Option-এ চলে, `expect` শুধু Result-এ",
+      "কোনো পার্থক্য নেই — দুটো হুবহু একই কাজ করে, শুধু নাম আলাদা"
+    ],
+    "answer": 0,
+    "explanation": "ভেতরে দুটোই একই match: `Ok(v) => v, Err(e) => panic!(...)`। পার্থক্য শুধু message-এ — `unwrap` দেয় \"called `unwrap()` on an `Err` value\", আর `expect(\"msg\")` শুরুতে তোমার msg বসায়। দুটোই panic করতে পারে, তাই production-এ avoid করো — শুধু test/prototype-এ।"
+  },
+  {
+    "id": "error-handling-3",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "এই কোডের stdout output কী?",
+    "code": "fn divide(a: i32, b: i32) -> Result<i32, String> {\n    if b == 0 {\n        Err(String::from(\"division by zero\"))\n    } else {\n        Ok(a / b)\n    }\n}\n\nfn main() {\n    match divide(10, 2) {\n        Ok(v) => println!(\"ok: {}\", v),\n        Err(e) => println!(\"err: {}\", e),\n    }\n    match divide(1, 0) {\n        Ok(v) => println!(\"ok: {}\", v),\n        Err(e) => println!(\"err: {}\", e),\n    }\n}",
+    "options": [
+      "ok: 5\nerr: division by zero",
+      "ok: 5\nok: 0",
+      "err: division by zero\nerr: division by zero",
+      "প্রথম match-এ 5 ছাপার পর দ্বিতীয় match-এ panic হয়"
+    ],
+    "answer": 0,
+    "explanation": "`divide(10, 2)` → `Ok(5)`, তাই `ok: 5`। `divide(1, 0)` → `Err(\"division by zero\")`, তাই `err: division by zero`। `Result` হাতে থাকলে panic নয় — match-ই শান্তভাবে নিজের arm বেছে নেয়।"
+  },
+  {
+    "id": "error-handling-4",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "`file.read_to_string(&mut s)?;` — compiler এই `?`-কে মোটামুটি কোন কোডে expand করে?",
+    "options": [
+      "match file.read_to_string(&mut s) { Ok(val) => val, Err(err) => return Err(From::from(err)) }",
+      "match file.read_to_string(&mut s) { Ok(val) => val, Err(err) => panic!(\"{}\", err) }",
+      "file.read_to_string(&mut s).unwrap()",
+      "match file.read_to_string(&mut s) { Ok(val) => val, Err(err) => return Err(err) } — কোনো conversion ছাড়া"
+    ],
+    "answer": 0,
+    "explanation": "`?` runtime feature নয় — compile time-এ match-এ expand হয়: Ok হলে value, Err হলে `return Err(From::from(err))`। `From::from`-ই automatic error conversion-এর জায়গা, আর পুরোটা একটা branch + return — exception throw-এর মতো কোনো খরচ নেই। Option 4 প্রায় ঠিক, কিন্তু `From::from` conversion-টা বাদ দিয়েছে।"
+  },
+  {
+    "id": "error-handling-5",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "`fn read_config() -> Result<i32, AppError>` ফাংশনে `content.trim().parse()?` লেখা হলো। `parse()` যে `ParseIntError` দেয়, সেটা `AppError`-এ কীভাবে পরিণত হয়?",
+    "options": [
+      "`?` ভেতরে `From::from(err)` call করে — তাই `impl From<ParseIntError> for AppError` থাকলেই conversion স্বয়ংক্রিয়",
+      "`parse()` নিজে থেকেই `AppError` return করে — return type দেখে বুঝে নেয়",
+      "`?` শুধু হুবহু same error type-এ কাজ করে, তাই প্রতিবার `.map_err()` লাগে",
+      "Compiler implicit ভাবে `AppError`-এর সব variant-এর জন্য From derive করে দেয়"
+    ],
+    "answer": 0,
+    "explanation": "Desugaring-এর `Err(From::from(err))` অংশটাই এই কাজ করে: `From<ParseIntError> for AppError` impl থাকলে `?` নিজেই convert করে দেয়। `parse()` আসলে `FromStr::from_str` call করে আর `Result` return করে — সে তোমার error type এমনিতে জানে না।"
+  },
+  {
+    "id": "error-handling-6",
+    "difficulty": "medium",
+    "type": "code",
+    "prompt": "Blank-এ কী বসবে যাতে ফাংশনটা compile হয় আর config-এর সংখ্যাটা `i32` হিসেবে পাওয়া যায়? (`content` একটা String)",
+    "code": "use std::fs;\n\nfn read_config() -> Result<i32, Box<dyn std::error::Error>> {\n    let content = fs::read_to_string(\"config.txt\")?;\n    let number: i32 = ____\n    Ok(number)\n}",
+    "accept": ["content.trim().parse()?;", "content.trim().parse()?"],
+    "explanation": "`parse()` নিজে `Result` দেয়, তাই `?` দিয়ে unwrap করতে হবে। Err হলে `From::from` ওটাকে `Box<dyn Error>`-এ মুড়ে দেয় — যেকোনো error, boxed; তাই-ই এই return type-এ `?` চলে।"
+  },
+  {
+    "id": "error-handling-7",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "`fn main() -> Result<(), Box<dyn std::error::Error>>` — যদি main থেকে `Err` return হয়, তাহলে কী হয়?",
+    "options": [
+      "Runtime নিজেই error-টার Debug format stderr-এ ছাপে আর exit code হয় 1",
+      "Panic হয় আর exit code হয় 101",
+      "Compile error — main কখনো Result return করতে পারে না",
+      "কিছু ছাপা হয় না, silently exit 0 হয়"
+    ],
+    "answer": 0,
+    "explanation": "`main`-এর return type-কে `Termination` trait implement করতে হয়; `Result<(), E>` থেকে `Err(e)` পেলে runtime `e`-এর Debug format stderr-এ ছাপে আর exit code 1 দেয় (`Ok` হলে 0)। Manual error printing লাগে না। Exit 101 পাওয়ার গল্পটা panic-এর — এটা সেটা না।"
+  },
+  {
+    "id": "error-handling-8",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "Default (unwind) setting-এ `panic!(\"boom\")` হলে ভেতরে কী কী ঘটে?",
+    "options": [
+      "stderr-এ message + file:line ছাপা হয়, তারপর call stack উল্টো দিকে walk করে প্রতিটা frame-এর local-দের Drop চালায়, শেষে process exit করে code 101 দিয়ে",
+      "stderr-এ message ছাপা হয়, কোনো Drop না চালিয়ে সরাসরি exit 101",
+      "Message ছাপা হয় আর exit code 1 — Result-এর মতোই",
+      "Panic handler-এর পরেই OS-level abort — exit code 134"
+    ],
+    "answer": 0,
+    "explanation": "Panic মানেই instant crash না: প্রথমে panic handler message ছাপে, তারপর unwinding শুরু হয় — প্রতিটা frame-এর local variable-এর `Drop::drop` চলে (file close, mutex unlock, heap free), main পেরোলে exit code 101। Drop ছাড়া abort হয় `panic = \"abort\"` দিলে।"
+  },
+  {
+    "id": "error-handling-9",
+    "difficulty": "hard",
+    "type": "code",
+    "prompt": "`read_config() -> Result<i32, AppError>`-এ `parse()?` কাজ করানোর জন্য নিচের From impl-এর blank-এ কী বসবে?",
+    "code": "#[derive(Debug)]\nenum AppError {\n    Io(std::io::Error),\n    Parse(std::num::ParseIntError),\n    NotFound(String),\n}\n\nimpl From<std::num::ParseIntError> for AppError {\n    fn from(e: std::num::ParseIntError) -> Self {\n        ____\n    }\n}\n\nfn read_config() -> Result<i32, AppError> {\n    let content = std::fs::read_to_string(\"config.txt\")?;\n    let number: i32 = content.trim().parse()?;\n    Ok(number)\n}",
+    "accept": ["AppError::Parse(e)"],
+    "explanation": "`?`-এর `From::from(err)` এই impl-টাকেই call করে। `Self` মানে এখানে `AppError`, আর parse-এর error যাবে `Parse` variant-এ। এই impl থাকলেই `read_config`-এর দুই ধরনের error-ই `?` দিয়ে চেইন করা যায় — thiserror-এর `#[from]` একই কাজ macro দিয়ে করে দেয়।"
+  },
+  {
+    "id": "error-handling-10",
+    "difficulty": "hard",
+    "type": "output",
+    "prompt": "Default unwind setting-এ এই প্রোগ্রামটা চালালে কী হবে?",
+    "code": "struct Guard;\n\nimpl Drop for Guard {\n    fn drop(&mut self) {\n        println!(\"dropped\");\n    }\n}\n\nfn main() {\n    let g = Guard;\n    panic!(\"boom\");\n}",
+    "options": [
+      "stderr-এ panic message ছাপা হবে, আর unwind-এর সময় stdout-এ \"dropped\" ছাপা হবে — exit code 101",
+      "শুধু stderr-এ panic message — \"dropped\" কখনোই ছাপা হবে না",
+      "stdout-এ আগে \"dropped\", তারপর stderr-এ panic message",
+      "Compile error — panic-এর পরে কোনো code থাকতে পারে না"
+    ],
+    "answer": 0,
+    "explanation": "Panic হলে unwinding চলে: message ছাপার পর call stack উল্টো দিকে walk করার পথে `g`-এর `Drop::drop` call হয়, তাই \"dropped\" ছাপা হয়। এভাবেই open file, lock, heap memory সব cleanup হয়; শেষে exit 101। `panic = \"abort\"` হলে \"dropped\" ছাপা হতো না — কোনো drop-ই চলত না।"
+  }
+]

@@ -26,6 +26,24 @@ s += " extra";         // s = "foobar! extra"
 
 `String` হলো heap-allocated, growable, owned string। মূলত এটা একটা `Vec<u8>` wrapper — UTF-8 encoded byte vector।
 
+ভেতরে সত্যিই `Vec<u8>` এর মতো: heap buffer এর pointer, `capacity`, আর `len` (byte count) — 64-bit এ মোট ২৪ byte। Python এর `str` immutable, তাই বারবার concatenate করলে প্রতিবার নতুন string তৈরি হয়; Rust এর `String` একটা mutable buffer, তাই append সস্তা।
+
+**`push_str` এর ভেতরে কী হয়?** `Vec::push` এর মতোই তিন ধাপ (simplified):
+
+```rust
+pub fn push_str(&mut self, slice: &str) {
+    if self.len + slice.len() > self.capacity {
+        self.reserve_and_grow();   // capacity প্রায় ২× করে বাড়ে, পুরনো byte memcpy হয়
+    }
+    self.buffer[self.len..].copy_from_slice(slice.as_bytes()); // memcpy
+    self.len += slice.len();
+}
+```
+
+`push('!')` ও একই — শুধু আগে char টাকে UTF-8 এ encode করে (ASCII হলে ১ byte, বাংলা/emoji হলে ৩-৪ byte), তারপর ওই byte গুলো append। খরচটা যোগ হওয়া byte সংখ্যার উপর — `String` এর পুরনো অংশ ছোঁয় না, তাই **amortized O(m)**।
+
+আরও দুটো ছোট কথা: `String::new()` **কিছুই allocate করে না** (capacity 0) — প্রথম push হলে তবেই heap এ জায়গা নেয়। আর `String::from("hello")` / `to_string()` হলো binary এর static section এ থাকা literal এর byte গুলো heap এ **copy** করা — এখানেই একটা allocation হয়।
+
 ### `&str` — Borrowed, Immutable
 
 ```rust
@@ -42,6 +60,8 @@ print_str(&s1);          // &String → &str — OK
 ```
 
 `&str` হলো string slice — কোনো string data এর reference। Ownership নেয় না।
+
+ভেতরে `&str` একটা **fat pointer** — দুটো word: data এর pointer আর length, মোট ১৬ byte (64-bit এ)। উপরে `&String → &str` auto-convert হওয়াটা **deref coercion** — `String` ভেতরে `Deref<Target = str>` implement করে, তাই compiler বুঝে যায়। কোনো data copy হয় না, শুধু `(ptr, len)` fat pointer তৈরি হয় — খাঁটি zero cost।
 
 ## `String` বনাম `&str` — কখন কোনটা?
 
@@ -110,6 +130,9 @@ let owned = String::from("hello");
 let borrowed: &str = &owned;
 ```
 
+> [!note]
+> নতুন তিনটা মুখ এই block-এ: **`.into()`** — সাধারণ conversion method (`Into` trait): "context-এর target type-এ রূপান্তর করো" — এখানে `let s4: String` annotation-ই বলে দিচ্ছে `&str → String` করতে হবে; ভেতরে `String::from`-কেই ডাকে, খরচ সমান (traits chapter-এ `From`/`Into`-এর পূর্ণ গল্প)। **`.to_owned()`** — `to_string()`-এরই আরেক নাম, `Clone` trait থেকে — শুধু `to_string()` সুবিধাজনক নাম। আর **`format!(...)`** — macro; কোনো operand-এর ownership না নিয়ে সবসময় **নতুন String allocate** করে (`Concatenation` section-এ এর ভেতরটা দেখেছি)। চার রকম নাম দেখে ঘাবড়িয়ো না — কাজ মূলত দুটোই: heap-এ copy করা (from/to_string/into/to_owned), নাহলে নতুন বানানো (format!)।
+
 ## Concatenation
 
 ```rust
@@ -131,6 +154,22 @@ s.push_str("bar");
 
 > [!warn]
 > `+` operator প্রথম operand এর ownership নিয়ে নেয়! `s1 + &s2` দিলে `s1` invalid হয়ে যায়। এটা কনফিউজিং — `format!` ব্যবহার করা বেশি পরিষ্কার।
+
+`+` কেন ownership নেয়? কারণ ভেতরে এই trait implementation টা কাজ করে:
+
+```rust
+// std::string এ প্রায় এভাবেই লেখা (simplified):
+impl Add<&str> for String {
+    type Output = String;
+
+    fn add(mut self, other: &str) -> String {
+        self.push_str(other);   // s1 এর নিজের buffer এই append হয়
+        self                    // পুরনো buffer ই ফেরত যায় — নতুন allocation নেই
+    }
+}
+```
+
+দেখো — `add` প্রথম operand টা **by value** (`self`) নেয়, কারণ append হয় ওই operand এর নিজের buffer এ — নতুন allocation বাঁচে, কিন্তু মালিকানা move হয়ে যায়। এ জন্যই `s1 + &s2` এর পরে `s1` invalid। অথচ `format!` ভেতরে formatting machinery চালিয়ে **সবসময় নতুন String** বানায় — কোনো operand এর মালিকানা নেয় না, তাই সবাই পরেও valid থাকে। দুই approach এর সুবিধা-অসুবিধা এখান থেকেই আসে।
 
 ## UTF-8 আর Indexing
 
@@ -157,6 +196,18 @@ let hola = &hello[0..4];  // "Hola"
 > [!danger]
 > Rust এ `s[0]` কাজ করে না! কারণ UTF-8 এ একটা character একাধিক byte হতে পারে। `"বাংলা"` এর প্রতিটা character ৩ বাইট! তাই byte index দিলে character এর মাঝখানে পড়তে পারে — panic। তাই Rust string indexing disable করেছে।
 
+**`chars()` ভেতরে কী করে?** এটা একটা UTF-8 decoder — প্রতি step এ একটা Unicode scalar value পড়ে:
+
+```text
+শুরুর byte (lead byte) দেখেই বোঝে character টা কয় byte এর:
+  0xxxxxxx                            → ১ byte (ASCII)
+  110xxxxx 10xxxxxx                   → ২ byte
+  1110xxxx 10xxxxxx 10xxxxxx          → ৩ byte (বাংলা এখানে!)
+  11110xxx 10xxxxxx 10xxxxxx 10xxxxxx → ৪ byte (emoji এখানে)
+```
+
+Lead byte থেকেই length বের হয়, তারপর continuation byte (`10xxxxxx`) গুলোর free bit জোড়া দিয়ে পুরো code point বানায়। তাই `for c in s.chars()` কখনো character এর মাঝখানে ভাঙবে না — কিন্তু random access ও হলো না: i-তম character চাইলে O(i) করে হেঁটে যেতে হয়। এই trade-off এর জন্যই Rust indexing disable করেছে।
+
 ### Bangla String Example
 
 ```rust
@@ -170,6 +221,8 @@ for (i, c) in bangla.chars().enumerate() {
 }
 ```
 
+খেয়াল করো — `len()` হলো O(1), কারণ শুধু stored `len` field পড়ে (byte count)। কিন্তু `chars().count()` হলো O(n) — পুরো string decode করে গুনতে হয়। "কয়টা character" কোথাও stored থাকে না — UTF-8 এ সেটা variable-length।
+
 ## Slicing
 
 ```rust
@@ -182,6 +235,8 @@ let full: &str = &s[..];         // "hello world"
 
 > [!warn]
 > Slice করার সময় সাবধান — character boundary তে cut করতে হবে। নাহলে panic। `&s[0..3]` যদি ৩ বাইট একটা character এর মাঝখানে পড়ে, runtime panic হবে।
+
+ভেতরে প্রতিটা slice এর আগে দুটো check চলে: `start <= end`, আর দুটো index ই **character boundary** তে আছে কিনা (ওই byte টা কোনো character এর শুরু, অর্থাৎ lead byte কিনা)। যেকোনো একটা fail করলে panic। পাস করলে result সেই একই zero-cost fat pointer — কোনো copy নেই।
 
 ## Iteration
 
@@ -211,6 +266,9 @@ for part in csv.split(',') {
 }
 ```
 
+> [!note]
+> `split(',')`, `lines()`, `chars()` — সবগুলো **lazy iterator**: ডাকার সময় কিছুই করে না, প্রতিবার `next()` ডাকলে একটা করে piece দেয়। কোনো নতুন `String` allocate হয় না — প্রতিটা piece মূল string এর একটা `&str` slice মাত্র। তাই `csv.split(',')` শুধু loop করলে **zero allocation**; `collect()` করলে তবেই একটা `Vec` allocate হয় (কিন্তু character data নিজে copy হয় না)। Python এর `str.split()` সাথে সাথেই পুরো list বানায় — বড় text process করার সময় এই পার্থক্য কাজে দেয়।
+
 ## Useful Methods
 
 ```rust
@@ -236,6 +294,14 @@ let parts: Vec<&str> = "a,b,c".split(',').collect();
 // Reverse
 let reversed: String = "hello".chars().rev().collect();
 ```
+
+> [!note]
+> **কয়েকটা method এর ভেতরে:**
+> - `contains("World")` — substring search। একটা char খুঁজলে সোজা byte scan; `&str` pattern হলে std এর optimized **two-way algorithm** চলে — O(n+m)। `starts_with`/`ends_with` আরও সস্তা: শুধু শুরু/শেষের কয়েক byte তুলনা করে, পুরো string ঘাঁটে না।
+> - `to_uppercase()` — শুধু ASCII flip করা না; ভেতরে **Unicode case mapping table** খোঁজে। জটিলতা: uppercase করলে byte length বদলাতে পারে — `"straße".to_uppercase()` হলো `"STRASSE"` ('ß' → "SS")! উত্তরের size আগে থেকে জানা যায় না, তাই এটা **নতুন String allocate** করে।
+> - `trim()` — সবচেয়ে সস্তা: শুরু-শেষের whitespace character গুলো skip করে বাকিটার **slice** ফেরত দেয় — কোনো copy/allocation নেই, খাঁটি zero cost। Unicode whitespace rule (`char::is_whitespace`) মেনে trim হয়।
+> - `replace("World", "Rust")` — পুরো string scan করে নতুন `String` এ লিখে যায় — সবসময় নতুন allocation।
+> - `"hello".chars().rev().collect()` — char গুলো উল্টে নতুন String এ আবার UTF-8 encode করে লেখে — এটাও নতুন allocation।
 
 ## Performance Comparison
 

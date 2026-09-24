@@ -1,0 +1,135 @@
+[
+  {
+    "id": "smart-pointers-1",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "`let x = Box::new(5);` — ভেতরে মেমরির হিসাবটা কেমন?",
+    "options": [
+      "`5` heap-এ allocate হয়, stack-এ `x` থাকে মাত্র একটা 8-byte pointer; scope শেষে Box drop হয়ে heap memory automatic free হয়",
+      "`5` stack-এই থাকে, Box শুধু একটা wrapper struct",
+      "`5` heap-এ যায়, আর free করতে হয় manually — C-এর মতো",
+      "পুরো `Box` (value সহ) heap-এ থাকে, stack-এ কিছুই না"
+    ],
+    "answer": 0,
+    "explanation": "`Box::new` দুই ধাপে কাজ করে: allocator দিয়ে `size_of::<T>()` জায়গা নেওয়া, তারপর value-টা ওই ঠিকানায় move করা। Stack-এ থাকে শুধু pointer; scope শেষে `Drop` dealloc করে দেয় — C/C++-এর `new`/`delete`-এর মতো, কিন্তু automatic cleanup সহ।"
+  },
+  {
+    "id": "smart-pointers-2",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "এই কোডের output কী (কোন ক্রমে)?",
+    "code": "struct CustomPointer {\n    data: &'static str,\n}\n\nimpl Drop for CustomPointer {\n    fn drop(&mut self) {\n        println!(\"Dropping: {}\", self.data);\n    }\n}\n\nfn main() {\n    let a = CustomPointer { data: \"first\" };\n    let b = CustomPointer { data: \"second\" };\n    println!(\"End of main\");\n}",
+    "options": [
+      "End of main\nDropping: second\nDropping: first",
+      "Dropping: first\nDropping: second\nEnd of main",
+      "End of main\nDropping: first\nDropping: second",
+      "End of main — Drop শুধু smart pointer-এর জন্য, custom struct-এ চলে না"
+    ],
+    "answer": 0,
+    "explanation": "Scope শেষে drop glue প্রতিটা local-এর `Drop::drop` ডাকে — ঘোষণার উল্টো ক্রমে (b আগে, a পরে), কারণ পরে ঘোষিতটা আগেরটার data borrow করে থাকতে পারে। তাই \"second\" আগে ছাপা হয়। `Box`, `Rc`, `File`, `MutexGuard` — সবার cleanup এই একই পথে।"
+  },
+  {
+    "id": "smart-pointers-3",
+    "difficulty": "easy",
+    "type": "code",
+    "prompt": "Recursive Cons list-কে compile করানোর জন্য blank-এ কী বসবে? (Box ছাড়া compiler বলবে \"recursive type has infinite size\")",
+    "code": "enum List {\n    Cons(i32, ____),\n    Nil,\n}\n\nuse List::{Cons, Nil};\n\nfn main() {\n    let list = Cons(1, Box::new(Cons(2, Box::new(Cons(3, Box::new(Nil))))));\n    if let Cons(head, _tail) = list {\n        println!(\"{}\", head);\n    }\n}",
+    "accept": ["Box<List>"],
+    "explanation": "`Cons(i32, List)` হলে enum-এর size অসীম হয়ে যায় — ভেতরে নিজের মতো বড় field ঢুকতেই থাকে। `Box<List>` দিলে store হয় শুধু একটা pointer (8 bytes), তাই size finite হয়ে যায়।"
+  },
+  {
+    "id": "smart-pointers-4",
+    "difficulty": "medium",
+    "type": "output",
+    "prompt": "এই কোডের output কী?",
+    "code": "use std::rc::Rc;\n\nfn main() {\n    let data = Rc::new(String::from(\"shared\"));\n    let r1 = Rc::clone(&data);\n    let r2 = Rc::clone(&data);\n    drop(r1);\n    println!(\"{}\", Rc::strong_count(&data));\n}",
+    "options": [
+      "2",
+      "3",
+      "1",
+      "0"
+    ],
+    "answer": 0,
+    "explanation": "`Rc::clone` data copy করে না — শুধু heap-এর control block-এ strong counter ১ করে বাড়ায়। data (1) + r1 + r2 = 3; `drop(r1)`-এ ২। শেষ reference drop হলে তবেই value free হয়।"
+  },
+  {
+    "id": "smart-pointers-5",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "`let s = Rc::new(String::from(\"hello\"));` — `Rc::clone(&s)` আর `(*s).clone()` এর মধ্যে পার্থক্য কী?",
+    "options": [
+      "`Rc::clone(&s)` শুধু reference count বাড়ায় (cheap, ১-২ cycle); `(*s).clone()` আসল String data copy করে (expensive, নতুন allocation)",
+      "দুটোই একই — দুটোই String data copy করে",
+      "`Rc::clone` নতুন heap allocation করে, `(*s).clone()` করে না",
+      "`(*s).clone()` reference count বাড়ায়, `Rc::clone` data copy করে"
+    ],
+    "answer": 0,
+    "explanation": "`Rc::clone(&s)` শুধু `strong += 1` — নতুন Rc মানে একই pointer-এর আরেকটা ৮-byte copy। কিন্তু `(*s).clone()` deref করে String-এর `clone` ডাকে — নতুন buffer allocate করে সব byte copy করে। Clippy এই ভুল ধরতে সাহায্য করে।"
+  },
+  {
+    "id": "smart-pointers-6",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "Graph-এ parent → child আর child → parent — দুই দিকেই `Rc` থাকলে কী হয়, আর সমাধান কী?",
+    "options": [
+      "দুজনের strong count কখনো ০ হয় না — কেউ drop-ই হতে পারে না, heap block leak হয়; সমাধান: এক দিকে (child → parent) `Weak` ব্যবহার করা",
+      "কিছু হয় না — Rust-এর GC cycle নিজেই ধরে ফেলে",
+      "Compile error — `Rc` দিয়ে cycle বানানো যায় না",
+      "Runtime-এ cycle detect করে automatic panic হয়"
+    ],
+    "answer": 0,
+    "explanation": "`Rc`-তে cycle detector নেই (Python-এর GC-র মতো না) — cycle হলে strong কখনো ০ হবে না, memory leak। `Weak` ownership নেয় না: clone-এ `weak` counter বাড়ে, strong না — তাই cycle ভেঙে যায়। চর্চা: নিচের দিকে strong (`Rc`), উপরের দিকে weak (`Weak`)।"
+  },
+  {
+    "id": "smart-pointers-7",
+    "difficulty": "medium",
+    "type": "output",
+    "prompt": "এই কোডের output কী?",
+    "code": "use std::cell::RefCell;\nuse std::rc::Rc;\n\nfn main() {\n    let shared = Rc::new(RefCell::new(vec![1, 2, 3]));\n    let owner2 = Rc::clone(&shared);\n    shared.borrow_mut().push(4);\n    println!(\"{:?} {}\", owner2.borrow(), Rc::strong_count(&shared));\n}",
+    "options": [
+      "[1, 2, 3, 4] 2",
+      "[1, 2, 3] 2",
+      "[1, 2, 3, 4] 1",
+      "Panic — একই সময়ে দুই owner"
+    ],
+    "answer": 0,
+    "explanation": "`Rc<RefCell<T>>` combo: একাধিক owner + mutation। `shared.borrow_mut().push(4)` ভেতরের Vec-এ 4 যোগ করে (statement শেষে guard drop হয়ে borrow flag ০-তে ফেরে), তাই `owner2.borrow()` একই data দেখে — দুজনেই একই heap block share করছে। strong count = 2 (shared + owner2)।"
+  },
+  {
+    "id": "smart-pointers-8",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "`let data = RefCell::new(5); let b1 = data.borrow_mut(); let b2 = data.borrow_mut();` — দ্বিতীয় `borrow_mut()`-এ কী হবে?",
+    "options": [
+      "Runtime panic — RefCell-এর borrowing rule compile time-এ না চেক করে runtime-এ একটা integer flag দিয়ে চেক করে, আর সেখানেই ফেঁসে যায়",
+      "Compile error — borrow checker দুই mutable borrow আগেই ধরবে",
+      "দ্বিতীয় borrow_mut silently None return করে",
+      "Deadlock — দ্বিতীয়টা প্রথমটা release হওয়ার অপেক্ষায় বসে থাকে"
+    ],
+    "answer": 0,
+    "explanation": "RefCell-এ কোনো lock নেই — আছে মাত্র একটা flag (0 = ফাঁকা, n = n-টা shared borrow, -1 = একটা exclusive borrow)। `borrow_mut` flag ০ না দেখলেই panic করে। নিয়ম সেই একই borrowing নিয়ম, শুধু চেকটা runtime-এ — তাই এই ভুল compile-এ ধরা পড়ে না।"
+  },
+  {
+    "id": "smart-pointers-9",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "`Arc`-এর reference count operation `Rc`-র চেয়ে ধীর কেন, তাও আবার thread-safe কেন?",
+    "options": [
+      "Count বাড়ানো/কমানো atomic instruction (fetch_add/fetch_sub) দিয়ে হয় — lock-prefixed, একটু দামি কিন্তু race অসম্ভব; শেষ-owner check-ও atomic, তাই double-free হয় না",
+      "Arc প্রতি clone-এ পুরো data copy করে বলে ধীর, কিন্তু copy তো safe",
+      "Arc ভেতরে একটা global Mutex ব্যবহার করে — ধীর কিন্তু thread-safe",
+      "আসলে Arc ধীর না — দুটো হুবহু একই instruction ব্যবহার করে"
+    ],
+    "answer": 0,
+    "explanation": "`Rc::clone` সাধারণ add — দুই thread-এ একসাথে করলে হিসাব ভেঙে যায়, তাই-ই `Rc` thread-এ পাঠানো যায় না (`!Send`)। `Arc` atomic op ব্যবহার করে (অন্য core-এর cache line invalidate করে, কয়েক গুণ দামি); শেষ-owner check-ও atomic — দুই thread একসাথে শেষ দুই owner drop করলেও free ঠিক একবারই হয়।"
+  },
+  {
+    "id": "smart-pointers-10",
+    "difficulty": "hard",
+    "type": "code",
+    "prompt": "Tree-তে child থেকে parent-এর দিকে reference রাখতে হবে যাতে cycle/leak না হয় — blank-এ কী বসবে?",
+    "code": "use std::rc::{Rc, Weak};\n\nstruct Node {\n    children: Vec<Rc<Node>>, // down the tree: strong ownership\n    parent: ____,            // up the tree: must not bump strong count\n}",
+    "accept": ["Weak<Node>"],
+    "explanation": "উপরের দিকে `Weak` — clone-এ `weak` counter বাড়ে, strong না, তাই parent-কে বাঁচিয়ে রাখে না এবং `Rc` cycle ভেঙে যায়। Value দরকার হলে `parent.upgrade()`: strong count > 0 হলে `Some(Rc)`, data drop হয়ে গেলে `None` — dangling pointer-এর সুযোগই নেই।"
+  }
+]

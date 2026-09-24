@@ -41,6 +41,28 @@ let grade = if score >= 80 { "A" } else { "B" };
 let value = if true { 5 } else { "hello" };
 ```
 
+### if expression এর ভেতরে — compiler কী করে?
+
+`if` কে expression ভাবার সবচেয়ে সহজ উপায় — machine level এ ভাবা। Compiler এই কোডটাকে মোটামুটি এমন generate করে:
+
+```text
+; grade = if score >= 80 { "A" } else { "B" } (conceptual x86-64)
+cmp   score, 80
+jl    .else              ; condition মিথ্যা হলে .else এ ঝাঁপ
+lea   rax, [.str_A]      ; সত্য হলে rax এ "A" এর address
+jmp   .done
+.else:
+lea   rax, [.str_B]      ; মিথ্যা path ও rax এই value রাখে
+.done:
+; দুই রাস্তাই একই register (rax) এ value রেখে যায়
+; — সেটাই "if এর return value", পরের কোড ওখান থেকে পায়
+```
+
+মানে "expression" বলতে আসলে এটাই: **প্রতিটা branch শেষ হয় একটা value register এ**। C এর ternary `x ? a : b` ঠিক এভাবেই compile হয় — Rust শুধু সেই ক্ষমতাটা পুরো `if/else` কে দিয়েছে। সাথে দুটো compile-time নিয়মও এখানেই বোঝা যায়:
+
+- **Condition সবসময় `bool`** — C/Python এর মতো "truthy/falsy" coercion নেই। `if 5 {}` লিখলেই error, কারণ branch শুরুর conditional jump এর জন্য ১-bit উত্তর লাগে, `5` দিয়ে jump decision নেওয়া যায় না।
+- **দুই branch এর type unify হয় compile time এ** — এক branch দেয় `i32`, আরেকটা `&str` — compiler বুঝতে পারে না কোন type এর value register ধরবে, তাই error।
+
 ## loop — Infinite Loop
 
 Rust এ `loop` হলো infinite loop (C++ এর `while(true)` এর মতো):
@@ -73,6 +95,8 @@ let result = loop {
 
 > [!example]
 > এটা Rust এর একটা দারুণ ফিচার। Python/C++ এ loop থেকে value return করা যায় না — external variable লাগে।
+
+**`break value` এর mechanism টা কী?** `loop` আসলে একটা block expression — `break expr` মানে "loop এর একদম শেষে ঝাঁপ দাও, সাথে expr এর value টা result register এ রেখে যাও"। Compiler এর চোখে loop এর type হয় তার ভেতরের `break` গুলোর type — এখানে সব break দেয় `i32`, তাই `result: i32`। আর যদি কোনো `break` না থাকে (চিরকাল চলবে এমন loop), loop এর type হয় `!` — "never": এই expression থেকে কখনো value ফিরবেই না, compiler সেটা জেনে পরের কোডকে unreachable ধরে। Python/C++ এ loop value return করে না বলে বাইরে আলাদা `mut` variable লাগে — Rust এ সেই boilerplate নেই।
 
 ### Nested loop এ break/continue
 
@@ -142,6 +166,25 @@ for i in (1..=5).rev() {
 > [!tip]
 > Rust এ range হলো `start..end` (exclusive) আর `start..=end` (inclusive)। Python এর `range(1, 5)` আর `range(1, 6)` এর মতো।
 
+### for এর ভেতরে — সবকিছু iterator
+
+Rust এ `for` নিজে কোনো loop machine না — সবসময় **iterator** এ নেমে যায়:
+
+```rust
+// for i in 1..=5 { println!("{}", i); }
+// ভেতরে মোটামুটি এটা হয় (simplified desugar):
+{
+    let mut iter = (1..=5).into_iter(); // ছোট struct — শুধু দুই মাথা জানে, allocation নেই
+    while let Some(i) = iter.next() {   // প্রতি ধাপে একটা value, শেষ হলে None
+        println!("{}", i);
+    }
+}
+```
+
+- `1..=5` কোনো list না — `RangeInclusive` নামের ছোট struct, ভেতরে মোটামুটি দুইটা সংখ্যা। Memory: দুইটা `i32`, zero allocation।
+- প্রতি ধাপে `next()`, শেষ হলে `None` — `while let` ওখানেই থামে।
+- LLVM পুরোটাকে আবার সহজ counter-loop এ (`i++; cmp; jle`) গুটিয়ে ফেলে — C এর `for(int i=1; i<=5; i++)` এর সমান assembly, abstraction এর দাম শূন্য।
+
 ### Enumerate — Index সহ Loop
 
 Python এর `enumerate()` এর মতো:
@@ -156,6 +199,9 @@ for (index, fruit) in fruits.iter().enumerate() {
 // 1: banana
 // 2: mango
 ```
+
+> [!note]
+> **`.enumerate()` এর ভেতরে:** এটা একটা iterator **adapter** — মূল iterator কে ভেতরে মুড়িয়ে রাখে, সাথে নিজের একটা counter রাখে। প্রতি `next()` এ counter +১ করে `(index, item)` tuple দেয়। নতুন কোনো array/vector বানায় না, allocation zero — প্রতি ধাপে extra cost একটা counter increment মাত্র। LLVM সাধারণত পুরোটাকে index-based pointer arithmetic এ optimize করে ফেলে।
 
 ## match — Rust এর Powerhouse
 
@@ -176,6 +222,25 @@ match number {
 
 > [!warn]
 > `match` এ **সব case cover করতে হবে** — নাহলে compile error। `_` wildcard দিয়ে "বাকি সব" বোঝানো যায়। এটা Rust এর safety guarantee — কোনো case miss হবে না।
+
+### match এর ভেতরে — exhaustiveness check আর codegen
+
+দুই ধাপে ঘটে, দুটোই compile time এ:
+
+**ধাপ ১ — exhaustiveness check:** compiler pattern গুলো থেকে একটা decision tree বানায় আর verify করে — input এর সব সম্ভাব্য value কি কোনো না কোনো arm এ পড়বে? `i32` এর মতো type এ সম্ভাব্য value অসীম, তাই `_` লাগেই। কিন্তু enum (যেমন `Option`) হলে variant সংখ্যা finite আর type system এ লেখা থাকে — compiler জানে `Some`/`None` ছাড়া আর কিছু হতে পারে না, তাই একটা variant বাদ দিলেই `E0004: non-exhaustive patterns`। মানে এই safety টা দাঁড়িয়ে আছে compiler এর type knowledge এর উপর।
+
+**ধাপ ২ — কোড generate:** pattern দেখে compiler দ্রুততম strategy বাছে:
+
+```text
+১. ঘন, পরপর integer pattern (1,2,3…10 জাতীয়):
+   jump table — একটা indexed jump, compare করারও দরকার নেই। O(1)।
+২. ছড়ানো সংখ্যা:
+   compare chain / binary search — উপর থেকে নিচে মিলিয়ে দেখা।
+৩. guard (x if শর্ত) থাকলে:
+   উপর থেকে নিচে sequential check — guard এর ফলাফল pattern দেখে আগে থেকে জানা যায় না।
+```
+
+মানে `match` শক্তিশালী হয়েও ধীর না — C এর best-case `switch` এর মতোই fast, সাথে exhaustiveness guarantee। (Enum আর pattern এর গভীর ব্যাপার পরের chapter গুলোতে।)
 
 ### match হলো Expression
 
@@ -219,12 +284,12 @@ match pair {
 
 ## if let — Short match
 
+শুরুতেই একটা নতুন মুখ: `Some(42)`। এটা কোথা থেকে এলো? `Option` নামের একটা std type আছে (prelude থেকে auto-import হয়) যার মান দুই রকম হতে পারে — `Some(মান)` মানে "মান আছে", `None` মানে "নেই"। Rust-এ null নেই, এটাই তার বিকল্প — "মান নে-ও-তে-পারে" বোঝানোর type-safe উপায়। (`Some` আসলে enum-এর একটা variant, আর variant-টা নিজেই value বানানোর ছোট function — enum-এর পূর্ণ গল্প পরের chapter গুলোতে।) আপাতত এটুকু জানলেই নিচের কোড পড়া যাবে:
+
 শুধু একটা pattern match করতে চাইলে `if let` ব্যবহার করা যায়:
 
 ```rust
 let some_value = Some(42);
-
-// match দিয়ে
 match some_value {
     Some(val) => println!("Value: {}", val),
     None => {},
@@ -239,6 +304,19 @@ if let Some(val) = some_value {
 > [!tip]
 > `if let` ব্যবহার করো যখন শুধু একটা case দরকার আর বাকিগুলো ignore করতে চাও। পুরো হাত ধরে match করতে চাইলে `match` ব্যবহার করো।
 
+**`if let` এর ভেতরে কী হয়?** এটা কোনো নতুন mechanism না — compiler এটাকে সরাসরি `match` এ রূপান্তর করে:
+
+```rust
+// if let Some(val) = some_value { body }
+// আসলে এটা হয় (simplified):
+match some_value {
+    Some(val) => { body },
+    _ => {},
+}
+```
+
+`while let` ও একই — শুধু match টা loop এর ভেতরে বসে: প্রতি ধাপে match, `None` পেলে loop ভেঙে বেরিয়ে যায়। মানে দুটোই match এর shorthand — আলাদা runtime ব্যবস্থা কিছু নেই।
+
 ## while let — Loop সহ Match
 
 ```rust
@@ -250,6 +328,13 @@ while let Some(top) = stack.pop() {
 ```
 
 Python এ এটা করতে হতো `while stack: top = stack.pop()`। Rust এ `Option` সহ safe ভাবে।
+
+এখানে দুটা builtin এর ভেতরে কী চলছে:
+
+- **`vec![1, 2, 3]`** — macro, compile time এ expand হয়: ঠিক ৩টা element এর জন্য **একবারই** memory allocate করে, element গুলো সরাসরি ওই buffer এ বসিয়ে দেয়।
+- **`stack.pop()`** — ভেতরের ধাপ: ① `len == 0`? হলে `None`। ② নাহলে শেষ slot থেকে value টা move করে বের করো, ③ `len -= 1`, ④ `Some(value)` দাও। O(1), কোনো memory free হয় না — capacity আগের মতোই থাকে, পরের `push` তাই আবার O(1)।
+
+আর লক্ষ্য করো — pop এর উত্তর **`Option` এ মোড়ানো**: খালি stack থেকে pop মানে crash না, `None`। আর তোমাকে `None` case টা `while let` দিয়ে handle করতেই হয়। Python এ `list.pop()` খালি হলে `IndexError` — সেই class এর bug এখানে type system ই আটকায়।
 
 ## Control Flow তুলনা
 

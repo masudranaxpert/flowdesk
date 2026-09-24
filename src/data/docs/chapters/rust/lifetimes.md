@@ -27,6 +27,22 @@ Rust এর compiler এর একটা অংশ হলো **borrow checker**�
 
 Rust এ প্রতিটা reference এর একটা **lifetime** আছে — scope যে পর্যন্ত reference টা valid। Lifetime সাধারণত implicit, compiler infer করে।
 
+### Lifetime আসলে Runtime এ কী করে? — কিছুই না
+
+এটাই সবচেয়ে গুরুত্বপূর্ণ insight: lifetime পুরোপুরি **compile-time এর ব্যাপার**। Runtime এ এর কোনো অস্তিত্ব নেই, কোনো খরচও নেই:
+
+- Memory তে lifetime এর কোনো জিনিস নেই — `'a` কোনো value না, counter না, timestamp না। এটা type system এর একটা **label**, compiler শুধু নিজের হিসাবের জন্য ব্যবহার করে আর binary তৈরি হওয়ার আগেই মুছে ফেলে।
+- Runtime এ `&i32` আর `*const i32` — দুটোই একই ৮ byte pointer। Rust এ reference **reference counting করে না**, কোনো validity check ও চালায় না (C++ এর `shared_ptr` এর মতো না)। নিরাপত্তাটা আসে compiler analysis থেকে, তাই cost zero।
+- Compiler এ এই হিসাব করে **borrow checker**: প্রতিটা function এর control-flow graph ধরে দেখে কোন reference শেষ বার কোথায় ব্যবহার হলো। একে বলে **NLL (non-lexical lifetimes)** — lifetime শেষ হয় scope এর শেষে না, reference এর **শেষ ব্যবহারের** জায়গায়।
+
+```text
+compile time:  borrow checker → lifetime solve → error বা pass → lifetime মুছে যায়
+runtime:       খালি pointer + তোমার আসল code — lifetime এর কোনো trace নেই
+```
+
+> [!tip]
+> Generic type parameter (`Vec<T>`) এর সাথে মেলাও — `T` ও runtime এ নেই, compile time এ প্রতিটা আসল type এর জন্য specialize হয়। `'a` ও ঠিক তেমন একটা generic parameter, শুধু এটা type নয় — "কতক্ষণ valid" সেটাই বহন করে।
+
 ## Generic Lifetime এর প্রয়োজন
 
 এই function দেখো:
@@ -123,6 +139,23 @@ fn foo<'a, 'b>(&'a self, x: &'b str) -> &'a str
 > [!tip]
 > এই তিন rule এর পরেও যদি compiler lifetime infer করতে না পারে — তখনই তোমাকে explicitly annotation লিখতে হবে। বেশিরভাগ function এ এটা লাগে না।
 
+Elision টা কোনো বুদ্ধিদীপ্ত অনুমান না — একটা **নির্দিষ্ট deterministic algorithm**: rule গুলো ক্রমান্বয়ে apply হয়। উপরের `longest` function এ compiler ঠিক এভাবে চেষ্টা করেছিল:
+
+```text
+fn longest(x: &str, y: &str) -> &str
+
+Rule ১ → প্রতিটা reference parameter নিজের lifetime পায়:
+         fn longest<'a, 'b>(x: &'a str, y: &'b str) -> ???
+Rule ২ → একটাই input reference হলে output ও সেটাই:
+         কিন্তু এখানে ২টা input — rule টা লাগেই না
+Rule ৩ → &self থাকলে output = self এর lifetime:
+         এটা free function, self নেই — লাগে না
+
+ফলাফল: output lifetime এখনো অজানা → compiler annotation চায়
+```
+
+তিন rule শেষ করেও output lifetime কোনো input এর সাথে যুক্ত করা না গেলে তবেই error — তখন তুমি `'a` দিয়ে সম্পর্কটা হাতে বলে দাও। অথচ `fn foo(x: &str) -> &str` এলে Rule ২ একাই সব solve করে ফেলে — এ কারণেই বেশিরভাগ function এ annotation লাগে না।
+
 ## Struct এ Lifetime
 
 Struct এ reference field থাকলে lifetime annotation বাধ্যতামূলক:
@@ -143,6 +176,9 @@ fn main() {
     }
 }
 ```
+
+> [!note]
+> এই ছোট্ট লাইনে তিনটা method প্রথমবার দেখা হলো — `.split('.')` string-কে `.`-এর কাটায় কাটা একটা **lazy iterator** দেয় (নতুন অ্যারে allocate করে না), `.next()` তার প্রথম টুকরা `Option<&str>` হিসেবে দেয় — টুকরা থাকলে `Some`, না থাকলে `None`। আর `.unwrap()` সেই `Option`-এর খোলস ছাড়িয়ে ভেতরের মান বের করে; খালি (`None`) পেলে panic। এখানে শুধু এই এক ব্যবহারের জন্য যথেষ্ট — `Option`-এর পূর্ণ গল্প enums chapter-এ, `unwrap`-এর নিরাপদ বিকল্প error-handling chapter-এ।
 
 > [!warn]
 > `Excerpt` struct এ `part` field টা `&'a str` — মানে struct টা যতক্ষণ alive থাকবে, মূল `str` ও ততক্ষণ alive থাকতে হবে। নাহলে dangling reference! এটাই lifetime annotation struct এ কেন দরকার।

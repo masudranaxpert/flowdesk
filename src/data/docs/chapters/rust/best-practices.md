@@ -26,7 +26,7 @@ for item in &v {
 ```
 
 > [!tip]
-// Clippy তোমার best friend! Code লিখে `cargo clippy` চালাও — Rust idiom গুলো শিখবে কোনো effort ছাড়াই। Production code এর আগে অবশ্যই clippy ক্লিন হতে হবে।
+> // Clippy তোমার best friend! Code লিখে `cargo clippy` চালাও — Rust idiom গুলো শিখবে কোনো effort ছাড়াই। Production code এর আগে অবশ্যই clippy ক্লিন হতে হবে।
 
 ## Formatting
 
@@ -36,7 +36,7 @@ cargo fmt --check   # শুধু check, format করবে না
 ```
 
 > [!note]
-// `cargo fmt` হলো Python এর `black` বা Go এর `gofmt` এর মতো — automatic code formatting। Style debate শেষ! সবার code একই style এ থাকবে। CI তে `cargo fmt --check` রাখো।
+> // `cargo fmt` হলো Python এর `black` বা Go এর `gofmt` এর মতো — automatic code formatting। Style debate শেষ! সবার code একই style এ থাকবে। CI তে `cargo fmt --check` রাখো।
 
 ## Error Handling Idioms
 
@@ -97,23 +97,23 @@ process(&s);
 ```
 
 > [!tip]
-// সবচেয়ে গুরুত্বপূর্ণ Rust idiom — **function parameter এর জন্য `&str` use করো `String` এর বদলে**। এটা সব string type accept করে আর unnecessary allocation এড়ায়।
+> // সবচেয়ে গুরুত্বপূর্ণ Rust idiom — **function parameter এর জন্য `&str` use করো `String` এর বদলে**। এটা সব string type accept করে আর unnecessary allocation এড়ায়।
+
+> [!note]
+> **কেন `&str` দ্রুত?** `String` = heap-allocated struct: pointer + len + capacity (২৪ byte) + আলাদা heap buffer। `&str` = শুধু **fat pointer**: data pointer + length (১৬ byte), নিজের কোনো allocation নেই। `greet(name: String)` লিখলে caller কে ownership দিতে হয় নয়তো `clone()` — মানে malloc + O(n) memcpy। `&str` এ দুটোই বাদ, আর `&String` পাঠালে **deref coercion** automatic `&str` বানিয়ে দেয়, তাই caller এর কোনো ঝামেলা নেই। `&[T]` vs `&Vec<T>` হুবহু একই গল্প।
 
 ### Return Value Idioms
 
 ```rust
-// BAD — return reference when ownership is easy
-fn get_name(user: &User) -> &str { &user.name }
-
-// GOOD — return owned when cheap
+// BAD — শুধু পড়ানোর জন্যও প্রতি call-এ clone (heap allocation + memcpy)
 fn get_name(user: &User) -> String { user.name.clone() }
 
-// BEST — return &str when caller doesn't need ownership
+// GOOD — caller পড়বে শুধু: &str return, zero allocation
 fn get_name(user: &User) -> &str { &user.name }
 ```
 
 > [!note]
-// Context dependent! যদি caller শুধু read করবে, `&str` return করো। যদি caller modify করবে বা store করবে, `String` return করো।
+> // Context dependent! যদি caller শুধু read করবে, `&str` return করো। যদি caller modify করবে বা store করবে, `String` return করো।
 
 ## Builder Pattern
 
@@ -163,8 +163,11 @@ fn main() {
 }
 ```
 
-> [example]
-// Builder pattern হলো Rust এর অন্যতম common pattern — fluent API দিয়ে configuration। অনেক optional parameter থাকলে এটা ব্যবহার করো। `derive_builder` crate দিয়ে auto-generate করা যায়।
+> [!example]
+> // Builder pattern হলো Rust এর অন্যতম common pattern — fluent API দিয়ে configuration। অনেক optional parameter থাকলে এটা ব্যবহার করো। `derive_builder` crate দিয়ে auto-generate করা যায়।
+
+> [!note]
+> **Builder কেন সস্তা?** প্রতিটা method `self` **by value** নিয়ে `self` return করে — পুরোটা move, কোনো clone বা allocation নেই; chain টা ownership এর হাতবদল মাত্র। Rust এ named/optional argument নেই, builder টাই সেই ফাঁক পূরণ করে; `derive_builder` crate এই method গুলো proc-macro দিয়ে generate করে দেয় (macros chapter দেখো)।
 
 ## Newtype Pattern
 
@@ -187,7 +190,10 @@ fn main() {
 ```
 
 > [!tip]
-// Newtype pattern হলো Rust এর সবচেয়ে সহজ কিন্তু powerful idiom। `u64` দিয়ে user ID আর product ID আলাদা type বানাও — accidental mix-up impossible। Zero runtime cost, compile-time safety।
+> // Newtype pattern হলো Rust এর সবচেয়ে সহজ কিন্তু powerful idiom। `u64` দিয়ে user ID আর product ID আলাদা type বানাও — accidental mix-up impossible। Zero runtime cost, compile-time safety।
+
+> [!note]
+> **খরচ শূন্য কেন?** এক-field struct এর memory layout মূলত ভেতরের type টারই সমান — `UserId(u64)` ঠিক `u64` এর মতোই ৮ byte, register এ চলে, কোনো indirection নেই; সব check compile time এ। Bonus: এই wrapper দিয়ে foreign type এর জন্য foreign trait implement করা যায় (orphan rule এর ফাঁকি) — আচরণ ঠিক করা বা নতুন `Send`/`Sync` বাউন্ড বসানো যায়।
 
 ## Iterators over Loops
 
@@ -214,7 +220,10 @@ let evens: Vec<i32> = v.iter().filter(|&&x| x % 2 == 0).cloned().collect();
 ```
 
 > [!note]
-// Rust এ iterator loop এর চেয়ে পছন্দ করা হয় — কারণ zero-cost আর পড়তে সহজ। Python এ list comprehension prefer করা হয়, Rust এ iterator chain।
+> // Rust এ iterator loop এর চেয়ে পছন্দ করা হয় — কারণ zero-cost আর পড়তে সহজ। Python এ list comprehension prefer করা হয়, Rust এ iterator chain।
+
+> [!note]
+> **কেন iterator chain "zero-cost"?** `map`, `filter` প্রতিটা নতুন type return করে (`Map`, `Filter` — ছোট struct, শুধু source iterator + closure ধরে রাখে) — সব lazy, কিন্তু সব generic, তাই LLVM পুরো chain **inline** করে ফেলে ও auto-vectorize করে — প্রায়ই hand-written loop এর চেয়ে ভালো machine code বের হয়। আর `v[i]` indexing এ প্রতি step এ **bounds check** হয়; iterator এ সীমা আগেই জানা, check বাদ যায়। Python এ comprehension দ্রুত হয় C-level এ নামার জন্য; Rust এ দুই রকম লেখাতেই একই machine code আসে — তাই পড়তে যেটা সহজ (iterator) সেটাই বাছো।
 
 ## `?` over `match` for Error Propagation
 
@@ -234,6 +243,18 @@ fn read_file() -> Result<String, io::Error> {
     Ok(content)
 }
 ```
+
+**`?` এর expansion** দেখো (simplified):
+
+```rust
+// let content = fs::read_to_string("file.txt")?;
+let content = match fs::read_to_string("file.txt") {
+    Ok(v) => v,
+    Err(e) => return Err(From::from(e)),  // From conversion + early return
+};
+```
+
+মানে `?` শুধু shorthand না — Err এর পথে **`From::from` conversion** চালায় (`io::Error` থেকে তোমার function এর error type এ automatic রূপান্তর)। ভেতরে branch ছাড়া কিছুই নেই — zero-cost।
 
 ## Prefer `&str` over `&String`
 
@@ -269,7 +290,7 @@ fn read_data(reader: impl std::io::Read) { ... }
 ```
 
 > [!tip]
-// API design এর সবচেয়ে গুরুত্বপূর্ণ নিয়ম — **accept trait, return concrete**। Parameter এর জন্য `impl Trait` বা `&[T]`, return এর জন্য concrete type। এটা flexibility আর clarity এর balance।
+> // API design এর সবচেয়ে গুরুত্বপূর্ণ নিয়ম — **accept trait, return concrete**। Parameter এর জন্য `impl Trait` বা `&[T]`, return এর জন্য concrete type। এটা flexibility আর clarity এর balance।
 
 ## Use `derive` Macros
 
@@ -295,6 +316,9 @@ struct Point {
 }
 ```
 
+> [!note]
+> **`derive` ভেতরে কী করে?** প্রতিটা derive একটা **proc-macro** — compile time এ struct টা দেখে impl block লিখে দেয়: `PartialEq` হলে field-by-field `==` (short-circuit সহ), `Hash` হলে field গুলো hash করার code। মানে হাতে লেখা impl আর generated impl হুবহু একই জিনিস — runtime reflection নেই, overhead নেই। ভেতরের প্রক্রিয়া macros chapter এ বিস্তারিত।
+
 ## Avoid Unnecessary `clone()`
 
 ```rust
@@ -315,7 +339,10 @@ fn process(data: &Vec<String>) {
 ```
 
 > [!warn]
-// `clone()` তোমার friend, কিন্তু overuse করলে performance কমে। Clippy তোমাকে unnecessary clone ধরতে সাহায্য করবে। শুধু তখন clone করো যখন ownership সত্যিই দরকার।
+> // `clone()` তোমার friend, কিন্তু overuse করলে performance কমে। Clippy তোমাকে unnecessary clone ধরতে সাহায্য করবে। শুধু তখন clone করো যখন ownership সত্যিই দরকার।
+
+> [!note]
+> **`clone()` এর আসল খরচ**: `String`/`Vec` clone = নতুন heap allocation + পুরো data **memcpy** — O(n)। `Vec<String>` clone = প্রতিটা string এর জন্য আলাদা allocation। Borrow (`&T`) = zero — মাত্র ৮-১৬ byte pointer pass। তাই "ownership দরকার না হলে clone করো না" নিয়মটা অলংকার না — flamegraph এ সোজা দেখা যায়।
 
 ## Documentation Idioms
 
@@ -349,7 +376,7 @@ fn greet(name: &str, age: u32) -> String {
 ```
 
 > [!note]
-// Rust doc comment (`///`) structured — `# Arguments`, `# Returns`, `# Errors`, `# Examples`। এগুলো `cargo doc` এ HTML documentation বানায়। Doc test গুলো `cargo test` এ run হয়।
+> // Rust doc comment (`///`) structured — `# Arguments`, `# Returns`, `# Errors`, `# Examples`। এগুলো `cargo doc` এ HTML documentation বানায়। Doc test গুলো `cargo test` এ run হয়।
 
 ## Performance Tips
 
@@ -371,6 +398,9 @@ let mut v: Vec<i32> = Vec::with_capacity(1000);  // no reallocation
 let mut s = String::with_capacity(100);
 ```
 
+> [!note]
+> **`with_capacity` এর লাভ**: সাধারণ `push` এ capacity শেষ হলে বারবার নতুন বড় buffer allocate + পুরনো সব copy হয় (growth ~২×)। আগে থেকে সঠিক capacity নিলে **একবারই** allocation — বাকি push গুলো শুধু slot এ লেখা, amortized O(1), কোনো copy নেই। `String::with_capacity` হুবহু একই জিনিস।
+
 ### 4. Avoid unnecessary `Box`
 
 ```rust
@@ -378,6 +408,9 @@ let mut s = String::with_capacity(100);
 let x = 5;          // stack — fast
 let x = Box::new(5); // heap — slower, only if needed
 ```
+
+> [!note]
+> **`Box` এর খরচ**: একটা heap allocation + পরে সব access pointer এর পিছনে (cache miss হতে পারে)। ছোট value এ শুধু অপচয়। Box সত্যিই লাগে: recursive type (size অসীম হয়ে যেত), trait object (`dyn Trait`), বা বড় value move করার সময় stack copy এড়াতে।
 
 ### 5. Use `Cow` for sometimes-owned data
 
@@ -393,6 +426,9 @@ fn process(input: &str) -> Cow<str> {
 }
 ```
 
+> [!note]
+> **`Cow` এর ভেতরে**: একটা enum — `Borrowed(&'a str)` বা `Owned(String)`। Mutation না লাগলে শুধু reference ঘোরে (zero allocation); `to_mut()` বা `into_owned()` call হলে তবেই copy হয় — নামটাই তো "clone on write"। খরচ conditional: বেশিরভাগ input অপরিবর্তিত থাকলে প্রায় সব call allocation-free।
+
 ### 6. Profile before optimizing
 
 ```bash
@@ -403,7 +439,7 @@ cargo flamegraph -- main
 ```
 
 > [!danger]
-// Premature optimization করো না! প্রথমে correct code লেখো, তারপর profile করে bottleneck খুঁজে বের করো, তারপর optimize করো। Rust এর default performance অনেক ভালো — কম optimize করতে হয়।
+> // Premature optimization করো না! প্রথমে correct code লেখো, তারপর profile করে bottleneck খুঁজে বের করো, তারপর optimize করো। Rust এর default performance অনেক ভালো — কম optimize করতে হয়।
 
 ## Rust Checklist — Production Ready
 
@@ -431,7 +467,7 @@ cargo flamegraph -- main
 5. **Contribute** — open source Rust project এ contribute করো
 
 > [!tip]
-// Rust শেখা একটা journey। Ownership, borrowing, lifetimes — শুরুতে কঠিন, কিন্তু একবার click করলে তুমি Rust ছাড়া আর কিছুতে কাজ করতে চাইবে না। কারণ Rust তোমাকে confidence দেয় — "if it compiles, it works"।
+> // Rust শেখা একটা journey। Ownership, borrowing, lifetimes — শুরুতে কঠিন, কিন্তু একবার click করলে তুমি Rust ছাড়া আর কিছুতে কাজ করতে চাইবে না। কারণ Rust তোমাকে confidence দেয় — "if it compiles, it works"।
 
 ## Summary
 

@@ -24,7 +24,27 @@ fn main() {
 ```
 
 > [!note]
-// `Box::new(5)` এ `5` কে heap এ allocate করে, `x` হলো stack এর pointer। Scope শেষে `Box` drop হয়, heap memory free হয়। C/C++ এর `new`/`delete` এর মতো, কিন্তু automatic cleanup সহ।
+> // `Box::new(5)` এ `5` কে heap এ allocate করে, `x` হলো stack এর pointer। Scope শেষে `Box` drop হয়, heap memory free হয়। C/C++ এর `new`/`delete` এর মতো, কিন্তু automatic cleanup সহ।
+
+ভেতরে দেখলে দুই ধাপ (simplified):
+
+```rust
+pub fn new(value: T) -> Box<T> {
+    // ১. GlobalAlloc দিয়ে size_of::<T>() ততটা জায়গা নেওয়া — ভেতরে malloc
+    let ptr = alloc(Layout::new::<T>());
+    // ২. value টা ওই heap ঠিকানায় লেখা (move)
+    unsafe { ptr::write(ptr, value) };
+    Box { ptr }            // stack এ থাকে শুধু একটা pointer — ৮ bytes
+}
+
+impl<T> Drop for Box<T> {
+    fn drop(&mut self) {
+        unsafe { dealloc(self.ptr, Layout::new::<T>()) }   // scope শেষে free
+    }
+}
+```
+
+মেমরি ছবি: stack এ `x` = ৮-byte pointer, আসল `5` heap এ। খরচ: একবার alloc + একবার free — এই ছোট value এর জন্য heap যেটুকু করে সেটাই দাম (C++ এ `unique_ptr` ঠিক একই জায়গায় থাকে)।
 
 ### কেন Box দরকার?
 
@@ -55,7 +75,7 @@ fn main() {
 ```
 
 > [!danger]
-// `Box` ছাড়া এটা compile হবে না! কারণ `Cons(i32, List)` infinite size চায় — compiler বলবে "recursive type has infinite size"। `Box<List>` দিলে শুধু pointer size (8 bytes) store হয় — finite।
+> // `Box` ছাড়া এটা compile হবে না! কারণ `Cons(i32, List)` infinite size চায় — compiler বলবে "recursive type has infinite size"। `Box<List>` দিলে শুধু pointer size (8 bytes) store হয় — finite।
 
 ৩. **Trait Object** — runtime polymorphism:
 
@@ -88,7 +108,7 @@ fn main() {
 ```
 
 > [!tip]
-// যখন একই collection এ একাধিক type store করতে হবে, `Box<dyn Trait>` ব্যবহার করো। এটাই trait object — C++ এর `unique_ptr<Animal>` এর মতো।
+> // যখন একই collection এ একাধিক type store করতে হবে, `Box<dyn Trait>` ব্যবহার করো। এটাই trait object — C++ এর `unique_ptr<Animal>` এর মতো।
 
 ### Deref — Transparent Access
 
@@ -101,6 +121,9 @@ println!("{}", *x);   // explicit deref
 println!("{}", x);    // auto deref (Display)
 let y = x + 1;        // auto deref for operators
 ```
+
+> [!note]
+> **Auto-deref কীভাবে হয়?** Compiler এর compile-time ট্রিক — **deref coercion**। Type মিলছে না দেখলে compiler নিজেই `Deref::deref` call বসিয়ে দেয়, যতবার লাগে ততবার (`&Box<String>` → `&String` → `&str`)। Method call এও একই: প্রথমে `Box` এর নিজের method খোঁজে, না পেলে এক deref করে `String` এ, তারপর `str` এ। Runtime এ খরচ শূন্য — pointer follow করা ছাড়া কিছুই না।
 
 ## `Rc<T>` — Shared Ownership
 
@@ -126,7 +149,25 @@ fn main() {
 ```
 
 > [!note]
-// `Rc` (Reference Counted) হলো Python এর garbage collector এর ছোট ভাই। Reference count track করে — শেষ reference drop হলে data free হয়। কিন্তু **single-threaded only**! Multi-threaded এর জন্য `Arc` দরকার।
+> // `Rc` (Reference Counted) হলো Python এর garbage collector এর ছোট ভাই। Reference count track করে — শেষ reference drop হলে data free হয়। কিন্তু **single-threaded only**! Multi-threaded এর জন্য `Arc` দরকার।
+
+মেমরিতে `Rc` কেমন? Heap এ একটা control block — দুটো counter + আসল data:
+
+```rust
+// Simplified — heap এ যা থাকে
+struct RcInner<T> {
+    strong: usize,   // কতজন owner (Rc) আছে
+    weak: usize,     // কতটা Weak pointer আছে
+    value: T,        // আসল data
+}
+```
+
+তাহলে ভেতরের হিসাব:
+
+- `Rc::clone(&data)` কোনো data copy করে **না** — শুধু `strong += 1` (একটা সাধারণ increment, ১-২ cycle)। নতুন `Rc` মানে একই pointer এর আরেকটা ৮-byte copy। এজন্যই "cheap"।
+- প্রতিটা `Rc` drop হলে `strong -= 1`; ফল ০ হলে (আর কেউ owner নেই) ভেতরের `value.drop()` চালিয়ে heap block free। (একটু সূক্ষ্মতা: block টা শেষ `Weak` পর্যন্ত বাঁচে — `weak` counter ০ হলে তবেই শেষ free।)
+- `Rc::strong_count(&data)` = ওই counter টা পড়া মাত্র। সব operation O(1)।
+- Counter দুটো সাধারণ (non-atomic) — দুই thread একসাথে clone করলে হিসাব ভেঙে যাবে (data race)। এজন্যই `Rc` কে thread এ পাঠানো compiler বারণ করে (`!Send`)।
 
 ### কখন Rc দরকার?
 
@@ -156,7 +197,7 @@ fn main() {
 ```
 
 > [!example]
-// Tree বা graph structure এ একই node কে একাধিক parent থেকে point করতে হলে `Rc` দরকার। Ownership rule (একজন owner) এর বিপরীতে `Rc` একাধিক owner allow করে।
+> // Tree বা graph structure এ একই node কে একাধিক parent থেকে point করতে হলে `Rc` দরকার। Ownership rule (একজন owner) এর বিপরীতে `Rc` একাধিক owner allow করে।
 
 ### `Rc::clone` vs `clone`
 
@@ -171,7 +212,24 @@ let s3 = (*s).clone();
 ```
 
 > [!warn]
-// `Rc::clone(&s)` আর `s.clone()` আলাদা! `Rc::clone` reference count বাড়ায় (cheap), `s.clone()` data copy করে (expensive)। Clippy তোমাকে সাহায্য করবে ভুল ধরতে।
+> // `Rc::clone(&s)` আর `s.clone()` আলাদা! `Rc::clone` reference count বাড়ায় (cheap), `s.clone()` data copy করে (expensive)। Clippy তোমাকে সাহায্য করবে ভুল ধরতে।
+
+### Rc Cycle আর `Weak` — কেন দরকার
+
+`Rc` এর একটা সর্বনাশ: দুটো node যদি একে অপরকে `Rc` দিয়ে ধরে (parent → child, আবার child → parent), দুজনের `strong` count কখনো ০ হয় না — drop কেউ করতে পারে না, heap block চিরকাল leak। Python এ GC এর cycle detector এটা ধরে ফেলে, Rust এ `Rc` এর ভেতরে কেউ নেই।
+
+সমাধান `Weak` — এমন pointer যেটা ownership নেয় না: clone করলে `strong` না বাড়িয়ে `weak` counter বাড়ে, তাই data বাঁচিয়ে রাখতে পারে না — আর cycle ভেঙে যায়:
+
+```rust
+use std::rc::{Rc, Weak};
+
+struct Node {
+    children: Vec<Rc<Node>>,   // নিচের দিকে strong — child এর মালিক
+    parent: Weak<Node>,        // উপরের দিকে weak — count বাড়ায় না
+}
+```
+
+`Weak` থেকে value নিতে হলে `parent.upgrade()` — ভেতরে শুধু একটা check: strong count > 0? থাকলে `Some(Rc)`, data drop হয়ে গেলে `None`। Dangling pointer হওয়ার সুযোগই নেই। চর্চা: parent → child strong (`Rc`), child → parent weak (`Weak`)।
 
 ## `RefCell<T>` — Interior Mutability
 
@@ -192,13 +250,41 @@ fn main() {
 ```
 
 > [!danger]
-// `RefCell` borrowing rule runtime এ check করে! যদি একই সময়ে দুটো mutable borrow নাও, **runtime panic** হবে। Compiler compile time এ ধরবে না। সাবধান!
+> // `RefCell` borrowing rule runtime এ check করে! যদি একই সময়ে দুটো mutable borrow নাও, **runtime panic** হবে। Compiler compile time এ ধরবে না। সাবধান!
 
 ```rust
 let data = RefCell::new(5);
 let b1 = data.borrow_mut();
 let b2 = data.borrow_mut();  // PANIC! Already borrowed
 ```
+
+ভেতরে কী চলে? কোনো lock নেই — মাত্র একটা `Cell<BorrowFlag>` (একটা integer), তিন অবস্থায় থাকে:
+
+```text
+0        → কেউ ধরেনি (unused)
+1, 2, 3… → এতগুলো immutable borrow চলছে (shared)
+-1       → একটা mutable borrow চলছে (exclusive)
+```
+
+```rust
+// Simplified
+pub fn borrow(&self) -> Ref<'_, T> {
+    match self.flag.get() {
+        EXCLUSIVE => panic!("already borrowed: BorrowError"),   // runtime panic!
+        n         => { self.flag.set(n + 1); Ref { /* drop এ flag ঠিক করবে */ } }
+    }
+}
+
+pub fn borrow_mut(&self) -> RefMut<'_, T> {
+    if self.flag.get() != 0 {
+        panic!("already borrowed: BorrowMutError");             // runtime panic!
+    }
+    self.flag.set(EXCLUSIVE);
+    RefMut { /* drop এ flag ০ করবে */ }
+}
+```
+
+মানে প্রতিটা `borrow`/`borrow_mut` call এ একটা integer পড়া-লেখা ছাড়া কিছুই না — compile-time borrow check এর চেয়ে ধীর, কিন্তু Mutex এর lock থেকে অনেক সস্তা। Panic টা হয় ঠিক এই flag check এ। `Ref`/`RefMut` guard object টা scope শেষে drop হলে flag আগের অবস্থায় ফিরে যায় — সেটাও আবার `Drop` trait এর কাজ।
 
 ### কখন RefCell দরকার?
 
@@ -231,7 +317,7 @@ fn main() {
 ```
 
 > [!tip]
-// `RefCell` দরকার যখন struct এর method `&self` (immutable) নেয় কিন্তু ভেতরের data modify করতে চায়। এটাকে **interior mutability pattern** বলে। Mock object, cache, আর lazy initialization এ দরকার হয়।
+> // `RefCell` দরকার যখন struct এর method `&self` (immutable) নেয় কিন্তু ভেতরের data modify করতে চায়। এটাকে **interior mutability pattern** বলে। Mock object, cache, আর lazy initialization এ দরকার হয়।
 
 ## `Rc<RefCell<T>>` — Combo
 
@@ -256,7 +342,7 @@ fn main() {
 ```
 
 > [!example]
-// `Rc<RefCell<T>>` হলো Python এর mutable shared state এর equivalent। একাধিক owner, mutable — কিন্তু runtime borrow check সহ। Graph algorithm, observer pattern এ দরকার হয়।
+> // `Rc<RefCell<T>>` হলো Python এর mutable shared state এর equivalent। একাধিক owner, mutable — কিন্তু runtime borrow check সহ। Graph algorithm, observer pattern এ দরকার হয়।
 
 ## `Arc<T>` — Thread-Safe Rc
 
@@ -285,7 +371,17 @@ fn main() {
 ```
 
 > [!warn]
-// **`Rc` = single-threaded, `Arc` = multi-threaded**। Thread এর সাথে `Rc` send করলে compile error! `Arc` ব্যবহার করো। `Arc` এর reference count atomic operation দিয়ে হয় — সামান্য ধীর কিন্তু thread-safe।
+> // **`Rc` = single-threaded, `Arc` = multi-threaded**। Thread এর সাথে `Rc` send করলে compile error! `Arc` ব্যবহার করো। `Arc` এর reference count atomic operation দিয়ে হয় — সামান্য ধীর কিন্তু thread-safe।
+
+**`Arc` এ count কীভাবে বাড়ে-কমে?** `Rc` এর মতোই, শুধু কাজটা **atomic instruction** এ:
+
+```text
+Rc::clone:  strong += 1                    → সাধারণ add — দুই thread এ একসাথে করলে race
+Arc::clone: strong.fetch_add(1)            → atomic add — race অসম্ভব
+Arc drop:   যদি strong.fetch_sub(1) == 1   → শেষ owner, এখন value drop + free
+```
+
+Atomic op CPU তে "lock-prefixed" instruction — অন্য core গুলোর cache line invalidate করে, তাই সাধারণ increment এর চেয়ে কয়েক গুণ ধীর। দামটা সব জায়গায় দিতে হয় না বলেই Rust দুটো type রেখেছে: single-thread এ `Rc` (দ্রুত), thread জুড়লে `Arc`। আর "শেষ owner" check টাও atomic — দুই thread একসাথে শেষ দুই owner drop করলেও free ঠিক **একবারই** হয়, double-free অসম্ভব।
 
 ## `Mutex<T>` আর `RwLock<T>` — Thread-Safe Mutability
 
@@ -316,7 +412,10 @@ fn main() {
 ```
 
 > [!note]
-// `Arc<Mutex<T>>` হলো Rust এর standard shared mutable state pattern। Python এর `threading.Lock` এর মতো, কিন্তু Rust এ compiler নিশ্চিত করে lock acquire না করে data access করা যাবে না। Concurrency chapter এ আরো দেখবো।
+> // `Arc<Mutex<T>>` হলো Rust এর standard shared mutable state pattern। Python এর `threading.Lock` এর মতো, কিন্তু Rust এ compiler নিশ্চিত করে lock acquire না করে data access করা যাবে না। Concurrency chapter এ আরো দেখবো।
+
+> [!note]
+> **`lock()` এর ভেতরে?** Linux এ futex — lock ফাঁকা থাকলে একটা atomic compare-and-swap, কয়েক ন্যানোসেকেন্ডেই ঢুকে যাওয়া; না পেলে thread টা kernel এ ঘুমিয়ে যায়, unlock হলে OS জাগিয়ে দেয়। আর `lock()` কেন `Result` দেয় জানো? **Poisoning** — lock ধরে রেখে কেউ panic করলে ভেতরের data অবিশ্বস্ত ধরা হয়, পরের সব `lock()` তখন `Err` দেয় (চাইলে `unwrap()` দিয়ে অবহেলা করা যায়)।
 
 ## Smart Pointer তুলনা
 
@@ -330,12 +429,12 @@ fn main() {
 | `Arc<Mutex<T>>` | Shared | Runtime | Yes | Shared mutable state |
 
 > [!tip]
-// Decision tree:
-// 1. Single owner, compile-time check → `Box<T>`
-// 2. Multiple owner, single-thread → `Rc<T>`
-// 3. Multiple owner, multi-thread → `Arc<T>`
-// 4. Need to mutate through `&self` → `RefCell<T>` (single) / `Mutex<T>` (multi)
-// 5. Shared mutable, multi-thread → `Arc<Mutex<T>>`
+> // Decision tree:
+> // 1. Single owner, compile-time check → `Box<T>`
+> // 2. Multiple owner, single-thread → `Rc<T>`
+> // 3. Multiple owner, multi-thread → `Arc<T>`
+> // 4. Need to mutate through `&self` → `RefCell<T>` (single) / `Mutex<T>` (multi)
+> // 5. Shared mutable, multi-thread → `Arc<Mutex<T>>`
 
 ## Deref Trait — Auto Dereference
 
@@ -367,7 +466,7 @@ fn main() {
 ```
 
 > [!note]
-// `Deref` trait এর কারণে `Box<String>` কে `&str` এর মতো treat করা যায় — deref coercion। এটাই Rust এর smart pointer গুলোকে seamless করে তোলে।
+> // `Deref` trait এর কারণে `Box<String>` কে `&str` এর মতো treat করা যায় — deref coercion। এটাই Rust এর smart pointer গুলোকে seamless করে তোলে।
 
 ## Drop Trait — Custom Cleanup
 
@@ -393,11 +492,14 @@ fn main() {
 // End of main
 // Dropping: second  (reverse order!)
 // Dropping: first
-}
+
 ```
 
 > [!example]
-// `Drop` trait হলো C++ এর destructor বা Python এর `__del__` এর মতো। Resource cleanup এর জন্য — file close, connection close, memory free। Rust এ memory leak practically impossible কারণ `Drop` automatic।
+> // `Drop` trait হলো C++ এর destructor বা Python এর `__del__` এর মতো। Resource cleanup এর জন্য — file close, connection close, memory free। Rust এ memory leak practically impossible কারণ `Drop` automatic।
+
+> [!note]
+> **Drop কীভাবে চলে?** Scope শেষে compiler এর বসানো "drop glue" প্রতিটা local variable এর জন্য `Drop::drop` call করে — **ঘোষণার উল্টো ক্রমে** (b আগে, a পরে — কারণ পরে ঘোষিতটা আগেরটার data borrow করতে পারে)। `Box`, `Rc`, `File`, `MutexGuard` — সবার cleanup এই একই পথে চলে। `drop(x)` function টা আসলে কোনো কাজ করে না — শুধু `x` কে ফাঁকা `_` এ move করে, move হলেই destructor সাথে সাথে চলে। উল্টোদিকে `std::mem::forget(x)` দিলে বা `Rc` cycle তৈরি হলে drop হয় না — তাই সত্যি বলতে Rust ও leak করা যায়, শুধু compiler এর নিয়মের বাইরে গেলে।
 
 ## Summary
 

@@ -1,0 +1,134 @@
+[
+  {
+    "id": "modules-cargo-1",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "Crate দুই রকম হয়। `main.rs`-ওয়ালা আর `lib.rs`-ওয়ালা — কোনটা কী বানায়?",
+    "options": [
+      "`main.rs`-সহ binary crate → executable বানায়; `lib.rs`-সহ library crate → অন্যরা যা use করে",
+      "দুটোই executable বানায়, শুধু নাম আলাদা",
+      "`main.rs` library, `lib.rs` binary বানায়",
+      "একটা package-এ হয় শুধু binary, নয় শুধু library — দুটো একসাথে অসম্ভব"
+    ],
+    "answer": 0,
+    "explanation": "Binary crate (main.rs) executable বানায়, library crate (lib.rs) library বানায়। আর একটা package-এ একটা library crate আর একাধিক binary crate একসাথে থাকতে পারে — অসম্ভব কিছু না।"
+  },
+  {
+    "id": "modules-cargo-2",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "`pub` ছাড়া লেখা একটা function module-এর বাইরে থেকে access করা যায়? Rust-এ default visibility কেমন?",
+    "options": [
+      "সবকিছু default private — শুধু নিজের module (আর তার child module) থেকে দেখা যায়; বাইরে দেখাতে `pub` লাগে",
+      "সবকিছু default public — `pub` শুধু documentation-এর জন্য",
+      "Default একই crate-এ public, বাইরের crate-এ private",
+      "Default protected — শুধু child module থেকে দেখা যায়"
+    ],
+    "answer": 0,
+    "explanation": "Rust-এ সবকিছু default ভাবে private; `pub` দিলে তবেই module tree-র অন্য শাখা থেকে দেখা যায়। মাঝামাঝি দরকারে আছে `pub(crate)` (শুধু এই crate), `pub(super)` (শুধু parent)।"
+  },
+  {
+    "id": "modules-cargo-3",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "এই কোডটা compile করলে কী হবে?",
+    "code": "mod math_utils {\n    pub fn add(a: i32, b: i32) -> i32 {\n        a + b\n    }\n\n    fn subtract(a: i32, b: i32) -> i32 {\n        a - b\n    }\n}\n\nfn main() {\n    println!(\"{}\", math_utils::add(10, 5));\n    println!(\"{}\", math_utils::subtract(10, 5));\n}",
+    "options": [
+      "Compile error — `subtract` private (pub নেই), বাইরের `main` থেকে access করা যায় না; `add` ঠিক আছে কারণ সেটা pub",
+      "15 আর 5 ছাপা হবে",
+      "15 ছাপা হবে, তারপর runtime panic হবে",
+      "Warning দেবে কিন্তু 15 আর 5-ই ছাপা হবে"
+    ],
+    "answer": 0,
+    "explanation": "`add`-এ `pub` আছে বলে path ধরে access চলে; `subtract`-এ নেই — private item শুধু নিজের module আর child থেকে দেখা যায়, parent (`main`) থেকে না। তাই compile-ই হবে না, runtime-এ যাওয়ার আগেই ব্যাপার শেষ।"
+  },
+  {
+    "id": "modules-cargo-4",
+    "difficulty": "medium",
+    "type": "code",
+    "prompt": "Function-টা পুরো crate-এর ভেতরের যেকোনো module থেকে call করা যাবে, কিন্তু বাইরের crate থেকে না — blank-এ কী লিখবে?",
+    "code": "mod my_module {\n    ____ fn crate_only() {\n        println!(\"internal helper\");\n    }\n}",
+    "accept": ["pub(crate)"],
+    "explanation": "`pub(crate)` — visibility সীমিত শুধু এই crate-এ। পুরোপুরি `pub` হলে বাইরের crate-এও খুলে যেত, আর কিছু না দিলে শুধু `my_module`-এর ভেতরেই থাকত। আরও সরু পরিসর চাইলে `pub(super)` (শুধু parent module)।"
+  },
+  {
+    "id": "modules-cargo-5",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "Crate root-এ `mod math_utils;` (semicolon সহ) লিখলে আসলে কী হয়?",
+    "options": [
+      "Compile time-এ module tree-তে একটা node যোগ হয়, আর compiler ডিস্ক থেকে `math_utils.rs` (বা `math_utils/mod.rs`) খুঁজে parse করে ঠিক ওই জায়গায় বসিয়ে দেয় — কোনো runtime file search নেই",
+      "Runtime-এ ওই ফাইলটা লোড আর execute হয় — Python-এর import-এর মতো",
+      "আলাদা একটা crate তৈরি হয়ে আলাদা ভাবে compile হয়",
+      "শুধু একটা namespace alias তৈরি হয়, ফাইলের সাথে সম্পর্ক থাকে না"
+    ],
+    "answer": 0,
+    "explanation": "`mod x;` মানেই compiler নিজেই ফাইলটা খুঁজে নিয়ে inline block-এর মতো ওই জায়গায় splice করে — পুরো crate এক compile unit। Python import-এর মতো runtime কিছু না: কোনো file search, কোনো module side-effect execute নেই।"
+  },
+  {
+    "id": "modules-cargo-6",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "`cargo build` ভেতরে চারটা ধাপ কোন ক্রমে চালায়?",
+    "options": [
+      "Resolve (dependency graph + Cargo.lock-এ lock) → Order (topological ক্রম) → Compile (rustc প্রতি crate-এ .rmeta + .rlib) → Link (সব জুড়ে executable)",
+      "Compile → Resolve → Order → Link",
+      "Link → Compile → Order → Resolve",
+      "Resolve → Link → Order → Compile"
+    ],
+    "answer": 0,
+    "explanation": "আগে Cargo.toml পড়ে semver মেনে version resolve করে Cargo.lock-এ lock করে; তারপর dependency graph থেকে topological ক্রম (যার উপর কেউ নির্ভর করে না সে আগে); প্রতিটা crate আলাদা compile unit — rustc দেয় .rmeta (type/signature metadata) + .rlib (compiled code); শেষে linker সব rlib জুড়ে target/debug/-এ executable বানায়।"
+  },
+  {
+    "id": "modules-cargo-7",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "`cargo check` কেন `cargo build`-এর চেয়ে অনেক দ্রুত?",
+    "options": [
+      "Type/borrow check পর্যন্তই চালায় — codegen (machine code বানানো) আর link ধাপ পুরোপুরি বাদ দেয়, কারণ check-এ binary দরকারই নেই",
+      "নতুন করে dependency গুলো একেবারেই compile করে না",
+      "শুধু syntax check করে — type error ধরে না",
+      "Check-এর সময় compiler কম CPU core ব্যবহার করে"
+    ],
+    "answer": 0,
+    "explanation": "Check একই resolve/order/type-check পথ চালায়, কিন্তু codegen আর link বাদ — binary লাগেই না। Type/borrow error সব ধরা পড়ে (শুধু syntax না); শুধু চালানোর মতো executable তৈরি হয় না।"
+  },
+  {
+    "id": "modules-cargo-8",
+    "difficulty": "medium",
+    "type": "code",
+    "prompt": "Library-র user-রা পুরো path (`my_lib::internal::helper`) না লিখে সরাসরি `my_lib::helper` লিখতে পারবে — internal module ঢাকা রেখে blank-এ কী লিখবে?",
+    "code": "mod internal {\n    pub fn helper() {\n        println!(\"helping\");\n    }\n}\n\n____\n// external user এখন লিখতে পারবে: use my_lib::helper;",
+    "accept": ["pub use internal::helper;"],
+    "explanation": "`pub use` re-export — item একবারই define থাকে, কিন্তু module tree-তে তার দ্বিতীয় একটা public path খুলে দেয়: `my_lib::helper` আর `my_lib::internal::helper` দুটোই একই function। সাধারণ `use` নিজের ফাইলের shortcut মাত্র; `pub use` বাইরের user-এর জন্য পথ খোলে — দুটোই compile-time path aliasing, binary-তে খরচ নেই।"
+  },
+  {
+    "id": "modules-cargo-9",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "প্রথম `cargo build` ধীর, কিন্তু কোড ছোঁয়ার পরেও পরের build প্রায় তাৎক্ষণিক কেন?",
+    "options": [
+      "প্রতিটা compile unit-এর fingerprint `target/`-এ জমে থাকে — যে crate বদলায়নি সেটা আর compile-ই হয় না; আর তোমার crate-এর type check নির্ভরতাদের `.rmeta` (metadata) দেখেই চলে, তাদের পুরো কোড আবার লাগে না",
+      "দ্বিতীয়বার compiler RAM-এ cache করা ফলাফল সরাসরি paste করে দেয়",
+      "দ্বিতীয় build নিজে থেকেই `--release` মোডে চলে",
+      "Linker-এর দ্বিতীয়বার কোনো কাজ থাকে না বলেই"
+    ],
+    "answer": 0,
+    "explanation": "Incremental build-এর মূল হিসাব fingerprint-ভিত্তিক: অপরিবর্তিত crate আবার compile হয় না। নির্ভরতাদের থেকে তোমার crate-এর type check চলে .rmeta (type/signature metadata) দেখেই — compiled code (.rlib) লাগে শুধু link ধাপে। এজন্যই প্রথম build ধীর, দ্বিতীয়টা প্রায় তাৎক্ষণিক।"
+  },
+  {
+    "id": "modules-cargo-10",
+    "difficulty": "hard",
+    "type": "output",
+    "prompt": "নিচের library crate `my_lib`-এর বাইরের একজন user `my_lib::api::call()` call করে `println!` দিয়ে ছাপালে কী হবে?",
+    "code": "// crate my_lib (src/lib.rs)\nmod net {\n    pub(crate) fn ping() -> &'static str {\n        \"pong\"\n    }\n}\n\npub mod api {\n    pub fn call() -> &'static str {\n        crate::net::ping()\n    }\n}\n\n// অন্য crate থেকে:\n// println!(\"{}\", my_lib::api::call());",
+    "options": [
+      "\"pong\" ছাপা হবে — `pub(crate)` একই crate-এর ভেতরের (api থেকে) access চালু রাখে, আর বাইরের user তো শুধু `call()` ব্যবহার করছে",
+      "Compile error — `ping` পুরো `pub` না হওয়ায় `api` থেকেও call করা যাবে না",
+      "Compile error — user `ping`-এ পৌঁছাতে না পারায় `call()` আটকে যাবে",
+      "\"pong\"-এর বদলে empty string আসবে"
+    ],
+    "answer": 0,
+    "explanation": "`pub(crate)` মানে পুরো crate-এর ভেতর থেকে access পাওয়া যায় — `api` একই crate-এর module, তাই `crate::net::ping()` বৈধ। বাইরের user `my_lib::net::ping()` সরাসরি ডাকতে পারবে না (crate-এর বাইরে `pub(crate)` দেখা যায় না) — সে পাচ্ছে শুধু public `call()`, যেটা ঠিকঠাক \"pong\" ফেরত দেয়।"
+  }
+]

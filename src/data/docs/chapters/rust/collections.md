@@ -25,6 +25,9 @@ let v4: Vec<i32> = (1..=5).collect();
 > [!tip]
 > `Vec::with_capacity(n)` ব্যবহার করলে Rust একবারে `n` এর জায়গা allocate করে। যদি জানো কতটা element ঢুকবে, এটা reallocation বাঁচায় — performance বাড়ে।
 
+> [!note]
+> **Vec ভেতরে কেমন?** `Vec<T>` নিজে মাত্র ৩টা word — heap buffer এর pointer, `capacity`, আর `len` (64-bit এ মোট ২৪ byte)। Element গুলো থাকে heap এর একটা contiguous buffer এ। `len` মানে এখন কয়টা element আছে, `capacity` মানে allocate করা জায়গায় সর্বোচ্চ কয়টা ঢুকতে পারে। `v[i]` আসলে `*(ptr + i * size_of::<T>())` — খালি pointer arithmetic, এ জন্যই access O(1)। আর `vec![1, 2, 3]` macro টা compile time এ প্রসারিত হয়ে element count আগেই জেনে নেয়, তাই exact capacity দিয়ে **একবারই** allocate করে — `Vec::new()` নিয়ে একাধিক `push` করলে যেমন বারবার resize হতো, তা হয় না।
+
 ### Element যোগ করা
 
 ```rust
@@ -36,6 +39,15 @@ v.push(3);
 v.insert(0, 0);  // index 0 তে insert → [0, 1, 2, 3]
 v.extend([4, 5]); // একাধিক যোগ → [0, 1, 2, 3, 4, 5]
 ```
+
+> [!note]
+> **`push` এর ভেতরে কী হয়?** `push` magic না — তিনটা কাজ করে:
+> ১. `len == capacity` কিনা check করে। ২. দরকার হলে নতুন বড় buffer allocate করে (capacity সাধারণত **২×**), পুরনো data সব নতুন জায়গায় bitwise copy (`memcpy`) করে, পুরনোটা free করে। ৩. নতুন value টা buffer এর শেষ slot এ লেখে, `len += 1`।
+> তাই বেশিরভাগ push O(1), কিন্তু resize এর মুহূর্তে O(n) — মোট হিসাবে **amortized O(1)**।
+
+আর `insert(0, 0)` ভিন্ন গল্প — index 0 তে বসাতে হলে তার পরের **সব** element এক ঘর করে ডানে সরতে হয়। ভেতরে `ptr::copy` দিয়ে বাকি পুরো অংশ memmove হয়, তাই insert যেকোনো position এই O(n) — আর শুরুতে insert মানে প্রায় পুরো n shift, সবচেয়ে খারাপ case। Loop এ বারবার `insert(0, ..)` করলে O(n²) — এমন কাজের জন্য `VecDeque` (দুই দিকে O(1) add) ব্যবহার করো।
+
+`extend([4, 5])` ভেতরে iterator এর প্রতিটা item এর জন্য push চালায়, কিন্তু শুরুতেই মোট দরকারি জায়গা একবার reserve করে নেয় — তাই মাঝপথে একাধিক resize হয় না।
 
 ### Element Access
 
@@ -57,6 +69,9 @@ let last = v.last().unwrap(); // 50
 > [!danger]
 > Python এর মতো `v[-1]` কাজ করবে না — Rust এ নেতিবাচক index নেই। `v.last()` বা `v[v.len()-1]` ব্যবহার করতে হবে। আর `v[100]` যদি out of bounds হয়, Rust panic করবে (crash)। `v.get(100)` ব্যবহার করলে `None` পাবে — safe।
 
+> [!note]
+> **`v[i]` vs `v.get(i)` — ভেতরে একই কাজ?** প্রায়। দুটোই একটাই comparison চালায়: `index < len` — তাই দুটোই O(1), কোনো লুকানো loop নেই। পার্থক্য শুধু fail branch এ: index বাইরে গেলে `v[i]` ভেতরে `panic!("index out of bounds")` call করে, `v.get(i)` সেই একই check থেকে `None` ফেরত দেয়। মানে `get` এর কোনো extra runtime cost নেই — return টা `Option<&T>`, যেটা niche optimization এর জন্য `&T` এর সমান সাইজ (enums chapter এ দেখবো)।
+
 ### Remove আর Pop
 
 ```rust
@@ -67,6 +82,9 @@ v.remove(0);                 // v = [2, 3, 4] (O(n) — shift করে)
 v.truncate(2);               // v = [2, 3]
 v.clear();                   // v = []
 ```
+
+> [!note]
+> **এদের ভেতরে:** `pop()` হলো O(1) — `len -= 1` করে শেষ element টা পড়ে return করে। খেয়াল করো capacity **কমে না** — buffer এর জায়গা দখলেই থাকে, পরের push গুলো তখন resize ছাড়াই চলে। `remove(i)` হলো O(n) — i এর পরের সব element এক ঘর বাঁয়ে memmove হয় (`insert` এর আয়নার মতো), তারপর `len -= 1`। `truncate(n)` আর `clear()` বাদ পড়া element গুলোর `Drop` চালিয়ে `len` কমিয়ে দেয় — কিন্তু buffer free **হয় না**। জায়গা সত্যিই ছাড়াতে চাইলে `shrink_to_fit()` ডাকতে হয়।
 
 ### Iteration
 
@@ -129,12 +147,23 @@ let mut dupes = vec![1, 1, 2, 2, 3];
 dupes.dedup();  // [1, 2, 3]
 ```
 
+> [!note]
+> **এই operations এর ভেতরে:**
+> - `len()`/`is_empty()` — শুধু stored field পড়া, O(1)।
+> - `contains(&3)` — ভেতরে একটা loop: প্রতিটা element এর সাথে `PartialEq` তুলনা, প্রথম match এ থেমে যায় — O(n)। Data sorted থাকলে `binary_search(&3)` O(log n)।
+> - `&v[1..3]` — **zero cost slice**: নতুন data তৈরি হয় না, শুধু একটা নতুন fat pointer `(ptr + 1, len = 2)` বসে। `split_at(2)` ও তাই — দুটো slice, কোনো copy নেই।
+> - `sort()` — stable sort, ভিত্তি merge sort (Rust 1.81+ এ "driftsort" নামের adaptive version)। সাধারণ case এ O(n log n); আগে থেকে sorted/প্রায় sorted input এ আরও দ্রুত। `sort_by` ও একই engine, শুধু comparator আলাদা।
+> - `dedup()` — শুধু **adjacent** duplicate মুছে, O(n): একটা window এগিয়ে যায়, current element আগেরটার সমান হলে skip, না হলে সামনে compact করে লেখে। এ জন্যই `[1, 2, 1]` dedup করলে অপরিবর্তিত থাকে — এটা দূরের duplicate খোঁজেই না। Global dedup দরকার হলে আগে `sort()` করে তারপর `dedup()`, অথবা `HashSet` এ collect করো (তখন order হারাবে)।
+
 ### Vec থেকে String তৈরি
 
 ```rust
 let chars = vec!['h', 'e', 'l', 'l', 'o'];
 let s: String = chars.into_iter().collect();
 ```
+
+> [!note]
+> এই এক লাইনে দুটো নতুন মুখ। **`.into_iter()`** — ownership নিয়ে নেওয়া iterator (`chars` Vec-টা এরপর ব্যবহার করা যাবে না, কারণ `String` বানাতেই element গুলো খরচ হয়ে যাবে)। আর **`.collect()`** — iterator থেকে collection বানায়; target type annotation (`let s: String`) দেখে বুঝে নেয় কী বানাতে হবে। পুরো iterator-জগৎের গল্প iterators chapter-এ — আপাতত মনে রাখো: `into_iter()` = element-এর ownership-সহ iterator, `collect()` = জমা করে নতুন collection।
 
 ## HashMap
 
@@ -151,6 +180,15 @@ scores.insert(String::from("Karim"), 95);
 scores.insert(String::from("Rahim"), 87);
 ```
 
+> [!note]
+> **`HashMap` ভেতরে কেমন?** std Rust এর `HashMap` আসলে **hashbrown** crate — SwissTable design এর উপর দাঁড়ানো:
+> - দুটো আলাদা array রাখে — প্রতি slot এর জন্য ১ byte করে **control byte** (slot খালি/ভরা/মুছে-ফেলা কিনা + key এর hash এর উপরের ৭ bit), আর key-value pair গুলোর array।
+> - probing এ একসাথে **১৬টা control byte** SIMD instruction দিয়ে compare করে — এক scan এ ১৬ slot এর খবর, এ জন্যই দ্রুত।
+> - Table **~87.5% (৭/৮)** পর্যন্ত ভরা চলে; তার বেশি হলে সব key আবার hash করে দ্বিগুণ বড় table এ সরে (resize)। মানে গড়ে ৮ slot এর মধ্যে ১টা ফাঁকা — probe chain ছোট থাকে।
+> - Default hasher **SipHash-1-3** — প্রতিটা map নিজস্ব random seed নেয়, যাতে attacker ইচ্ছাকৃত collision ঘটিয়ে lookup slow করতে (hash-flooding DoS) না পারে। এই security এর দাম হলে ধীর গতি — নিজের data বিশ্বস্ত হলে `ahash`/`FxHashMap` জাতীয় faster hasher বসানো যায়।
+>
+> **`insert(k, v)` এর ধাপগুলো:** key hash করে → control byte প্রোব করে slot খোঁজে → কোনো slot এ same key থাকলে `PartialEq` দিয়ে compare করে নিশ্চিত হয় → value লেখে (আগে থেকে থাকলে পুরনোটা drop করে), আর load factor পার হলে আগে resize। গড়ে এক probe, তাই **amortized O(1)**।
+
 ### Access
 
 ```rust
@@ -163,6 +201,9 @@ for (name, score) in &scores {
     println!("{}: {}", name, score);
 }
 ```
+
+> [!note]
+> `get("Karim")` ও insert এর পথেই চলে — hash → probe → key compare; মিললে `Some(&value)` (value এর **reference**, copy হয় না), না মিললে `None`। গড়ে O(1)। আর iteration ভেতরে control byte array হেঁটে ভরা slot গুলো দেয় — order টা hash এর উপর নির্ভর করে, তাই দেখতে "random", প্রতিবার run এ আলাদা।
 
 ### Insert আর Update
 
@@ -177,6 +218,20 @@ scores.entry(String::from("Sadia")).or_insert(78);  // নতুন, insert হ�
 
 > [!tip]
 > `entry().or_insert()` হলো Python এর `dict.setdefault()` এর মতো। এটা "insert if absent" pattern এর জন্য perfect — দুবার lookup করা লাগে না।
+
+`entry().or_insert()` এর ভেতরে আসলে এই কোড চলে (simplified):
+
+```rust
+// একবারই hash + lookup হয় — দুবার না
+pub fn entry(&mut self, key: K) -> Entry<'_, K, V> {
+    match self.get_inner(&key) {
+        Some(_) => Entry::Occupied(/* slot এর location মনে রাখে */),
+        None    => Entry::Vacant(/* insert করার জায়গা */),
+    }
+}
+```
+
+`Entry` হলো একটা enum — `Occupied` মানে key আছে, `Vacant` মানে নেই। `or_insert()` শুধু Vacant হলে insert করে। এক lookup, তাই দ্রুত — `contains_key` + `insert` লিখলে একই কাজে hash + probe **দুবার** লাগতো।
 
 ### Update Existing Value
 
@@ -200,6 +255,8 @@ for word in text.split_whitespace() {
 ```rust
 scores.remove("Rahim");
 ```
+
+`remove` ও একই পথে চলে — hash → probe → key compare → মিললে ওই slot এর control byte "deleted" (tombstone) করে key-value টা drop করে। Tombstone রাখা জরুরি — নাহলে পরে ঢোকা কোনো key এর probe chain মাঝপথে ভেঙে যেত।
 
 ### Common Operations
 
@@ -238,6 +295,8 @@ for (key, value) in &map {
 > [!note]
 > `BTreeMap` internally B-tree ব্যবহার করে। Lookup একটু ধীর `HashMap` থেকে, কিন্তু sorted iteration পাওয়া যায়। যখন order দরকার, তখন এটা ব্যবহার করো।
 
+B-tree এর কাজের ধরন: প্রতিটা node এ অনেকগুলো key একসাথে থাকে (Rust এ সাধারণত ১১টা)। lookup মানে — একটা node পড়ো → node এর ভেতরে **binary search** করে ঠিক subtree বের করো → পরের node। tree এর height খুবই কম (লাখখানেক element এও ৪-৫ level), আর এক node এর সব key memory তে পাশাপাশি — cache friendly। Complexity সবসময় **O(log n)**, খারাপ case নেই (hash table এর মতো collision worry নেই)। আরেকটা পার্থক্য: `HashMap` এর key তে `Hash + Eq` লাগে, `BTreeMap` এ শুধু `Ord` — আর range query free: `map.range("b".."d")` দিয়ে একটা সীমার সব key পাওয়া যায়।
+
 ## HashSet
 
 `HashSet<T>` হলো unique value এর collection — Python এর `set` এর মতো:
@@ -260,6 +319,9 @@ let intersection: Vec<&i32> = set1.intersection(&set2).collect(); // [3, 4]
 let union: Vec<&i32> = set1.union(&set2).collect();               // [1, 2, 3, 4, 5, 6]
 let diff: Vec<&i32> = set1.difference(&set2).collect();           // [1, 2]
 ```
+
+> [!note]
+> **HashSet ভেতরে কী?** মূলত `HashMap<T, ()>` — একই SwissTable, value হিসেবে ফাঁকা unit `()`। `insert("apple")` দ্বিতীয়বার ডাকলে ভেতরে hash → probe → key compare হয়ে already-present বুঝে কিছুই লেখে না — এ জন্যই duplicate ঢোকে না। `intersection`/`union`/`difference` ও একই hash + probe mechanism ব্যবহার করে: `intersection` দুটোর **ছোট** set টা iterate করে প্রতিটা element অন্য set এ `contains` করে দেখে — তাই O(min(n, m))। union এ duplicate একবারই আসে, কারণ ভেতরে insert হয় আর insert-time এই duplicate check।
 
 ## Collection তুলনা
 

@@ -1,0 +1,141 @@
+[
+  {
+    "id": "enums-pattern-matching-1",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "Rust-এর enum-কে C++/Python-এর enum বা Union-এর চেয়ে শক্তিশালী বলা হয় কেন?",
+    "options": [
+      "Enum-এর ভেতরে method লেখা যায়",
+      "প্রতিটা variant নিজে data বহন করতে পারে — `Write(String)` বা `Move { x: i32, y: i32 }`-এর মতো",
+      "Enum-এর value গুলো runtime-এ বদলানো যায়",
+      "Rust enum-এ inheritance আছে"
+    ],
+    "answer": 1,
+    "explanation": "Rust-এর variant শুধু label না — struct বা tuple-এর মতো payload বহন করে। ভেতরে এটা tag + union, কিন্তু type-safe: `Direction` type-এর বাইরের কোনো মান ঢোকানোই সম্ভব না (C++ enum-এ ভুল integer দিলে UB হতে পারে)।"
+  },
+  {
+    "id": "enums-pattern-matching-2",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "`Some(42)` আসলে কী?",
+    "options": [
+      "Null আছে কিনা check করা একটা builtin function",
+      "`Option` struct-এর একটা field",
+      "`std::option` মডিউলের একটা macro",
+      "`Option` enum-এর data-বহনকারী variant — আর variant-টা নিজে constructor-এর মতো কাজ করে: `Some(42)` লিখলে ভেতরে 42 ঢুকিয়ে tagged value বানিয়ে দেয়"
+    ],
+    "answer": 3,
+    "explanation": "`Some` আর `None` — `Option<T>` enum-এর দুটো variant, prelude-র কল্যাণে import ছাড়াই পাওয়া যায়। Data-বহনকারী variant নিজেই ছোট function-এর মতো — `let f = Some; let x = f(42);` সত্যিই চলে! Rust-এ null নেই, তাই \"মান নেই\" অবস্থাটা type-এই বাঁধা।"
+  },
+  {
+    "id": "enums-pattern-matching-3",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "`enum Message { Quit, Move { x: i32, y: i32 }, Write(String), ChangeColor(i32, i32, i32) }` — memory-তে কেমন সাজে?",
+    "options": [
+      "tag + payload union: একসময়ে একটাই variant থাকে, তাই সব variant সবচেয়ে বড় variant-টার জায়গা share করে",
+      "প্রতিটা variant-এর আলাদা জায়গা বরাদ্দ থাকে — size সব variant-এর size-এর যোগফল",
+      "সব variant heap-এ allocate হয়, stack-এ শুধু pointer থাকে",
+      "ভেতরে String থাকায় enum-টা কখনো stack-এ রাখা যায় না"
+    ],
+    "answer": 0,
+    "explanation": "Enum সাজে tag (discriminant) + payload union আকারে; size = tag + সবচেয়ে বড় variant (+ alignment)। বাড়তি মজা: `repr(Rust)`-এ `String`-এর মতো niche-ওয়ালা payload থাকলে compiler tag আলাদা করে বসায়ই না — তাই `size_of::<Message>()` মাত্র ২৪ byte, `String`-এর সমান।"
+  },
+  {
+    "id": "enums-pattern-matching-4",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "64-bit এ `std::mem::size_of::<Option<&T>>()` কত, আর কেন?",
+    "options": [
+      "১৬ byte — ৮ byte pointer + ৮ byte tag",
+      "৯ byte — ৮ byte pointer + ১ byte tag",
+      "T-র size-এর উপর নির্ভর করে",
+      "৮ byte — `&T`-এর সমান; `None` বোঝাতে ভেতরের pointer-কেই 0 (null address) করে দেওয়া হয়"
+    ],
+    "answer": 3,
+    "explanation": "এটাই niche optimization: valid reference কখনো 0 হতে পারে না — সেই ফাঁকা bit pattern-টাই `None` encode করতে ব্যবহার হয়, আলাদা tag byte লাগে না। `Option<Box<T>>`, `Option<NonZeroU32>`-ও একই সুবিধা পায়। কিন্তু `Option<i32>`-এ প্রতিটা bit pattern-ই valid মান, niche নেই — তাই tag লাগে (৮ byte)।"
+  },
+  {
+    "id": "enums-pattern-matching-5",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "`match` কোন শর্তে সরাসরি jump table-এ compile হয়?",
+    "options": [
+      "সবসময় — match এমনিতেই jump table",
+      "সব variant exhaustively cover থাকলে এবং arm-এ guard (`if ...`) না থাকলে",
+      "`_ =>` catch-all arm থাকলেই",
+      "আন্ডারস্কোর দিয়ে শুরু হওয়া variable name থাকলে"
+    ],
+    "answer": 1,
+    "explanation": "Exhaustiveness checker গাণিতিকভাবে প্রমাণ করে সব সম্ভাব্য মান cover হয়েছে — fallback path-এর দরকার থাকে না, তাই tag পড়ে index হিসেবে সরাসরি branch-এ jump করা যায়; if-else chain-এর চেয়ে দ্রুত। Guard (`if t < 0.0`) ঢুকলে jump table আর সম্ভব না — তখন branch chain।"
+  },
+  {
+    "id": "enums-pattern-matching-6",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "কী প্রিন্ট হবে?",
+    "code": "fn main() {\n    let n = 5;\n    match n {\n        1 | 2 | 3 => println!(\"Small\"),\n        4..=7 => println!(\"Medium\"),\n        8..=100 => println!(\"Large\"),\n        _ => println!(\"Huge or negative\"),\n    }\n}",
+    "options": [
+      "Small",
+      "Medium",
+      "Large",
+      "Huge or negative"
+    ],
+    "answer": 1,
+    "explanation": "`1 | 2 | 3` — multiple pattern একসাথে; `4..=7` inclusive range। n = 5 সীমার ভেতরে, আর pattern গুলো উপর থেকে নিচে মেলানো হয় — আগে মিললেই সেই arm চলে, তাই \"Medium\"।"
+  },
+  {
+    "id": "enums-pattern-matching-7",
+    "difficulty": "medium",
+    "type": "output",
+    "prompt": "শেষ লাইনে কী প্রিন্ট হবে?",
+    "code": "#[derive(Debug)]\nenum GameState {\n    Menu,\n    Playing { score: u32, lives: u8 },\n    Paused { score: u32, lives: u8 },\n    GameOver { final_score: u32 },\n}\n\nimpl GameState {\n    fn next(self) -> Self {\n        match self {\n            GameState::Menu => GameState::Playing { score: 0, lives: 3 },\n            GameState::Playing { score, lives } if lives == 0 => {\n                GameState::GameOver { final_score: score }\n            }\n            GameState::Playing { score, lives } => GameState::Paused { score, lives },\n            GameState::Paused { score, lives } => GameState::Playing { score, lives },\n            GameState::GameOver { .. } => GameState::Menu,\n        }\n    }\n}\n\nfn main() {\n    let state = GameState::Menu;\n    let state = state.next();\n    let state = GameState::Playing { score: 100, lives: 0 };\n    let state = state.next();\n    println!(\"{:?}\", state);\n}",
+    "options": [
+      "Paused { score: 100, lives: 0 }",
+      "GameOver { final_score: 100 }",
+      "Menu",
+      "Compile error — একই variant দুইবার pattern-এ আসতে পারে না"
+    ],
+    "answer": 1,
+    "explanation": "`Playing { score: 100, lives: 0 }`-এর `next()`-এ প্রথম arm-এর guard `if lives == 0` মিলে যায় — guard-সহ arm সাধারণ `Playing` arm-এর আগেই আছে, তাই GameOver। Guard না থাকলে পরের arm-এ পড়ে Paused হতো। (আগের `state`-গুলো shadow হয়ে গেছে।)"
+  },
+  {
+    "id": "enums-pattern-matching-8",
+    "difficulty": "medium",
+    "type": "output",
+    "prompt": "প্রোগ্রামটা কী ছাপাবে?",
+    "code": "fn main() {\n    let mut stack = vec![1, 2, 3];\n    while let Some(top) = stack.pop() {\n        print!(\"{}\", top);\n    }\n}",
+    "options": [
+      "123",
+      "321",
+      "1 2 3",
+      "Compile error — `pop()` কিন্তু `Option` দেয়"
+    ],
+    "answer": 1,
+    "explanation": "`pop()` শেষ থেকে তোলে আর `Option` ফেরত দেয়। `while let Some(top)` হলো match-এরই sugar — প্রতি ঘূর্ণনে tag check করে, `None` (Vec খালি) এলেই থামে। তাই 3, 2, 1 ক্রমে ছাপা হয়: 321।"
+  },
+  {
+    "id": "enums-pattern-matching-9",
+    "difficulty": "easy",
+    "type": "code",
+    "prompt": "Blank-এ কী বসালে `double(Some(21))` ঠিকমতো `Some(42)` দেবে?",
+    "code": "fn double(x: Option<i32>) -> Option<i32> {\n    match x {\n        Some(v) => ____,\n        None => None,\n    }\n}",
+    "accept": [
+      "Some(v * 2)",
+      "Some(2 * v)"
+    ],
+    "explanation": "`Some(v)` pattern-এ ভেতরের মান v-তে bind হয়। Return type `Option<i32>` — তাই দ্বিগুণ করা মানটা আবার `Some`-এ মুড়ে ফেরত দিতে হয়; খালি `v * 2` দিলে type মিলত না।"
+  },
+  {
+    "id": "enums-pattern-matching-10",
+    "difficulty": "hard",
+    "type": "code",
+    "prompt": "Blank-এ কোন pattern বসালে 15-এর জন্য \"Teen: 15\" ছাপা হবে?",
+    "code": "fn main() {\n    let age = 15u32;\n    match age {\n        n @ 0..=12 => println!(\"Child: {}\", n),\n        ____ => println!(\"Teen: {}\", n),\n        n @ 20..=100 => println!(\"Adult: {}\", n),\n        _ => println!(\"Invalid\"),\n    }\n}",
+    "accept": [
+      "n @ 13..=19",
+      "n@13..=19"
+    ],
+    "explanation": "`n @ 13..=19` — `@` দিয়ে range ম্যাচ করার সাথে সাথে সেই মানটা n-এ bind-ও করা হয়, তাই arm-এর ভেতরে `n` ব্যবহার করা যায়। শুধু `13..=19 =>` লিখলে range ম্যাচ হতো কিন্তু মানটা bind হতো না — `n` পাওয়া যেত না।"
+  }
+]

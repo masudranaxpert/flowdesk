@@ -1,0 +1,139 @@
+[
+  {
+    "id": "ownership-1",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "Ownership-এর ৩টা rule-এর একটা বলে — একই সময়ে একটা value-র owner কতজন থাকতে পারে?",
+    "options": [
+      "ঠিক একজন — অন্য কারো কাছে ownership গেলে আগেরটা invalid",
+      "দুজন পর্যন্ত, যদি দুজনেই শুধু read করে",
+      "যত খুশি — সবাই pointer share করে থাকে",
+      "Owner বলে আলাদা কিছু নেই — GC সব সামলায়"
+    ],
+    "answer": 0,
+    "explanation": "Rule ২ — একই সময়ে একজনই owner। Assign করলে ownership move হয়ে আগের variable মরে যায়, আর owner scope ছাড়লে value drop হয়। এই এক-মালিক নিয়মেই double free অসম্ভব হয়ে যায়।"
+  },
+  {
+    "id": "ownership-2",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "এই program-টা চালালে কী হবে?",
+    "code": "fn main() {\n    let s1 = String::from(\"hello\");\n    let s2 = s1;\n\n    println!(\"{} {}\", s1, s2);\n}",
+    "options": [
+      "hello hello ছাপবে",
+      "compile error — s1-এর ownership s2-তে move হয়ে গেছে, s1 আর valid না",
+      "runtime-এ double free crash করবে",
+      "শুধু hello একবার ছাপবে"
+    ],
+    "answer": 1,
+    "explanation": "String heap data point করে — assign মানে move। Python-এ `s2 = s1` দুটোই same value দেখায়, কিন্তু Rust-এ s1 মরে যায়, ব্যবহার করতে গেলেই compile error। Copy করা হলে scope-এর শেষে দুজনই free করতে চাইত — double free; তাই Rust move করে, একজন owner, একবার free।"
+  },
+  {
+    "id": "ownership-3",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "আর এইটা? কী ছাপা হবে?",
+    "code": "fn main() {\n    let x = 5;\n    let y = x;\n\n    println!(\"{} {}\", x, y);\n}",
+    "options": [
+      "compile error — x-এর ownership y-তে move হয়েছে",
+      "5 0",
+      "5 5",
+      "runtime error"
+    ],
+    "answer": 2,
+    "explanation": "i32 stack-এ থাকা সস্তা type — তাই Copy। `y = x` এ শুধু bitwise copy হয়, x জীবিতই থাকে। শুধু String, Vec-এর মতো heap data point করা type-এর ক্ষেত্রেই assign মানে move। নিয়ম: stack value copy, heap-ওয়ালা value move।"
+  },
+  {
+    "id": "ownership-4",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "নিচের কোন type-এর value assign করলে (`let b = a;`) মূল variable-টা invalid হয় না?",
+    "options": [
+      "String",
+      "Vec<i32>",
+      "[i32; 4]",
+      "কোনোটাতেই না — সবগুলোই move হয়"
+    ],
+    "answer": 2,
+    "explanation": "Fixed array `[i32; 4]`-এর ভেতরে সব element copy type — তাই পুরো array-ই Copy হয়, a বৈধ থাকে। String আর Vec heap data point করে — তাই move। একই কথা `(i32, i32)` tuple-এর জন্যও খাটে: ভেতরে সব copy type হলে tuple-ও Copy।"
+  },
+  {
+    "id": "ownership-5",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "`let s2 = s1.clone();` — ভেতরে আসল খরচটা কী?",
+    "options": [
+      "শুধু pointer-টা copy হয় — O(1)",
+      "নতুন heap buffer allocate (ঠিক len ততটা) + bytes copy (memcpy) — O(n), আর allocation-ই সবচেয়ে ব্যয়বহুল অংশ",
+      "Reference count ১ বাড়ে — মালিকানা share হয়ে যায়",
+      "কিছুই হয় না — clone আসলে move-এরই আরেকটা নাম"
+    ],
+    "answer": 1,
+    "explanation": "clone মানে deep copy: alloc(len) → memcpy → নতুন header। পরে দুটো আলাদা heap buffer, দুজন আলাদা owner — একজন drop হলেও আরেকজন অক্ষত। খরচ থাকায় hot loop-এ বারবার clone এড়ানো ভালো — পরের chapter-এর borrowing দিয়েই এই খরচ এড়ানো যায়। Reference counting-এর ব্যাপারটা এখানে নেই-ই।"
+  },
+  {
+    "id": "ownership-6",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "Owner scope ছাড়লে value drop হয় — এই drop-টা আসলে কে করে?",
+    "options": [
+      "GC-র মতো একটা background চালক নিয়মিত memory ঝেড়ে দেয়",
+      "Compiler প্রতিটা scope-এর শেষে নিজে থেকেই cleanup call বসিয়ে দেয় — compile time-এ বসানো deterministic free()",
+      "Runtime প্রতিটা allocation-এর reference count রাখে, শূন্য হলে free করে",
+      "তোমাকেই নিজে হাতে free() call করতে হয়"
+    ],
+    "answer": 1,
+    "explanation": "Magic না — compiler scope-এর শেষে `String::drop(s)`-এর মতো cleanup call ঢোকিয়ে দেয়, যেটা heap buffer allocator-কে ফেরত দেয় (C-এর free-এর মতো)। i32-জাতীয় value-তে drop no-op — LLVM মুছে দেয়। GC-র pause নেই, manual free-ও লাগে না — এটাই \"automatic memory management\"-এর আসল রূপ।"
+  },
+  {
+    "id": "ownership-7",
+    "difficulty": "medium",
+    "type": "output",
+    "prompt": "কোডটা trace করো — কী হবে?",
+    "code": "fn takes_ownership(some_string: String) {\n    println!(\"{}\", some_string);\n}\n\nfn makes_copy(some_integer: i32) {\n    println!(\"{}\", some_integer);\n}\n\nfn main() {\n    let s = String::from(\"hello\");\n    takes_ownership(s);\n\n    let x = 5;\n    makes_copy(x);\n    println!(\"{}\", x);\n}",
+    "options": [
+      "hello, তারপর 5, তারপর 5 — compile হবে, চলবে",
+      "compile error — makes_copy(x)-এর পরে x আর valid না",
+      "compile error — takes_ownership(s)-এ s দুইবার drop হচ্ছে",
+      "চলবে, কিন্তু শেষে double-free panic করবে"
+    ],
+    "answer": 0,
+    "explanation": "s-এর ownership function-এ গিয়ে function শেষে drop হয় — পরে s আর ব্যবহারই হয়নি, তাই কোনো সমস্যা না। কিন্তু x copy type — makes_copy(x)-এর পরেও x জীবিত, তাই শেষের println বৈধ। কোন value move হবে না copy — সেটা type-ই ঠিক করে দেয়।"
+  },
+  {
+    "id": "ownership-8",
+    "difficulty": "medium",
+    "type": "code",
+    "prompt": "main-এর `s`-এর মালিকানা ঠিকঠাক চলে আসতে হলে return type হিসেবে blank-এ কী লিখবে?",
+    "code": "fn gives_ownership() -> ____ {\n    String::from(\"from the function\")\n}\n\nfn main() {\n    let s = gives_ownership();\n    println!(\"{}\", s);\n}",
+    "accept": [
+      "String"
+    ],
+    "explanation": "function টি একটা নেওয়া value-কে মালিকানা-সহ ফেরত দিচ্ছে — তাই return type `String`। `s` main-এ এড়িয়ে ফিরে আসে কারণ যে value বানানো হয়েছে তার ownership ফেরত দেওয়াই return-টার কাজ।"
+  },
+  {
+    "id": "ownership-9",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "`\"hello\"` literal আর `String::from(\"hello\")` — memory-র দিক থেকে কোন বর্ণনাটা সঠিক?",
+    "options": [
+      "Literal heap-এ allocate হয় ও পরে বড়ও হতে পারে; String::from read-only section-এ বসে থাকে",
+      "দুটোই heap-এ থাকে, খালি জায়গায় বদলে যায়",
+      "Literal compile-ই binary-র read-only section-এ বসে যায় (type &str — pointer + length), allocation/free কিছুই নেই; String::from runtime-এ heap-এ নতুন buffer নিয়ে literal-এর bytes copy করে — খরচ O(n)",
+      "Literal প্রতি ব্যবহারে stack-এ push হয়; String::from stack-এই থেকে যায়"
+    ],
+    "answer": 2,
+    "explanation": "Literal binary-র rodata-তে বসে পুরো program জুড়ে অপরিবর্তিত থাকে — allocation নেই, free নেই। String::from-এর তিন ধাপ: heap allocate → bytes memcpy → header (ptr, len, capacity) বানানো। এই O(n) খরচটাই \"মালিকানা-সহ, বাড়ানো-যোগ্য\" String-এর দাম।"
+  },
+  {
+    "id": "ownership-10",
+    "difficulty": "hard",
+    "type": "code",
+    "prompt": "দুটো variable-ই ব্যবহার করতে হবে (output: hello hello) — এমন কিছু blank-এ লিখো যাতে s1 পরেও valid থাকে।",
+    "code": "fn main() {\n    let s1 = String::from(\"hello\");\n    let s2 = ____;\n\n    println!(\"{} {}\", s1, s2);\n}",
+    "accept": [
+      "s1.clone()"
+    ],
+    "explanation": "move-এর বদলে `clone()` ব্যবহার করা হয়েছে — এটা একটা heap buffer/মালিকানা আলাদা কপি বানায়। তাই s1-ও valid থেকে যায়, আর s2 আলাদা কপি।"
+  }
+]

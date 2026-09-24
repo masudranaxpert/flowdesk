@@ -34,6 +34,13 @@ Rust এ কোনো GC নেই, আর কোনো manual free ও নে�
 }   // s এর scope শেষ — "hello" drop (free) হয়ে যায়
 ```
 
+এখানে `String::from("hello")` এর ভেতরে কী হয় আর সাধারণ literal (`"hello"`) থেকে পার্থক্য কোথায় — এটা পরিষ্কার করা জরুরি:
+
+- **Literal `"hello"`** — compile time এই তোমার binary এর read-only section (rodata) এ বসে যায়। Allocation হয় না, free ও হয় না — program চলার সময় ওখানেই থাকে। Type পাও: `&'static str` — একটা pointer + length, মাত্র দুই word।
+- **`String::from("hello")`** — runtime এ তিন ধাপ: ① heap এ নতুন buffer allocate, ② literal এর bytes গুলো ওই buffer এ copy (memcpy), ③ `String` header বানানো — `(ptr, len, capacity)`। খরচ O(n), n = length। মানে এটা **মালিকানা-সহ, বাড়ানো যায়** এমন String কেনার দাম।
+
+Stack এ থাকে মাত্র তিনটা machine word (64-bit এ ২৪ byte) — আসল `h,e,l,l,o` heap এ। নিচের diagram টা এই structure ই দেখাচ্ছে।
+
 ### Rule ২: একই সময়ে একজনই owner
 
 যখন একটা variable আরেকটাতে assign হয়, **ownership move** হয়:
@@ -56,6 +63,25 @@ println!("{}", s1);  // ERROR! s1 আর valid না
 }   // s drop হয়েছে — memory automatically free!
 // কোনো free() বা delete লাগে না
 ```
+
+**`drop` এর ভেতরে কী হয়?** Magic না — compiler প্রতিটা scope এর শেষে নিজে থেকে একটা cleanup call ঢুকিয়ে দেয়:
+
+```rust
+// তুমি যা লেখো:
+{
+    let s = String::from("hello");
+    println!("{}", s);
+}
+
+// compiler যা বানায় (simplified):
+{
+    let s = String::from("hello");
+    println!("{}", s);
+    String::drop(s); // ← Drop trait এর method: heap buffer টা allocator কে ফেরত (free)
+}
+```
+
+ধাপে ধাপে: `String` জানে তার `ptr` কোন heap buffer ধরে আছে → `Drop::drop` ওই buffer এর জন্য dealloc call করে (C এর `free(ptr)` এর মতো) → শেষ। যদি value তে heap data-ই না থাকে (যেমন `i32`), drop call টা no-op — LLVM ওটা মুছেই দেয়। Struct হলে প্রতিটা field নিজের drop পায়, ঘোষণার ক্রম ধরে। মানে "automatic memory management" এর পুরো রহস্য: compile time এ বসানো deterministic `free()` — GC এর মতো কোনো background চালক নেই।
 
 ## Move Semantics গভীরে
 
@@ -84,6 +110,14 @@ s1 (invalid)          s2
 > [!note]
 > কেন copy করা হয় না? কারণ যদি copy করা হতো, scope শেষে দুজনই free করতে চাইতো — **double free** problem। তাই Rust move করে — একজন owner, একবার free।
 
+আরেকটা রহস্য ভেঙে দিই — **move কোনো "invalid flag" set করে না।** Runtime এ যা ঘটে:
+
+১. `let s2 = s1` মানে শুধু ২৪-byte header টা (ptr, len, capacity) **bit-by-bit copy** — C এর struct assign এর মতোই। Heap এ কিছুই যায় আসে না।
+২. `s1` এর "invalid" হওয়া runtime এর অবস্থা না — এটা **compile time এর তথ্য**: borrow checker এর হিসাবে `s1` dead হয়ে যায়, তাই ওকে ব্যবহারের লাইন compile ই হয় না।
+৩. Generated assembly তে `s1` নামের কিছু আর থাকে না — একটা buffer, একটা pointer, ব্যস।
+
+তাই move এর পুরো খরচ: কয়েকটা register move instruction। Safety পুরোটা compile time এ, runtime এ এক ফোঁটাও check নেই — **zero-cost abstraction** এর চমৎকার নমুনা।
+
 ### কোন Type কপি হয়, কোনটা Move হয়?
 
 Integer, float, bool, char এগুলো **stack** এ থাকে — সস্তা। এগুলো copy হয়:
@@ -111,6 +145,9 @@ println!("{}", x);  // VALID! x এখনো valid
 
 নিজের type কে copy করার যোগ্য বানাতে `#[derive(Copy, Clone)]` দিতে হয় (পরের chapter এ trait শিখবো):
 
+> [!note]
+> এখানে হঠাৎ দুটো নতুন মুখ — `#[derive(...)]` আর trait। **Trait** হলো "এই type এই কাজটা পারে" এর নাম-ওয়ালা contract (method-এর তালিকা) — traits chapter এ পুরো আলোচনা। আর **`#[derive(Copy, Clone)]`** হলো compiler-কে বলা: "এই দুটো trait-এর বিল্ট-ইন implementation আমার struct-এর জন্য লিখে দাও" — অর্থাৎ `#[...]` হলো compiler নির্দেশ (attribute), derive হলো সেই নির্দেশের একটা প্রকার যা compile time-এ code জেনারেট করে। হাতে লেখা আর derive-করা implementation-এ কোনো পার্থক্য হয় না।
+
 ```rust
 #[derive(Copy, Clone)]
 struct Point {
@@ -121,6 +158,9 @@ struct Point {
 let p1 = Point { x: 1, y: 2 };
 let p2 = p1;  // copy — p1 এখনো valid!
 ```
+
+> [!note]
+> ভেতরের ব্যাপার: `Copy` মানে assignment এ **bitwise copy** — compiler নিজেই করে দেয়, কোনো `clone()` call ঢোকে না। আর একটা কঠোর নিয়ম: একই type `Copy` আর `Drop` **দুটোই হতে পারে না** — কারণ copy মানে একাধিক copy, প্রত্যেকে scope শেষে free করতে চাইলে double free! Compiler এই জুটি দেখলেই আটকে দেয়। এজন্যই heap-data-ওয়ালা `String`/`Vec` কখনো `Copy` হতে পারে না।
 
 ## Function এ Ownership Transfer
 
@@ -145,6 +185,9 @@ fn makes_copy(some_integer: i32) {
     println!("{}", some_integer);
 }   // some_integer scope শেষ, কিন্তু কিছু করার নেই (copy ছিল)
 ```
+
+> [!note]
+> এই function call গুলোর runtime খরচ কত? `takes_ownership(s)` মানে শুধু ২৪-byte header টা callee এর stack frame এ copy — ব্যস, এটাই move এর দাম। Function শেষ হলে compiler প্যারামিটারের জন্য drop call বসিয়ে দেয় (owner তখন ওই function)। `makes_copy(x)` আরো সস্তা — `i32` একটা register-এর ব্যাপার, drop করার কিছু নেই।
 
 ### Function থেকে Ownership ফেরত
 
@@ -184,11 +227,25 @@ println!("s1 = {}, s2 = {}", s1, s2);  // দুটোই valid
 > [!warn]
 > `clone()` expensive — heap data copy করে। Performance-sensitive code এ বারবার clone ব্যবহার করা ভালো না। তবে prototype বা যেখানে clarity দরকার, সেখানে fine।
 
+**`clone()` এর ভেতরে কী হয়?** মোটামুটি এই কোড (simplified):
+
+```rust
+// String::clone এর সরলীকৃত version:
+fn clone(&self) -> String {
+    let buf = alloc(self.len);       // ① নিজের মতো একটা নতুন heap buffer — ঠিক len ততটা
+    memcpy(buf, self.ptr, self.len); // ② bytes গুলো copy — এটাই আসল খরচ
+    String { ptr: buf, len: self.len, capacity: self.len } // ③ স্বাধীন নতুন String
+}
+```
+
+খেয়াল করো — clone ঠিক `len` ততটা allocate করে, পুরনো spare capacity টানে না (এজন্যই clone করা String এর capacity = len হয়)। ক্লোনের পর দুটি আলাদা heap buffer, দুজন আলাদা owner — একজন drop হলে আরেকজন অক্ষত। খরচ: একটা allocation (সবচেয়ে ব্যয়বহুল অংশ) + O(n) memcpy। তাই hot loop এ বারবার clone মানে বারবার allocation — পরের chapter এর **borrowing** দিয়ে এই খরচ অনেকটাই এড়ানো যায়।
+
+
 ## Ownership এর কারণ — কেন এত ঝামেলা?
 
 > [!note]
 > এই "ঝামেলা" আসলে দুর্দান্ত feature। Ownership এর কারণে:
-> - Memory leak হবে না (C/C++ এর সমস্যা)
+> - Accidental memory leak হয় না — প্রতিটা value deterministic ভাবে free হয় (ইচ্ছাকৃত `mem::forget` বা `Rc` cycle দিয়ে leak করা যায়, কিন্তু সেগুলোও memory-safe)
 > - GC এর overhead নেই (Python/Java এর সমস্যা)
 > - Data race হবে না (concurrency এ বিশাল সুবিধা)
 > - Use-after-free, double-free সব impossible
@@ -220,6 +277,9 @@ fn calculate_length(s: String) -> usize {
     s.len()
 }   // s drop হয়ে যায়
 ```
+
+> [!note]
+> **`s.len()` এর ভেতরে:** কোনো character গোনা হয় না — শুধু `len` field টা সরাসরি return করে। আর Rust এ String এর `len` মানে **byte count**, character count না (বাংলা 'ক' নিজেই ৩ byte!)। O(1), এক field read।
 
 > [!tip]
 > এখনকার জন্য `clone()` ব্যবহার করো যখন compiler ownership error দেখায়। পরের chapter এ শিখবো কীভাবে **borrowing** দিয়ে এই সমস্যা আরো ভালো ভাবে solve করা যায় — clone ছাড়াই।

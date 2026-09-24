@@ -56,7 +56,19 @@ mod tests {
 ```
 
 > [!note]
-// `#[cfg(test)]` দিয়ে module টা শুধু test এ compile হবে — production binary তে যাবে না। `use super::*` দিয়ে parent module এর সব import করা হয়। এটাই Rust এর standard unit test pattern।
+> // `#[cfg(test)]` দিয়ে module টা শুধু test এ compile হবে — production binary তে যাবে না। `use super::*` দিয়ে parent module এর সব import করা হয়। এটাই Rust এর standard unit test pattern।
+
+**`#[test]` আসলে কী করে?** Compiler function টাকে test হিসেবে চিহ্নিত করে, আর test harness (libtest) এর collection এ নামসহ register করে। `cargo test` চললে তোমার crate **আলাদা একটা test binary** হয়ে compile হয় — যার নিজস্ব `main()` registered সব test চালায়। প্রতিটা test ভেতরে ভেতরে এমন (simplified):
+
+```rust
+// harness এর ভেতরে (simplified)
+match std::panic::catch_unwind(test_fn) {
+    Ok(_) => println!("ok"),
+    Err(_) => println!("FAILED"),   // panic = fail
+}
+```
+
+মানে test আসলে একটা সাধারণ function — **panic করলেই fail**, এই একটাই নিয়ম। `assert*!` macro গুলো fail করার উপায় `panic!` ছাড়া আর কিছু করে না।
 
 ### Run Tests
 
@@ -66,6 +78,9 @@ cargo test test_add     # শুধু test_add সম্বলিত গুল�
 cargo test -- --nocapture  # println! output দেখাও
 cargo test -- --test-threads=1  # sequential (single thread)
 ```
+
+> [!note]
+> **`cargo test` ভেতর থেকে কীভাবে চলে?** Harness default এ **worker thread** তোলে (সংখ্যা = logical core) — প্রতিটা test নিজের আলাদা thread এ চলে। এজন্যই test গুলো পরস্পর-নির্ভর বা shared file/DB ছোঁয়া বিপজ্জনক — `--test-threads=1` দিলে sequential। প্রতিটা test এর `println!` output আলাদা করে ধরা হয় (capture) — pass করলে বাদ, `-- --nocapture` দিলে লাইভ terminal এ স্ট্রিম হয়। `cargo test test_add` এর filter টা test এর **নামের substring** match করে।
 
 ## Assertion Macros
 
@@ -89,6 +104,23 @@ fn test_assertions() {
 }
 ```
 
+`assert_eq!` এর expansion দেখলে পরিষ্কার (simplified):
+
+```rust
+// assert_eq!(add(2, 3), 5) আসলে হয়
+{
+    match (&add(2, 3), &5) {
+        (l, r) if *l == *r => {}   // সমান — pass, কিছুই হয় না
+        _ => panic!(
+            "assertion `left == right` failed\n  left: {:?}\n right: {:?}",
+            l, r
+        ),   // সাথে file!(), line!() থেকে location
+    }
+}
+```
+
+এজন্যই দুই পাশের type এ `PartialEq` + `Debug` দুটোই লাগে — failure এ দুই পাশের মান debug format এ ছাপা হয়। তৃতীয় argument এর custom message টা `format_args!` হয়ে panic message এর সাথে জুড়ে যায়।
+
 ### `should_panic` — Expected Panic
 
 ```rust
@@ -110,7 +142,10 @@ fn test_out_of_bounds_message() {
 ```
 
 > [!tip]
-// `#[should_panic]` দিয়ে test করা যায় function panic করার কথা কিনা। `expected` দিয়ে specific error message match করা যায়।
+> // `#[should_panic]` দিয়ে test করা যায় function panic করার কথা কিনা। `expected` দিয়ে specific error message match করা যায়।
+
+> [!note]
+> **ভেতরে কী ঘটে?** Harness test টাকে `catch_unwind` এ wrap করে চালায় — panic হলে ধরে ফেলে (process মরে না), আর panic message এ `expected = "..."` থাকলে substring match দেখে। panic না হলে বা message মিললে না হলে test fail। খেয়াল: profile এ `panic = "abort"` থাকলে unwinding বন্ধ — `#[should_panic]` তখন কাজ করে না।
 
 ### `Result` in Test
 
@@ -131,7 +166,10 @@ fn test_parse_success() -> Result<(), ParseIntError> {
 ```
 
 > [!example]
-// Test function ও `Result` return করতে পারে! `?` operator ব্যবহার করা যায় — যদি error হয় test automatically fail হবে। `unwrap()` এর চেয়ে পরিষ্কার।
+> // Test function ও `Result` return করতে পারে! `?` operator ব্যবহার করা যায় — যদি error হয় test automatically fail হবে। `unwrap()` এর চেয়ে পরিষ্কার।
+
+> [!note]
+> ভেতরে আলাদা কোনো জাদু নেই: test function টা `Result` return করলে harness এর হাতে `Err(e)` এলেই সেটা `panic!("{e:?}")` করে দেয় — fail করার প্রক্রিয়া একই, `?` শুধু লেখাটা ছোট করে।
 
 ## Integration Test
 
@@ -162,7 +200,7 @@ fn test_integration_divide() {
 ```
 
 > [!note]
-// Integration test গুলো `tests/` ফোল্ডারে থাকে। এরা তোমার library এর public API test করে — ঠিক external user এর মতো। Internal private function access নেই। এটা black-box testing।
+> // Integration test গুলো `tests/` ফোল্ডারে থাকে। এরা তোমার library এর public API test করে — ঠিক external user এর মতো। Internal private function access নেই। এটা black-box testing।
 
 ### Multiple Integration Test Files
 
@@ -216,7 +254,10 @@ cargo doc --open        # documentation generate আর দেখো
 ```
 
 > [!tip]
-// Doc test হলো Rust এর অসাধারণ feature — documentation এর কোড example গুলো automatically test হয়! Python এর doctest এর মতো, কিন্তু অনেক বেশি integrated। Documentation যদি outdated হয়, test fail হবে — documentation সবসময় correct থাকবে।
+> // Doc test হলো Rust এর অসাধারণ feature — documentation এর কোড example গুলো automatically test হয়! Python এর doctest এর মতো, কিন্তু অনেক বেশি integrated। Documentation যদি outdated হয়, test fail হবে — documentation সবসময় correct থাকবে।
+
+> [!note]
+> **Doc test ভেতরে কীভাবে চলে?** `rustdoc` প্রতিটা doc comment এর code block বের করে, প্রতিটার জন্য **আলাদা ছোট crate** বানায় — তোমার snippet টা একটা generated `main()` এর ভেতরে বসে — তারপর সেগুলো compile + run করে। এজন্যই doc test একটু ধীর, কিন্তু `cargo test` এ automatic চলে বলে documentation সহজে পুরনো হয়ে যায় না।
 
 ### Ignorable Doc Test
 
@@ -265,7 +306,7 @@ tests/
 ```
 
 > [!note]
-// Unit test গুলো `src/` এর ভেতরে, private function ও test করতে পারে। Integration test `tests/` এর ভেতরে, শুধু public API test করে। এটাই Rust convention।
+> // Unit test গুলো `src/` এর ভেতরে, private function ও test করতে পারে। Integration test `tests/` এর ভেতরে, শুধু public API test করে। এটাই Rust convention।
 
 ## Setup আর Teardown
 
@@ -339,7 +380,10 @@ fn test_find_username_not_found() {
 ```
 
 > [!example]
-// `mockall` দিয়ে trait mock করা যায়। Database, API client, file system — সব external dependency mock করে test fast আর deterministic হয়। Python এর `unittest.mock` এর মতো।
+> // `mockall` দিয়ে trait mock করা যায়। Database, API client, file system — সব external dependency mock করে test fast আর deterministic হয়। Python এর `unittest.mock` এর মতো।
+
+> [!note]
+> `#[automock]` নিজেই একটা **proc-macro** — compile time এ তোমার trait কে নকল করে `MockDatabase` struct + impl generate করে (expectation রাখার field সহ)। মানে mock runtime reflection দিয়ে কাজ করে না — generated আসল code, তাই type-safe আর দ্রুত; Python এর `MagicMock` এর dynamic স্বাধীনতা নেই, বিনিময়ে ভুল হলে compile error।
 
 ## Property-Based Testing
 
@@ -367,7 +411,10 @@ proptest! {
 ```
 
 > [!tip]
-// Property-based testing হলো random input দিয়ে property check করা। Python এর Hypothesis এর মতো। Edge case খুঁজে বের করতে দারুণ — manually ভাবা কঠিন edge case গুলো automatic ধরা যায়।
+> // Property-based testing হলো random input দিয়ে property check করা। Python এর Hypothesis এর মতো। Edge case খুঁজে বের করতে দারুণ — manually ভাবা কঠিন edge case গুলো automatic ধরা যায়।
+
+> [!note]
+> **`proptest!` এর ভেতরে**: macro random value generate করে test টা অনেকবার চালায় (seed সহ)। Fail পেলে **shrinking** করে — input ছোট করে কমিয়ে সবচেয়ে সরল failing case খোঁজে, আর সেটা `proptest-regressions` ফাইলে রেখে দেয় যাতে পরের run এ সেই case আবার চলে।
 
 ## Benchmark Test
 
@@ -404,6 +451,9 @@ criterion_main!(benches);
 cargo bench
 ```
 
+> [!note]
+> **`black_box` কেন দরকার?** Optimizer দুষ্ট — `fibonacci(20)` এর মান সে compile time এই বের করে ফেলতে পারে। তখন benchmark চলছে ভাবছ, আসলে একটা constant মান বসানো হচ্ছে! `black_box(x)` value টাকে compiler এর চোখে **opaque** করে দেয় (ফাঁকা read/write ঢোকায়), constant-folding বন্ধ হয় — মাপাটা তখন সত্যি runtime এর।
+
 ## Test Coverage
 
 ```bash
@@ -426,7 +476,7 @@ cargo tarpaulin
 | Benchmark | `pytest-benchmark` | `criterion` crate |
 
 > [!note]
-// Rust এর testing সবচেয়ে বড় সুবিধা — সব built-in! `pytest` install করতে হয় না, `doctest` আলাদা চালাতে হয় না। `cargo test` এক command এ unit + integration + doc test সব run হয়।
+> // Rust এর testing সবচেয়ে বড় সুবিধা — সব built-in! `pytest` install করতে হয় না, `doctest` আলাদা চালাতে হয় না। `cargo test` এক command এ unit + integration + doc test সব run হয়।
 
 ## Summary
 

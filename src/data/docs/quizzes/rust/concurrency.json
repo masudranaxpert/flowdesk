@@ -1,0 +1,135 @@
+[
+  {
+    "id": "concurrency-1",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "নিচের প্রোগ্রামে join() নেই — ফলাফল কী হতে পারে?",
+    "code": "use std::thread;\nuse std::time::Duration;\n\nfn main() {\n    thread::spawn(|| {\n        for i in 1..10 {\n            println!(\"Thread: {}\", i);\n            thread::sleep(Duration::from_millis(1));\n        }\n    });\n\n    for i in 1..5 {\n        println!(\"Main: {}\", i);\n        thread::sleep(Duration::from_millis(1));\n    }\n}",
+    "options": [
+      "প্রোগ্রাম spawn করা thread-এর কাজ শেষ না হওয়া পর্যন্ত অপেক্ষা করে, তারপর exit করে",
+      "spawn করা thread detached হয়ে main-এর পরেও background-এ চলতেই থাকে",
+      "main thread-এর loop শেষ হলেই প্রোগ্রাম exit করে — spawn করা thread-এর বাকি কাজ আর চলতে পারে না",
+      "compile error দেয় — join() ছাড়া thread::spawn করা যায় না"
+    ],
+    "answer": 2,
+    "explanation": "spawn সাথে সাথে JoinHandle return করে আর thread parallel-এ চলতে থাকে; handle drop করে দিলে thread detached হয়। কিন্তু main thread শেষ হলে পুরো process exit করে — detached thread-ও বাঁচে না। thread শেষ হওয়ার guarantee দরকার হলে handle-এ .join() করতে হবে, যেটা calling thread-কে block করে রাখে।"
+  },
+  {
+    "id": "concurrency-2",
+    "difficulty": "easy",
+    "type": "mcq",
+    "prompt": "std::sync::mpsc channel-এর ব্যাপারে কোনটা সঠিক?",
+    "options": [
+      "Sender আর Receiver দুটোই clone করা যায় — যত খুশি producer আর consumer",
+      "Sender clone করা যায় (multiple producer), কিন্তু Receiver clone করা যায় না — consumer একজনই",
+      "Receiver clone করা যায় কিন্তু Sender যায় না — producer একজনই",
+      "কোনোটাই clone করা যায় না — channel একবারই ব্যবহার করা যায়"
+    ],
+    "answer": 1,
+    "explanation": "mpsc = Multiple Producer, Single Consumer। tx.clone() শুধু atomic refcount বাড়ায় — queue একই থাকে, তাই অনেক thread একসাথে send করতে পারে। কিন্তু Receiver clone করা যায় না — receive করে একজনই (নামের শেষের c দ্বারা single consumer)।"
+  },
+  {
+    "id": "concurrency-3",
+    "difficulty": "easy",
+    "type": "output",
+    "prompt": "প্রোগ্রামটা কী print করবে?",
+    "code": "use std::thread;\n\nfn main() {\n    let handle = thread::spawn(|| {\n        let mut sum = 0;\n        for i in 1..=4 {\n            sum += i;\n        }\n        sum\n    });\n\n    let result = handle.join().unwrap();\n    println!(\"Thread returned: {}\", result);\n}",
+    "options": [
+      "Thread returned: 10",
+      "Thread returned: 4",
+      "কিছু print হয় না — thread শেষ হওয়ার আগেই main exit করে যায়",
+      "compile error — spawn-এর closure থেকে value return করা যায় না"
+    ],
+    "answer": 0,
+    "explanation": "closure-এর শেষ expression-টাই thread-এর return value। thread শেষ হলে মানটা দুই thread-এর মাঝের shared slot-এ বসে, join() সেটা তুলে দেয়। এখানে 1+2+3+4 = 10। join() থাকায় main thread শেষ হওয়ার আগেই spawn-এর কাজ নিশ্চিত হয়ে যায়।"
+  },
+  {
+    "id": "concurrency-4",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "thread::spawn দিয়ে নতুন thread বানালে প্রতিটার default stack মোটামুটি কত বড়, আর ১০,০০০ thread spawn করলে কথা কী?",
+    "options": [
+      "প্রতি thread-এ ~64 KiB — মোট ~640 MB address space",
+      "প্রতি thread-ে ~8 MiB — মোট ~80 GB",
+      "stack আগে থেকে reserve হয় না, দরকারমতো grow করে",
+      "প্রতি thread-এ ~2 MiB — মোট ~20 GB address space"
+    ],
+    "answer": 3,
+    "explanation": "spawn আসলে OS-কে call করে (Linux-এ pthread_create) — আসল kernel thread তৈরি হয়, প্রতিটার default stack ~2 MiB। main thread-টা OS দেয় (সাধারণত 8 MiB)। এজন্যই ১০,০০০ thread মানে ~20 GB address space, কিন্তু async task-এর খরচ মাত্র কয়েকশো byte — async chapter-এর মূল যুক্তি এটাই।"
+  },
+  {
+    "id": "concurrency-5",
+    "difficulty": "medium",
+    "type": "mcq",
+    "prompt": "Mutex::lock() কেন Result return করে — আমরা কেন counter.lock().unwrap() লিখি?",
+    "options": [
+      "lock তখনই busy থাকলে Err দেয় — অপেক্ষা না করেই fail করে ফেলে",
+      "deadlock detect করলে Err দেয়",
+      "lock ধরে থাকা অবস্থায় কোনো thread panic করলে mutex poisoned হয় — তখন পরের সব lock() দেয় Err(PoisonError), কারণ shared data সম্ভবত অসঙ্গত হয়ে গেছে",
+      "T-এর উপর Debug implement না থাকলে Err দেয়"
+    ],
+    "answer": 2,
+    "explanation": "এটা poison mechanism: lock ধরে থাকা অবস্থায় thread panic করলে mutex poisoned হয়ে যায়, আর চুপচাপ চলতে দেওয়া হয় না — পরের সব lock() Err দেয়। জোর করে মান লুটতে চাইলে e.into_inner() আছে। ভেতরে fast path-এ এক atomic exchange-এই lock নেওয়া যায়, ব্যস্ত থাকলে কিছুক্ষণ spin করে Linux-এর futex-এ ঘুমিয়ে যায় — অপেক্ষায় CPU খরচ শূন্য।"
+  },
+  {
+    "id": "concurrency-6",
+    "difficulty": "medium",
+    "type": "output",
+    "prompt": "stdout-এ কী print হবে?",
+    "code": "use std::sync::mpsc;\nuse std::thread;\n\nfn main() {\n    let (tx, rx) = mpsc::channel();\n\n    thread::spawn(move || {\n        for i in 1..=3 {\n            tx.send(i * 10).unwrap();\n        }\n    });\n\n    for received in rx {\n        println!(\"Got: {}\", received);\n    }\n    println!(\"Done\");\n}",
+    "options": [
+      "Done — message গুলো আসার আগেই main exit করে যায়",
+      "Got: 10\nGot: 20\nGot: 30\nDone",
+      "Got: 30\nGot: 20\nGot: 10\nDone",
+      "compile error — rx-কে for loop-এ ব্যবহার করা যায় না"
+    ],
+    "answer": 1,
+    "explanation": "Receiver-এর Iterator impl আছে: queue খালি হলে block করে, সব Sender drop হয়ে গেলে None return করে — loop শেষ। spawned thread তিনটা message পাঠিয়ে শেষ হলে tx drop হয়, তখন iterator ফুরায়। channel FIFO, তাই order 10, 20, 30 — শেষে Done।"
+  },
+  {
+    "id": "concurrency-7",
+    "difficulty": "medium",
+    "type": "code",
+    "prompt": "thread-এর ভেতরে data ব্যবহার করতে blank-এ কী বসালে কোড compile হবে?",
+    "code": "use std::thread;\n\nfn main() {\n    let data = vec![1, 2, 3];\n\n    let handle = thread::spawn(____ || {\n        println!(\"{:?}\", data);\n    });\n\n    handle.join().unwrap();\n}",
+    "accept": ["move"],
+    "explanation": "spawn-এর closure bound হলো F: FnOnce() -> T + Send + 'static — thread-টা main-এর বাঁচা ছাড়িয়ে যেতে পারে, তাই borrowed data নিষেধ। move দিলে Vec-এর pointer+len+capacity ownership সহ thread-এ চলে যায় (element copy হয় না)। move ছাড়া compiler error দেয় — closure may outlive the current function।"
+  },
+  {
+    "id": "concurrency-8",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "Rc<i32>-কে thread::spawn-এর closure-এ move করলে compile error আসে। কারণ কী?",
+    "options": [
+      "Rc heap-এ allocate থাকে, আর heap-এর data thread-এর মধ্যে পাঠানো নিষেধ",
+      "Rc-তে Mutex নেই — unlock করার মতো কোনো method না থাকায় compiler আটকায়",
+      "সমস্যাটা শুধু 'static নিয়ে — Rc deref করে reference দেয়, তাই lifetime bound ভাঙে; Send নিয়ে কোনো বাধা নেই",
+      "Rc-র reference count non-atomic — data race হতে পারে, তাই std এটাকে ইচ্ছা করে !Send + !Sync রেখেছে; spawn-এর Send + 'static bound-ই এটাকে আটকে দেয়"
+    ],
+    "answer": 3,
+    "explanation": "Send/Sync দুটো marker trait — কোনো method নেই, compiler এগুলো auto trait হিসেবে গাছের মতো বানায়: struct-এর সব field Send হলে struct-ও Send। Rc-র count non-atomic বলে std-তে সেটা ইচ্ছা করে !Send + !Sync। multi-threaded-এ Arc (atomic refcount) লাগবে — compiler এটা enforce করে, আর এভাবেই data race compile error হয়ে যায়।"
+  },
+  {
+    "id": "concurrency-9",
+    "difficulty": "hard",
+    "type": "code",
+    "prompt": "১০টা thread একটা Arc<Mutex<i32>> counter বাড়াচ্ছে — শেষে Final: 10 print হতে হলে blank-এ কী বসবে?",
+    "code": "use std::sync::{Arc, Mutex};\nuse std::thread;\n\nfn main() {\n    let counter = Arc::new(Mutex::new(0));\n    let mut handles = vec![];\n\n    for _ in 0..10 {\n        let counter = Arc::clone(&counter);\n        handles.push(thread::spawn(move || {\n            let mut num = counter.lock().unwrap();\n            ____;\n        }));\n    }\n\n    for handle in handles {\n        handle.join().unwrap();\n    }\n\n    println!(\"Final: {}\", *counter.lock().unwrap());\n}",
+    "accept": ["*num += 1"],
+    "explanation": "lock() একটা MutexGuard return করে — guard-এর ভেতরের মান বদলাতে deref করতে হয়, তাই *num += 1। guard scope শেষে drop হলে lock automatically release হয় (RAII), তাই প্রতিটা thread-এর বাড়ানো হারায় না। Arc নিজে কাউকে share করাতে পারে না — atomic refcount দিয়ে Arc অনেক thread-কে একই Mutex-এর মালিকানা দেয়।"
+  },
+  {
+    "id": "concurrency-10",
+    "difficulty": "hard",
+    "type": "mcq",
+    "prompt": "parallel_sum-এ ১ থেকে ১০ লাখের যোগফল accumulator কেন i64 দিয়ে করা হয়েছে — i32 accumulator হলে কী হতো?",
+    "options": [
+      "i32-তেও কিছু হতো না — Rust automatically সব কিছু i64-এ promote করে ফেলে",
+      "যোগফল 500000500000 — যা i32-র সীমা (≈2.1 billion) পার করে যায়; debug build-এ attempt to add with overflow panic হতো",
+      "debug আর release দুই build-ই panic করত",
+      "compile-ই হতো না — compiler constant overflow ধরে ফেলত"
+    ],
+    "answer": 1,
+    "explanation": "১..=১০ লাখের যোগফল 500,000,500,000 — i32 ধারণ করতে পারে না। debug build-এ overflow check থাকে বলে panic হয়, release build-এ wrap করে ভুল মান silently আসে। তাই x as i64 conversion করে i64 accumulator-এ sum করা হয়েছে — rayon-এর উদাহরণেও একই সতর্কতা।"
+  }
+]
